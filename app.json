@@ -57,7 +57,6 @@
       "expo-router",
       "expo-font",
       "react-native-google-mobile-ads",
-      "expo-iap",
       [
         "expo-build-properties",
         {
@@ -65,8 +64,7 @@
             "newArchEnabled": false,
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
-            "minSdkVersion": 24,
-            "kotlinVersion": "1.8.22"
+            "minSdkVersion": 24
           },
           "ios": {
             "newArchEnabled": false,

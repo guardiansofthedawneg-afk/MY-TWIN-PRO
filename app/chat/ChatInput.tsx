@@ -1,4 +1,4 @@
-import React, { memo, useRef, useEffect, useMemo } from 'react';
+import React, { memo, useRef, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Modal, Animated, ActivityIndicator, ScrollView,
@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import {
   Send, X, Camera, Image as ImageIcon, FileText,
   Search, Cloud, Music, Film, TrendingUp,
-  Wand2, Mic, Phone, GraduationCap, Code2, Heart,
+  Wand2, Phone, GraduationCap, Code2, Heart,
   Moon, PenLine, BarChart3, Home, AudioLines,
 } from 'lucide-react-native';
 import { ToolChip } from './ChatBubbles';
@@ -20,7 +20,7 @@ const FEATURE_ROUTES: Record<string, string> = {
 };
 
 export const ChatInput = memo(({
-  input, setInput, loading, isRTL, isDark, colors, lang, onFeatureSelect,
+  input, setInput, loading, isRTL, isDark, colors, lang,
   onSend, onAddTool, activeTools, onRemoveTool,
   onCamera, onGallery, onFile,
   showAttach, setShowAttach, attachAnim,
@@ -28,7 +28,7 @@ export const ChatInput = memo(({
   bottomInset = 0,
 }: any) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [inputHeight, setInputHeight] = React.useState(44);
+  const [inputHeight, setInputHeight] = useState(44);
   const hasText = input.trim().length > 0;
 
   useEffect(() => {
@@ -71,8 +71,7 @@ export const ChatInput = memo(({
 
       <View style={[st.inputBar, { backgroundColor: colors.headerBg, borderTopColor: colors.border, paddingBottom: Math.max(bottomInset, 8) }]}>
         <View style={[st.inputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
-          {/* أيقونة المرفقات داخل الحقل */}
-          <TouchableOpacity onPress={() => setShowAttach((prev: boolean) => !prev)} style={st.attachBtnInner} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => setShowAttach((prev: boolean) => !prev)} style={st.attachBtnInner}>
             <Text style={{ fontSize: 22, color: colors.subtext, fontWeight: '300' }}>+</Text>
           </TouchableOpacity>
 
@@ -87,24 +86,16 @@ export const ChatInput = memo(({
             onContentSizeChange={(e) => { setInputHeight(e.nativeEvent.contentSize.height); }}
           />
 
-          {/* أيقونة المحادثة الصوتية داخل الحقل */}
           <TouchableOpacity onPress={onCallPress || (() => {})} style={st.callBtnInner}>
             <Phone size={18} stroke={colors.subtext} />
           </TouchableOpacity>
         </View>
 
-        {/* زر الإرسال المزدوج */}
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <TouchableOpacity
             onPress={hasText ? () => onSend && onSend() : onMicPress || (() => {})}
             disabled={loading || (!hasText && !isRecording)}
-            style={[
-              st.sendBtn,
-              {
-                backgroundColor: hasText || isRecording ? colors.accent : colors.accentLight,
-                opacity: loading ? 0.5 : 1,
-              },
-            ]}
+            style={[st.sendBtn, { backgroundColor: hasText || isRecording ? colors.accent : colors.accentLight, opacity: loading ? 0.5 : 1 }]}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#FFF" />
@@ -166,8 +157,8 @@ export const ChatInput = memo(({
 const st = StyleSheet.create({
   chipsRow: { paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
   inputBar: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
-  inputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 28, borderWidth: 1, paddingHorizontal: 8 },
   attachBtnInner: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 4 },
+  inputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 28, borderWidth: 1, paddingHorizontal: 8 },
   textInput: { flex: 1, fontSize: 16, maxHeight: 120, minHeight: 44, lineHeight: 22, paddingHorizontal: 4, paddingVertical: 10 },
   callBtnInner: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
   sendBtn: { width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },

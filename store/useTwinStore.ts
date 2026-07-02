@@ -338,14 +338,33 @@ export const useTwinStore = create<TwinStore>()(
             : `📁 Project context: ${project.title}\n💡 You can discuss this project with me.`;
         }
 
+        const userMsgId = generateId();
+        const systemMsgId = generateId();
+        
+        // بناء رسالة المستخدم
+        let userMsg = '';
+        if (isAr) {
+          userMsg = `لقد انتهيت من ${project.type === 'code_lab' ? 'مختبر البرمجة' : project.type === 'business' ? 'تحليل الأعمال' : project.type === 'content' ? 'مُحترف الكتابة' : project.type === 'dream' ? 'تفسير الأحلام' : project.type === 'study' ? 'جلسة الدراسة' : project.type === 'life_coach' ? 'جلسة التدريب' : project.type === 'task' ? 'المهمة' : 'المشروع'}: "${project.title}". أريد مناقشته معك.`;
+        } else {
+          userMsg = `I've finished the ${project.type === 'code_lab' ? 'Code Lab' : project.type === 'business' ? 'Business Analysis' : project.type === 'content' ? 'Writing Project' : project.type === 'dream' ? 'Dream Interpretation' : project.type === 'study' ? 'Study Session' : project.type === 'life_coach' ? 'Coaching Session' : project.type === 'task' ? 'Task' : 'Project'}: "${project.title}". Let's discuss it.`;
+        }
+
         set({
           activeProjectContext: project,
-          chatHistory: [{
-            id: generateId(),
-            role: 'system',
-            content: contextMsg,
-            timestamp: Date.now(),
-          }],
+          chatHistory: [
+            {
+              id: systemMsgId,
+              role: 'system',
+              content: contextMsg,
+              timestamp: Date.now(),
+            },
+            {
+              id: userMsgId,
+              role: 'user',
+              content: userMsg,
+              timestamp: Date.now() + 1,
+            },
+          ],
         });
       },
 

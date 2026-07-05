@@ -1,40 +1,76 @@
+"""
+CODE LAB ROUTES – مسارات موحدة (Code Lab + Engineering Brain)
+==============================================================
+- تحليل الأفكار، بدء المشاريع، مراجعة الكود، اتخاذ القرارات
+- Startup Mode، DevOps، Performance، Project Health
+"""
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+
 router = APIRouter(prefix="/api/code-lab", tags=["code-lab"])
 
-class ProjectRequest(BaseModel): user_id: str; name: str; project_type: str = "fastapi"
-class CodeRequest(BaseModel): user_id: str; prompt: str; lang: str = "Python"
-class DebugRequest(BaseModel): user_id: str; error: str; lang: str = "Python"
+# ============================================================
+# نماذج الطلبات
+# ============================================================
+class IdeaRequest(BaseModel): user_id: str; idea: str; lang: str = "ar"
+class ProjectRequest(BaseModel): user_id: str; idea: str; frontend: str = "react"; backend: str = "fastapi"; database: str = "postgresql"; lang: str = "ar"
 class ReviewRequest(BaseModel): user_id: str; code: str; lang: str = "Python"
-class FullStackRequest(BaseModel): user_id: str; idea: str
-class UIRequest(BaseModel): user_id: str; component_type: str; description: str; business_name: str = ""
+class DecisionRequest(BaseModel): user_id: str; question: str; options: List[str] = []; lang: str = "ar"
+class HealthRequest(BaseModel): project_id: str; lang: str = "ar"
+class DevOpsRequest(BaseModel): user_id: str; frontend: str = "react"; backend: str = "fastapi"; database: str = "postgresql"; lang: str = "ar"
 
-@router.post("/start")
-async def start(req: ProjectRequest):
-    from app.features.code_lab.sdlc_orchestrator import code_lab
-    return await code_lab.start_project(req.user_id, req.name, req.project_type)
+# ============================================================
+# المسارات
+# ============================================================
+@router.post("/analyze-idea")
+async def analyze_idea(req: IdeaRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.analyze_idea(req.user_id, req.idea, req.lang)
+
+@router.post("/start-project")
+async def start_project(req: ProjectRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    stack = {"frontend": req.frontend, "backend": req.backend, "database": req.database}
+    return await code_lab.start_project(req.user_id, req.idea, stack, req.lang)
+
+@router.post("/review-code")
+async def review_code(req: ReviewRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.review_code(req.user_id, req.code, req.lang)
+
+@router.post("/make-decision")
+async def make_decision(req: DecisionRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.make_decision(req.question, req.options, {}, req.lang)
+
+@router.get("/dashboard/{user_id}")
+async def dashboard(user_id: str, lang: str = "ar"):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.get_cto_dashboard(user_id, lang)
+
+@router.post("/startup-mode")
+async def startup_mode(req: IdeaRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.startup_mode(req.user_id, req.idea, req.lang)
+
+@router.post("/project-health")
+async def project_health(req: HealthRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.get_project_health(req.project_id, req.lang)
+
+@router.post("/generate-devops")
+async def generate_devops(req: DevOpsRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    stack = {"frontend": req.frontend, "backend": req.backend, "database": req.database}
+    return await code_lab.devops.generate_docker_files(stack, req.lang)
 
 @router.post("/generate-code")
-async def generate_code(req: CodeRequest):
-    from app.features.code_lab.sdlc_orchestrator import code_lab
-    return await code_lab.generate_code(req.user_id, req.prompt, req.lang)
+async def generate_code(req: ReviewRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.review_code(req.user_id, req.code, req.lang)
 
 @router.post("/debug")
-async def debug(req: DebugRequest):
-    from app.features.code_lab.sdlc_orchestrator import code_lab
-    return await code_lab.debug(req.user_id, req.error, req.lang)
-
-@router.post("/review")
-async def review(req: ReviewRequest):
-    from app.features.code_lab.sdlc_orchestrator import code_lab
-    return await code_lab.review(req.user_id, req.code, req.lang)
-
-@router.post("/full-project")
-async def full_project(req: FullStackRequest):
-    from app.features.code_lab.sdlc_orchestrator import code_lab
-    return await code_lab.generate_full_project(req.user_id, req.idea)
-
-@router.post("/generate-ui")
-async def generate_ui(req: UIRequest):
-    from app.features.code_lab.sdlc_orchestrator import code_lab
-    return await code_lab.generate_ui(req.user_id, req.component_type, req.description, req.business_name)
+async def debug(req: ReviewRequest):
+    from app.features.code_lab.code_lab_orchestrator import code_lab
+    return await code_lab.review_code(req.user_id, req.code, req.lang)

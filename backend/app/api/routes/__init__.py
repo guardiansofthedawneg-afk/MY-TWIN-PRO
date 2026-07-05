@@ -1,9 +1,7 @@
-"""
-API Routes – جميع مسارات التطبيق
-==================================
-- chat, auth, profile, memories, goals, feedback, referral, onboarding
-- account, push, tasks, calendar, ads, features, stats, dev, voice
-- study (ATHENA), business (GROWTH-HIVE), creator, code_lab, life_coach
-- dreams, smart_home, pass (P.A.S.S.)
-- reports, graph, recommendations, meta, relationship, ai_trainer
-"""
+from . import chat
+from . import auth
+from . import life_coach_routes
+from . import code_lab_routes
+from . import projects
+
+__all__ = ["chat", "auth", "life_coach_routes", "code_lab_routes", "projects"]

@@ -1,401 +1,288 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Alert, TextInput, Modal, RefreshControl,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
+  RefreshControl, Alert, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTwinStore } from '../store/useTwinStore';
-import { useProjectStore, ProjectType, ProjectItem } from '../store/useProjectStore';
 import { useTheme } from '../utils/theme';
 import { router } from 'expo-router';
+import { apiGet, apiDelete } from '../lib/httpClient';
 import {
-  ArrowLeft, Plus, Trash2, FolderOpen, Clock, ChevronRight,
-  X, Search, Sparkles, RefreshCw, Filter, MessageSquare,
-  GraduationCap, Code2, TrendingUp, Heart, ImageIcon,
-  Moon, PenLine, Home, CheckSquare, Layers,
+  Code2, Heart, MessageCircle, Search, Trash2, X,
+  Sparkles, GraduationCap, TrendingUp, PenLine, Moon,
+  FolderOpen, ChevronRight, Clock, Filter,
 } from 'lucide-react-native';
 
-// ── أيقونة كل نوع مشروع ─────────────────────────────────
-const TYPE_ICON: Record<ProjectType, React.ComponentType<any>> = {
-  chat: MessageSquare,
-  study: GraduationCap,
-  code_lab: Code2,
-  business: TrendingUp,
-  life_coach: Heart,
-  dream: Moon,
-  content: PenLine,
-  image_lab: ImageIcon,
-  smart_home: Home,
-  task: CheckSquare,
+// أيقونات وألوان حسب نوع المشروع
+const PROJECT_TYPES: Record<string, { icon: any; color: string; label_ar: string; label_en: string }> = {
+  chat: { icon: MessageCircle, color: '#7C3AED', label_ar: 'محادثة', label_en: 'Chat' },
+  life_coach: { icon: Heart, color: '#EC4899', label_ar: 'مدرب الحياة', label_en: 'Life Coach' },
+  code_lab: { icon: Code2, color: '#10B981', label_ar: 'المعمل', label_en: 'Code Lab' },
+  study: { icon: GraduationCap, color: '#3B82F6', label_ar: 'دراسة', label_en: 'Study' },
+  business: { icon: TrendingUp, color: '#F59E0B', label_ar: 'تحليل أعمال', label_en: 'Business' },
+  content: { icon: PenLine, color: '#8B5CF6', label_ar: 'محتوى', label_en: 'Content' },
+  dream: { icon: Moon, color: '#6366F1', label_ar: 'حلم', label_en: 'Dream' },
+  default: { icon: FolderOpen, color: '#6B7280', label_ar: 'مشروع', label_en: 'Project' },
 };
 
-const TYPE_LABEL: Record<string, { ar: string; en: string }> = {
-  chat:        { ar: 'محادثة',        en: 'Chat' },
-  study:       { ar: 'دراسة',         en: 'Study' },
-  code_lab:    { ar: 'برمجة',         en: 'Code Lab' },
-  business:    { ar: 'أعمال',         en: 'Business' },
-  life_coach:  { ar: 'تدريب حياة',    en: 'Life Coach' },
-  dream:       { ar: 'تفسير حلم',     en: 'Dream' },
-  content:     { ar: 'محتوى',         en: 'Content' },
-  image_lab:   { ar: 'صورة',          en: 'Image' },
-  smart_home:  { ar: 'منزل ذكي',      en: 'Smart Home' },
-  task:        { ar: 'مهمة',          en: 'Task' },
-};
-
-const ALL_TYPES: ProjectType[] = [
-  'chat', 'study', 'code_lab', 'business', 'life_coach',
-  'dream', 'content', 'image_lab', 'smart_home', 'task',
+const TABS = [
+  { key: 'all', label_ar: 'الكل', label_en: 'All' },
+  { key: 'chat', label_ar: 'المحادثات', label_en: 'Chats' },
+  { key: 'life_coach', label_ar: 'مدرب الحياة', label_en: 'Life Coach' },
+  { key: 'code_lab', label_ar: 'المعمل', label_en: 'Code Lab' },
 ];
-
-const T = {
-  ar: {
-    title: 'مشاريع الوعي',
-    subtitle: 'كل ما يصنعه وعي توأمك يُحفظ هنا',
-    searchPlaceholder: 'ابحث في المشاريع...',
-    filterAll: 'الكل',
-    noProjects: 'لا توجد مشاريع بعد',
-    noProjectsDesc: 'استخدم أي قدرة وسيُحفظ مشروعك تلقائياً هنا',
-    loading: 'جاري تحميل المشاريع...',
-    delete: 'حذف',
-    deleteConfirm: 'هل تريد حذف هذا المشروع نهائياً؟',
-    deleteCancel: 'إلغاء',
-    deleteError: 'فشل حذف المشروع',
-    openProject: 'فتح',
-  },
-  en: {
-    title: 'Mind Projects',
-    subtitle: 'Everything your Twin creates is saved here',
-    searchPlaceholder: 'Search projects...',
-    filterAll: 'All',
-    noProjects: 'No projects yet',
-    noProjectsDesc: 'Use any power and your project will be saved here automatically',
-    loading: 'Loading projects...',
-    delete: 'Delete',
-    deleteConfirm: 'Delete this project permanently?',
-    deleteCancel: 'Cancel',
-    deleteError: 'Failed to delete project',
-    openProject: 'Open',
-  },
-};
 
 export default function History() {
   const insets = useSafeAreaInsets();
-  const { lang, userId } = useTwinStore();
+  const { lang, userId, hasHydrated } = useTwinStore();
   const isAr = lang === 'ar';
   const isDark = useTheme().isDark;
-  const t = T[lang] || T['ar'];
+  const t = useCallback((ar: string, en: string) => (isAr ? ar : en), [isAr]);
 
-  const {
-    projects,
-    loading,
-    fetchProjects,
-    deleteProject,
-    searchProjects,
-    getProjectsByType,
-  } = useProjectStore();
-
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ProjectType | 'all'>('all');
-  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
 
-  const colors = {
+  const colors = useMemo(() => ({
     bg: isDark ? '#0A0014' : '#FAFAF8',
     card: isDark ? '#1A1226' : '#FFFFFF',
     text: isDark ? '#FFFFFF' : '#2D2D2D',
-    subtext: isDark ? '#A78BFA' : '#7C6B99',
+    subtext: isDark ? '#A78BFA' : '#6B7280',
     accent: '#7C3AED',
-    accentLight: '#7C3AED15',
     border: isDark ? '#2D1B4D' : '#E8E8E3',
     inputBg: isDark ? '#161122' : '#FDFDF9',
     danger: '#EF4444',
-    chipActive: '#7C3AED',
-    chipInactive: isDark ? '#2D1B4D' : '#F0EBF8',
-    chipTextActive: '#FFFFFF',
-    chipTextInactive: isDark ? '#A78BFA' : '#7C6B99',
-  };
+  }), [isDark]);
 
-  // ── جلب المشاريع ─────────────────────────────────────
-  const loadProjects = useCallback(async (showRefresh = false) => {
-    if (showRefresh) setRefreshing(true);
+  const fetchProjects = useCallback(async () => {
+    if (!userId) return;
     try {
-      await fetchProjects(userId);
+      const res = await apiGet(`/api/projects?user_id=${userId}`);
+      if (res && Array.isArray(res.projects)) {
+        setProjects(res.projects);
+      } else if (Array.isArray(res)) {
+        setProjects(res);
+      } else {
+        setProjects([]);
+      }
     } catch (e) {
-      // المخزن المحلي لديه نسخة
+      console.warn('History fetch failed', e);
+      setProjects([]);
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchProjects, userId]);
+  }, [userId]);
 
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    if (!hasHydrated) return;
+    fetchProjects();
+  }, [hasHydrated]);
 
-  // ── فلترة المشاريع ───────────────────────────────────
-  const filteredProjects = (() => {
-    let list: ProjectItem[] = [];
-
+  const filteredProjects = useMemo(() => {
+    let result = projects;
+    if (activeTab !== 'all') {
+      result = result.filter(p => p.type === activeTab);
+    }
     if (searchQuery.trim()) {
-      list = searchProjects(searchQuery);
-    } else if (activeFilter === 'all') {
-      list = projects;
-    } else {
-      list = getProjectsByType(activeFilter);
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        (p.title || '').toLowerCase().includes(query)
+      );
     }
+    return [...result].sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [projects, activeTab, searchQuery]);
 
-    // إذا بحثنا بكلمة مع فلتر نوع
-    if (searchQuery.trim() && activeFilter !== 'all') {
-      list = list.filter((p) => p.type === activeFilter);
-    }
-
-    return list.sort(
-      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  const handleDelete = useCallback((projectId: string) => {
+    Alert.alert(
+      t('حذف المشروع', 'Delete Project'),
+      t('هل أنت متأكد؟', 'Are you sure?'),
+      [
+        { text: t('إلغاء', 'Cancel'), style: 'cancel' },
+        {
+          text: t('حذف', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiDelete(`/api/projects?project_id=${projectId}`);
+              setProjects(prev => prev.filter(p => p.id !== projectId));
+            } catch (e) {
+              Alert.alert(t('خطأ', 'Error'), t('فشل الحذف', 'Failed to delete'));
+            }
+          },
+        },
+      ]
     );
-  })();
+  }, [t]);
 
-  // ── حذف مشروع ────────────────────────────────────────
-  const handleDelete = async (projectId: string) => {
-    const success = await deleteProject(projectId, userId);
-    if (!success) {
-      Alert.alert(isAr ? 'خطأ' : 'Error', t.deleteError);
-    }
-    setDeleteModalId(null);
+  const handleDiscuss = useCallback((project: any) => {
+    router.push({
+      pathname: '/chat',
+      params: { projectId: project.id, projectType: project.type }
+    } as any);
+  }, []);
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      if (days === 0) return t('اليوم', 'Today');
+      if (days === 1) return t('أمس', 'Yesterday');
+      if (days < 7) return t(`منذ ${days} أيام`, `${days} days ago`);
+      return date.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US');
+    } catch { return ''; }
   };
 
-  // ── فتح مشروع حسب نوعه ───────────────────────────────
-  const handleOpenProject = (project: ProjectItem) => {
-    const routes: Record<string, string> = {
-      chat: '/chat',
-      study: '/features/study-mode',
-      code_lab: '/features/code-lab',
-      business: '/features/business-analyzer',
-      life_coach: '/features/life-coach',
-      dream: '/features/dreams',
-      content: '/features/content-creator',
-      image_lab: '/features/image-creator',
-      smart_home: '/features/smart-home',
-      task: '/features/task-manager',
-    };
-    const route = routes[project.type] || '/chat';
-    router.push(route as any);
-  };
-
-  if (loading && projects.length === 0) {
+  if (!hasHydrated || loading) {
     return (
       <View style={[st.root, { paddingTop: insets.top, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={{ color: colors.subtext, marginTop: 12, fontSize: 15 }}>{t.loading}</Text>
+        <Text style={{ color: colors.subtext, marginTop: 12 }}>
+          {t('جاري تحميل المشاريع...', 'Loading projects...')}
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={[st.root, { paddingTop: insets.top, backgroundColor: colors.bg }]}>
-      {/* ── الهيدر ─────────────────────────────────── */}
-      <View style={[st.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <ArrowLeft size={24} stroke={colors.text} />
-        </TouchableOpacity>
-        <Text style={[st.headerTitle, { color: colors.text }]}>{t.title}</Text>
-        <View style={{ width: 40 }} />
+      <View style={st.header}>
+        <Text style={[st.title, { color: colors.text }]}>
+          {t('سجل المشاريع', 'Project History')}
+        </Text>
+        <Text style={[st.subtitle, { color: colors.subtext }]}>
+          {t(`${filteredProjects.length} مشروع`, `${filteredProjects.length} projects`)}
+        </Text>
       </View>
 
-      {/* ── شريط البحث ─────────────────────────────── */}
-      <View style={st.searchRow}>
-        <View style={[st.searchWrap, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-          <Search size={18} stroke={colors.subtext} />
-          <TextInput
-            style={[st.searchInput, { color: colors.text, textAlign: isAr ? 'right' : 'left' }]}
-            placeholder={t.searchPlaceholder}
-            placeholderTextColor={colors.subtext}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={18} stroke={colors.subtext} />
-            </TouchableOpacity>
-          )}
-        </View>
-        <TouchableOpacity
-          style={[st.refreshBtn, { backgroundColor: colors.accentLight }]}
-          onPress={() => loadProjects(true)}
-        >
-          <RefreshCw size={20} stroke={colors.accent} />
-        </TouchableOpacity>
+      <View style={[st.searchBar, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+        <Search size={18} stroke={colors.subtext} />
+        <TextInput
+          style={[st.searchInput, { color: colors.text }]}
+          placeholder={t('ابحث عن مشروع...', 'Search projects...')}
+          placeholderTextColor={colors.subtext}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery ? (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <X size={18} stroke={colors.subtext} />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      {/* ── فلترة الأنواع ───────────────────────────── */}
-      <ScrollView
+      <FlatList
         horizontal
+        data={TABS}
+        keyExtractor={(item) => item.key}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={st.filterRow}
-      >
-        {[
-          { key: 'all' as const, label: t.filterAll, Icon: Layers },
-          ...ALL_TYPES.map((type) => ({
-            key: type,
-            label: isAr ? TYPE_LABEL[type].ar : TYPE_LABEL[type].en,
-            Icon: TYPE_ICON[type],
-          })),
-        ].map(({ key, label, Icon }) => {
-          const active = activeFilter === key;
+        contentContainerStyle={st.tabsContainer}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[st.tab, { borderColor: activeTab === item.key ? colors.accent : colors.border }, activeTab === item.key && { backgroundColor: colors.accent + '15' }]}
+            onPress={() => setActiveTab(item.key)}
+          >
+            <Text style={[st.tabText, { color: activeTab === item.key ? colors.accent : colors.subtext }]}>
+              {t(item.label_ar, item.label_en)}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
+
+      <FlatList
+        data={filteredProjects}
+        keyExtractor={(item) => item.id || Math.random().toString()}
+        contentContainerStyle={st.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchProjects(); }} colors={[colors.accent]} tintColor={colors.accent} />}
+        renderItem={({ item }) => {
+          const typeInfo = PROJECT_TYPES[item.type] || PROJECT_TYPES.default;
+          const Icon = typeInfo.icon;
+
           return (
             <TouchableOpacity
-              key={key}
-              style={[
-                st.filterChip,
-                { backgroundColor: active ? colors.chipActive : colors.chipInactive },
-              ]}
-              onPress={() => setActiveFilter(key)}
+              style={[st.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleDiscuss(item)}
+              activeOpacity={0.7}
             >
-              <Icon size={14} stroke={active ? colors.chipTextActive : colors.chipTextInactive} />
-              <Text style={[st.filterChipText, { color: active ? colors.chipTextActive : colors.chipTextInactive }]}>
-                {label}
-              </Text>
+              <View style={[st.iconWrap, { backgroundColor: typeInfo.color + '15' }]}>
+                <Icon size={22} stroke={typeInfo.color} />
+              </View>
+
+              <View style={st.cardContent}>
+                <Text style={[st.cardTitle, { color: colors.text }]} numberOfLines={2}>
+                  {item.title || t('بدون عنوان', 'Untitled')}
+                </Text>
+                <View style={st.cardMeta}>
+                  <View style={[st.typeBadge, { backgroundColor: typeInfo.color + '20' }]}>
+                    <Text style={[st.typeText, { color: typeInfo.color }]}>
+                      {t(typeInfo.label_ar, typeInfo.label_en)}
+                    </Text>
+                  </View>
+                  <Clock size={12} stroke={colors.subtext} />
+                  <Text style={[st.dateText, { color: colors.subtext }]}>
+                    {formatDate(item.created_at)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={st.actions}>
+                <TouchableOpacity style={[st.actionBtn, { backgroundColor: colors.accent + '15' }]} onPress={() => handleDiscuss(item)}>
+                  <MessageCircle size={16} stroke={colors.accent} />
+                </TouchableOpacity>
+                <TouchableOpacity style={[st.actionBtn, { backgroundColor: colors.danger + '15' }]} onPress={() => handleDelete(item.id)}>
+                  <Trash2 size={16} stroke={colors.danger} />
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           );
-        })}
-      </ScrollView>
-
-      {/* ── قائمة المشاريع ──────────────────────────── */}
-      <ScrollView
-        contentContainerStyle={st.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => loadProjects(true)} colors={[colors.accent]} />
+        }}
+        ListEmptyComponent={
+          <View style={st.empty}>
+            <FolderOpen size={56} stroke={colors.subtext} opacity={0.4} />
+            <Text style={[st.emptyTitle, { color: colors.subtext }]}>
+              {t('لا توجد مشاريع', 'No projects yet')}
+            </Text>
+            <Text style={[st.emptySub, { color: colors.subtext }]}>
+              {t('جميع محادثاتك ومشاريعك ستظهر هنا', 'All your conversations and projects will appear here')}
+            </Text>
+          </View>
         }
-      >
-        <Text style={[st.subtitle, { color: colors.subtext }]}>{t.subtitle}</Text>
-
-        {filteredProjects.length === 0 ? (
-          <View style={st.emptyContainer}>
-            <FolderOpen size={56} stroke={colors.subtext} />
-            <Text style={[st.emptyText, { color: colors.subtext }]}>{t.noProjects}</Text>
-            <Text style={[st.emptyDesc, { color: colors.subtext }]}>{t.noProjectsDesc}</Text>
-          </View>
-        ) : (
-          filteredProjects.map((item) => {
-            const IconComp = TYPE_ICON[item.type] || MessageSquare;
-            const typeLabel = isAr ? TYPE_LABEL[item.type]?.ar : TYPE_LABEL[item.type]?.en;
-
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={[st.projectCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => handleOpenProject(item)}
-                activeOpacity={0.8}
-                onLongPress={() => setDeleteModalId(item.id)}
-              >
-                {/* أيقونة النوع */}
-                <View style={[st.projectIcon, { backgroundColor: colors.accentLight }]}>
-                  <IconComp size={22} stroke={colors.accent} />
-                </View>
-
-                {/* معلومات المشروع */}
-                <View style={st.projectInfo}>
-                  <View style={st.projectTitleRow}>
-                    <Text style={[st.projectName, { color: colors.text }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    {item.pinned && <Sparkles size={14} stroke="#F59E0B" />}
-                  </View>
-
-                  <Text style={[st.projectPreview, { color: colors.subtext }]} numberOfLines={2}>
-                    {item.preview || (isAr ? 'لا توجد معاينة' : 'No preview')}
-                  </Text>
-
-                  <View style={st.projectMeta}>
-                    {/* شارة النوع */}
-                    <View style={[st.typeBadge, { backgroundColor: colors.chipInactive }]}>
-                      <IconComp size={10} stroke={colors.chipTextInactive} />
-                      <Text style={[st.typeBadgeText, { color: colors.chipTextInactive }]}>
-                        {typeLabel}
-                      </Text>
-                    </View>
-
-                    <Clock size={12} stroke={colors.subtext} />
-                    <Text style={[st.projectDate, { color: colors.subtext }]}>
-                      {new Date(item.created_at).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
-                        year: 'numeric', month: 'short', day: 'numeric',
-                      })}
-                    </Text>
-
-                    {item.tags && item.tags.length > 0 && (
-                      <Text style={[st.tagCount, { color: colors.subtext }]}>
-                        +{item.tags.length}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-
-                {/* زر الفتح */}
-                <ChevronRight size={20} stroke={colors.subtext} />
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
-
-      {/* ── مودال تأكيد الحذف ───────────────────────── */}
-      <Modal visible={!!deleteModalId} transparent animationType="fade" onRequestClose={() => setDeleteModalId(null)}>
-        <TouchableOpacity style={st.modalOverlay} activeOpacity={1} onPress={() => setDeleteModalId(null)}>
-          <View style={[st.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[st.modalTitle, { color: colors.text }]}>{t.delete}</Text>
-            <Text style={[st.modalDesc, { color: colors.subtext }]}>{t.deleteConfirm}</Text>
-            <View style={st.modalActions}>
-              <TouchableOpacity
-                style={[st.modalBtn, { backgroundColor: colors.chipInactive }]}
-                onPress={() => setDeleteModalId(null)}
-              >
-                <Text style={[st.modalBtnText, { color: colors.text }]}>{t.deleteCancel}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[st.modalBtn, { backgroundColor: colors.danger }]}
-                onPress={() => deleteModalId && handleDelete(deleteModalId)}
-              >
-                <Trash2 size={16} stroke="#FFF" />
-                <Text style={[st.modalBtnText, { color: '#FFF' }]}>{t.delete}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      />
     </View>
   );
 }
 
 const st = StyleSheet.create({
   root: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 0.5 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  searchWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, padding: 10, gap: 8 },
-  searchInput: { flex: 1, fontSize: 14 },
-  refreshBtn: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  filterRow: { paddingHorizontal: 12, paddingVertical: 6, gap: 8, flexDirection: 'row' },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  filterChipText: { fontSize: 12, fontWeight: '600' },
-  list: { padding: 16, paddingBottom: 50 },
-  subtitle: { fontSize: 14, textAlign: 'center', marginBottom: 20, lineHeight: 22 },
-  projectCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
-  projectIcon: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  projectInfo: { flex: 1, marginRight: 8 },
-  projectTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  projectName: { fontSize: 15, fontWeight: '700', flex: 1 },
-  projectPreview: { fontSize: 12, lineHeight: 18, marginBottom: 8 },
-  projectMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  typeBadgeText: { fontSize: 10, fontWeight: '600' },
-  projectDate: { fontSize: 11 },
-  tagCount: { fontSize: 10, fontWeight: '600' },
-  emptyContainer: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 18, fontWeight: '700', marginTop: 16, marginBottom: 8 },
-  emptyDesc: { fontSize: 14, textAlign: 'center', marginBottom: 24, lineHeight: 22 },
-  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalContent: { width: '82%', borderRadius: 20, padding: 24 },
-  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 12 },
-  modalDesc: { fontSize: 14, lineHeight: 22, marginBottom: 24 },
-  modalActions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
-  modalBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
-  modalBtnText: { fontWeight: '700', fontSize: 14 },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  title: { fontSize: 26, fontWeight: '800', marginBottom: 4 },
+  subtitle: { fontSize: 14, fontWeight: '500' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginVertical: 12, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
+  searchInput: { flex: 1, fontSize: 15 },
+  tabsContainer: { paddingHorizontal: 16, marginBottom: 12, gap: 8 },
+  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, marginRight: 8 },
+  tabText: { fontSize: 13, fontWeight: '600' },
+  list: { paddingHorizontal: 16, paddingBottom: 40 },
+  card: { flexDirection: 'row', alignItems: 'center', borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 10, gap: 12 },
+  iconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  cardContent: { flex: 1, gap: 6 },
+  cardTitle: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  typeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  typeText: { fontSize: 10, fontWeight: '700' },
+  dateText: { fontSize: 11, fontWeight: '500' },
+  actions: { gap: 8 },
+  actionBtn: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  empty: { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', marginTop: 16, marginBottom: 8 },
+  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });

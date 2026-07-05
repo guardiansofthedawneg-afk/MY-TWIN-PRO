@@ -2,7 +2,8 @@ import { useTwinStore } from '../store/useTwinStore';
 
 export interface ThemeColors {
   bg: string; card: string; text: string; subtext: string;
-  accent: string; border: string; inputBg: string;
+  accent: string; accentLight: string; accentGlow: string;
+  border: string; inputBg: string;
   success: string; danger: string; warning: string;
   bondLow: string; bondMedium: string; bondHigh: string;
   energyLow: string; energyMedium: string; energyHigh: string;
@@ -15,7 +16,8 @@ export interface ThemeColors {
 
 const DARK_THEME: ThemeColors = {
   bg: '#0F0A1A', card: '#1A1226', text: '#FFFFFF', subtext: '#A78BFA',
-  accent: '#7C3AED', border: '#2D1B4D', inputBg: '#161122',
+  accent: '#7C3AED', accentLight: '#7C3AED15', accentGlow: '#7C3AED30',
+  border: '#2D1B4D', inputBg: '#161122',
   success: '#10B981', danger: '#EF4444', warning: '#F59E0B',
   bondLow: '#60A5FA', bondMedium: '#A855F7', bondHigh: '#EC4899',
   energyLow: '#EF4444', energyMedium: '#F59E0B', energyHigh: '#10B981',
@@ -28,7 +30,8 @@ const DARK_THEME: ThemeColors = {
 
 const LIGHT_THEME: ThemeColors = {
   bg: '#FAFAF8', card: '#FFFFFF', text: '#2D2D2D', subtext: '#7C6B99',
-  accent: '#7C3AED', border: '#E8E8E3', inputBg: '#FDFDF9',
+  accent: '#7C3AED', accentLight: '#7C3AED15', accentGlow: '#7C3AED30',
+  border: '#E8E8E3', inputBg: '#FDFDF9',
   success: '#10B981', danger: '#EF4444', warning: '#F59E0B',
   bondLow: '#3B82F6', bondMedium: '#A855F7', bondHigh: '#EC4899',
   energyLow: '#DC2626', energyMedium: '#D97706', energyHigh: '#16A34A',
@@ -44,19 +47,19 @@ export function useTheme(): ThemeColors {
   return theme === 'dark' ? DARK_THEME : LIGHT_THEME;
 }
 
-export function getBondColor(bondLevel: number, colors: any): string {
+export function getBondColor(bondLevel: number, colors: ThemeColors): string {
   if (bondLevel >= 70) return colors.bondHigh;
   if (bondLevel >= 40) return colors.bondMedium;
   return colors.bondLow;
 }
 
-export function getEnergyColor(energy: number, colors: any): string {
+export function getEnergyColor(energy: number, colors: ThemeColors): string {
   if (energy >= 70) return colors.energyHigh;
   if (energy >= 30) return colors.energyMedium;
   return colors.energyLow;
 }
 
-export function getEmotionColor(emotion: string, colors: any): string {
+export function getEmotionColor(emotion: string, colors: ThemeColors): string {
   const map: Record<string, string> = {
     joy: colors.emotionJoy, sadness: colors.emotionSad, fear: colors.emotionFear,
     love: colors.emotionLove, anger: colors.emotionAnger,

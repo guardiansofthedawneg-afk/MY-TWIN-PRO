@@ -104,6 +104,7 @@ class LifeCoachOrchestrator(BasePlugin):
         journey = self.journey.get_current_stage(user_context.get("start_date", datetime.now(timezone.utc).isoformat()))
 
         await self._save_session(user_id, topic, {"emotion": emotion_result, "clinical": clinical_result, "long_term": long_term}, plan)
+        await self._save_session_to_history(user_id, topic, {"analysis": emotion_result, "plan": plan, "coach_reply": ai_response})
         await self._notify_consciousness(user_id, emotion_result)
 
         return {
@@ -227,5 +228,25 @@ class LifeCoachOrchestrator(BasePlugin):
         tips = ["خذ 5 دقائق للتنفس العميق", "اكتب 3 أشياء جيدة اليوم", "اشرب كوب ماء الآن"] if lang == "ar" else ["Take 5 min deep breathing", "Write 3 good things today", "Drink water now"]
         return random.choice(tips)
 
+
+
+    async def _save_session_to_history(self, user_id: str, topic: str, result: Dict):
+        """حفظ الجلسة كمشروع في History"""
+        try:
+            if self._memory_client:
+                await self._memory_client.store_entity("project", user_id, {
+                    "title": f"جلسة تدريب: {topic[:50]}",
+                    "type": "life_coach",
+                    "data": {
+                        "topic": topic,
+                        "analysis": result.get("analysis", {}),
+                        "plan": result.get("plan", {}),
+                        "coach_reply": result.get("coach_reply", "")
+                    },
+                    "created_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+                    "user_id": user_id
+                })
+        except Exception as e:
+            logger.warning(f"Failed to save life coach session: {e}")
 
 life_coach = LifeCoachOrchestrator()

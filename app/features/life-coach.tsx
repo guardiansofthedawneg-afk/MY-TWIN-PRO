@@ -16,8 +16,6 @@ import {
   ArrowUpRight,
 } from 'lucide-react-native';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-
 let Haptics: any = null;
 try { Haptics = require('expo-haptics'); } catch(e) {}
 
@@ -184,21 +182,16 @@ const LivingAvatar = React.memo(({ avatarUrl, energyColor, isDark }: {
 
   return (
     <View style={laStyles.container}>
-      {/* Glow خلفي متنفس */}
       <Animated.View style={[
         laStyles.glow,
         { backgroundColor: energyColor, opacity: breathAnim }
       ]} />
-
-      {/* حلقة المدار */}
       <Animated.View style={[
         laStyles.orbitRing,
         { borderColor: energyColor + '25', transform: [{ rotate }] }
       ]}>
         <View style={[laStyles.orbitDot, { backgroundColor: energyColor }]} />
       </Animated.View>
-
-      {/* الأفاتار النابض */}
       <Animated.View style={[laStyles.avatarWrap, { transform: [{ scale: pulseAnim }] }]}>
         <View style={[laStyles.avatarRing, { borderColor: energyColor }]}>
           {avatarUrl ? (
@@ -210,8 +203,6 @@ const LivingAvatar = React.memo(({ avatarUrl, energyColor, isDark }: {
           )}
         </View>
       </Animated.View>
-
-      {/* نقطة حالة حية */}
       <View style={[laStyles.statusDot, { backgroundColor: energyColor }]} />
     </View>
   );
@@ -539,7 +530,6 @@ export default function LifeCoach() {
     return energy > 60 ? colors.success : energy > 30 ? colors.warning : colors.danger;
   }, [data, colors]);
 
-  // جلب البيانات الحية
   const fetchData = useCallback(async () => {
     if (!userId) return;
     try {
@@ -639,21 +629,18 @@ export default function LifeCoach() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* الطبقة 1: TWIN PRESENCE */}
           <View style={styles.presenceLayer}>
             <LivingAvatar
               avatarUrl={data?.dashboard?.avatar_url}
               energyColor={energyColor}
               isDark={isDark}
             />
-
             <WelcomeMessage
               text={data?.welcomeMessage || ''}
               isActive={true}
               colors={colors}
               isAr={isAr}
             />
-
             <View style={styles.statusRow}>
               <EmotionRing emotion={data?.emotion || 'neutral'} colors={colors} />
               <View style={[styles.twinStatusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -667,7 +654,6 @@ export default function LifeCoach() {
             </View>
           </View>
 
-          {/* الطبقة 2: CONVERSATION */}
           {data?.lastMessage && (
             <ConversationCard
               lastMessage={data.lastMessage}
@@ -690,7 +676,6 @@ export default function LifeCoach() {
             <ArrowUpRight size={18} stroke="#FFF" />
           </TouchableOpacity>
 
-          {/* الطبقة 3: TODAY'S FOCUS */}
           <TodayFocus
             mission={data?.todayFocus}
             colors={colors}
@@ -698,12 +683,10 @@ export default function LifeCoach() {
             onComplete={handleMissionComplete}
           />
 
-          {/* الطبقة 4: LIFE INSIGHT */}
           {data?.lifeInsight && (
             <LifeInsight text={data.lifeInsight} colors={colors} isAr={isAr} />
           )}
 
-          {/* الطبقة 5: JOURNEY TIMELINE */}
           <View style={styles.journeyHeader}>
             <TrendingUp size={20} stroke={colors.accent} />
             <Text style={[styles.journeyTitle, { color: colors.text }]}>
@@ -717,7 +700,6 @@ export default function LifeCoach() {
             onSeeAll={() => router.push('/stories')}
           />
 
-          {/* ذكريات حية */}
           {data?.memories?.length > 0 && (
             <View style={styles.memorySection}>
               <View style={styles.memoryHeader}>
@@ -732,7 +714,6 @@ export default function LifeCoach() {
             </View>
           )}
 
-          {/* إدخال سريع */}
           <View style={[styles.quickInputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {!showQuickInput ? (
               <TouchableOpacity
@@ -774,9 +755,6 @@ export default function LifeCoach() {
   );
 }
 
-// ============================================================
-// الأنماط
-// ============================================================
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { padding: 20, paddingTop: 8 },
@@ -798,4 +776,8 @@ const styles = StyleSheet.create({
   quickInputActive: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 4 },
   quickInputField: { flex: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, maxHeight: 100 },
   quickSendBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+});
+const st3 = StyleSheet.create({
+  discussBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, marginTop: 12 },
+  discussBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
 });

@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import {
-  StyleSheet, Animated, View, Text, TouchableOpacity, ActivityIndicator
-} from "react-native";
+import { StyleSheet, Animated, View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTwinStore } from "../store/useTwinStore";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import SideMenu from '../components/SideMenu';
+import Header from '../components/Header';
 import { Sparkles } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { apiGet } from '../lib/httpClient';
@@ -83,7 +83,7 @@ const ConsciousnessCard = React.memo(({ visible, onClose }: { visible: boolean; 
 });
 
 /* ============================================================
-   المكون الجذري
+   المكون الجذري — محصّن ضد أي crash
    ============================================================ */
 export default function RootLayout() {
   const hasHydrated = useTwinStore(s => s.hasHydrated);
@@ -91,22 +91,10 @@ export default function RootLayout() {
   const twinEnergy = useTwinStore(s => s.twinEnergy);
   const menuVisible = useTwinStore(s => s.menuVisible);
   const closeMenu = useTwinStore(s => s.closeMenu);
-  const lang = useTwinStore(s => s.lang);
   const userId = useTwinStore(s => s.userId);
   const isDark = theme === 'dark';
   const [currentEmotion, setCurrentEmotion] = useState('neutral');
   const [showConsciousnessCard, setShowConsciousnessCard] = useState(false);
-  const [SideMenuComp, setSideMenuComp] = useState<any>(null);
-
-  // ✅ تحميل SideMenu بأمان بدون import مباشر
-  useEffect(() => {
-    try {
-      const mod = require('../components/SideMenu');
-      setSideMenuComp(() => mod.default || mod);
-    } catch (e) {
-      console.warn('[Layout] SideMenu load failed:', e);
-    }
-  }, []);
 
   useEffect(() => {
     if (twinEnergy > 80) setCurrentEmotion('joy');
@@ -127,6 +115,7 @@ export default function RootLayout() {
     if (typeof closeMenu === 'function') closeMenu();
   }, [closeMenu]);
 
+  // 🛡️ شاشة التحميل — تمنع White Screen نهائياً
   if (!hasHydrated) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0014' }}>
@@ -142,46 +131,49 @@ export default function RootLayout() {
         <StatusBar style={isDark ? 'light' : 'dark'} />
         <ParticleField emotion={currentEmotion} />
 
-        {SideMenuComp ? (
-          <SideMenuComp visible={menuVisible} onClose={handleCloseMenu}>
-            <Stack screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 150 }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="splash" />
-              <Stack.Screen name="twin-mind" />
-              <Stack.Screen name="chat" />
-              <Stack.Screen name="login" />
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen name="museum" />
-              <Stack.Screen name="memories" />
-              <Stack.Screen name="relationship" />
-              <Stack.Screen name="stories" />
-              <Stack.Screen name="profile" />
-              <Stack.Screen name="settings" />
-              <Stack.Screen name="subscription" />
-              <Stack.Screen name="referral" />
-              <Stack.Screen name="features/index" />
-              <Stack.Screen name="features/study-mode" />
-              <Stack.Screen name="features/code-lab" />
-              <Stack.Screen name="features/business-analyzer" />
-              <Stack.Screen name="features/life-coach" />
-              <Stack.Screen name="features/image-creator" />
-              <Stack.Screen name="features/dreams" />
-              <Stack.Screen name="features/content-creator" />
-              <Stack.Screen name="features/smart-home" />
-              <Stack.Screen name="features/task-manager" />
-            </Stack>
-          </SideMenuComp>
-        ) : (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#0A0014' : '#FAFAF8' }}>
-            <ActivityIndicator size="large" color="#7C3AED" />
-          </View>
-        )}
+        <SideMenu visible={menuVisible} onClose={handleCloseMenu}>
+          <Stack
+            screenOptions={{
+              headerShown: true,
+              header: () => <Header />,
+              animation: 'fade',
+              animationDuration: 150,
+              contentStyle: { backgroundColor: isDark ? '#0A0014' : '#FAFAF8' },
+            }}
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="splash" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="twin-mind" />
+            <Stack.Screen name="chat" />
+            <Stack.Screen name="museum" />
+            <Stack.Screen name="memories" />
+            <Stack.Screen name="relationship" />
+            <Stack.Screen name="stories" />
+            <Stack.Screen name="profile" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="subscription" />
+            <Stack.Screen name="referral" />
+            <Stack.Screen name="features/index" />
+            <Stack.Screen name="features/study-mode" />
+            <Stack.Screen name="features/code-lab" />
+            <Stack.Screen name="features/business-analyzer" />
+            <Stack.Screen name="features/life-coach" />
+            <Stack.Screen name="features/image-creator" />
+            <Stack.Screen name="features/dreams" />
+            <Stack.Screen name="features/content-creator" />
+            <Stack.Screen name="features/smart-home" />
+            <Stack.Screen name="features/task-manager" />
+          </Stack>
+        </SideMenu>
 
         <ConsciousnessCard visible={showConsciousnessCard} onClose={handleCloseCard} />
       </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
+
 const st = StyleSheet.create({
   card: {
     position: 'absolute',

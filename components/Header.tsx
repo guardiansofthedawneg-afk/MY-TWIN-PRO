@@ -1,105 +1,139 @@
+import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ArrowLeft, MoreVertical } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTwinStore } from '../store/useTwinStore';
 import { useTheme } from '../utils/theme';
+import { useRouter, usePathname } from 'expo-router';
+import { Menu, ChevronLeft, Sparkles } from 'lucide-react-native';
 
-interface HeaderProps {
-  title?: string;
-  onBackPress?: () => void;
-  rightAction?: {
-    icon: React.ElementType;
-    onPress: () => void;
-    label?: string;
-  };
-  transparent?: boolean;
-}
+const ROUTE_TITLES: Record<string, { ar: string; en: string }> = {
+  '/twin-mind': { ar: 'مركز الوعي', en: 'Mind Center' },
+  '/chat': { ar: 'الوعي', en: 'Mind' },
+  '/memories': { ar: 'الذكريات', en: 'Memories' },
+  '/relationship': { ar: 'الرابطة', en: 'Bond' },
+  '/museum': { ar: 'المتحف', en: 'Museum' },
+  '/profile': { ar: 'الملف الشخصي', en: 'Profile' },
+  '/settings': { ar: 'الإعدادات', en: 'Settings' },
+  '/subscription': { ar: 'الاشتراك', en: 'Subscription' },
+  '/referral': { ar: 'الإحالات', en: 'Referral' },
+  '/features/index': { ar: 'عالم القدرات', en: 'Power Universe' },
+  '/features/code-lab': { ar: 'مختبر البرمجة', en: 'Code Lab' },
+  '/features/business-analyzer': { ar: 'تحليل الأعمال', en: 'Business' },
+  '/features/study-mode': { ar: 'وضع الدراسة', en: 'Study Mode' },
+  '/features/life-coach': { ar: 'مدرب الحياة', en: 'Life Coach' },
+  '/features/image-creator': { ar: 'مولد الصور', en: 'Image Lab' },
+  '/features/dreams': { ar: 'تفسير الأحلام', en: 'Dreams' },
+  '/features/content-creator': { ar: 'مُحترف الكتابة', en: 'Content Creator' },
+  '/features/smart-home': { ar: 'المنزل الذكي', en: 'Smart Home' },
+  '/features/task-manager': { ar: 'مدير المهام', en: 'Task Manager' },
+};
 
-export default function Header({ title, onBackPress, rightAction, transparent = false }: HeaderProps) {
-  const { lang } = useTwinStore();
+/**
+ * 🧠 Header مركزي ذكي
+ * - يُعرض تلقائياً في كل الشاشات (عبر Stack header)
+ * - يتكيف مع RTL/LTR
+ * - يُظهر زر القائمة أو الرجوع حسب السياق
+ */
+const Header = memo(() => {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { lang, openMenu } = useTwinStore();
   const theme = useTheme();
   const isAr = lang === 'ar';
-  const isDark = theme.isDark;  // ✅ إصلاح مقارنة الثيم
 
-  const colors = {
-    bg: transparent ? 'transparent' : (isDark ? '#0F0A1A' : '#FAFAF8'),
-    text: isDark ? '#FFFFFF' : '#2D2D2D',
-    icon: isDark ? '#A78BFA' : '#7C3AED',
-    border: transparent ? 'transparent' : (isDark ? '#2D1B4D' : '#E8E8E3'),
-  };
+  const title = ROUTE_TITLES[pathname] || { ar: 'MY TWIN', en: 'MY TWIN' };
+  const showBack = pathname !== '/twin-mind' && pathname !== '/index' && pathname !== '/';
 
-  const RightIcon = rightAction?.icon || null;
+  const handleMenu = useCallback(() => {
+    if (typeof openMenu === 'function') openMenu();
+  }, [openMenu]);
+
+  const handleBack = useCallback(() => {
+    try { router.back(); } catch (e) {}
+  }, [router]);
 
   return (
-    <View style={[styles.container, { 
-      backgroundColor: colors.bg, 
-      borderBottomColor: colors.border,
-      flexDirection: isAr ? 'row-reverse' : 'row' 
-    }]}>
-      <TouchableOpacity
-        onPress={onBackPress || (() => router.back())}
-        style={styles.backBtn}
-        accessibilityLabel={isAr ? 'رجوع' : 'Back'}
-        accessibilityRole="button"
-      >
-        <ArrowLeft size={24} stroke={colors.icon} />
-      </TouchableOpacity>
-
-      {title ? (
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-          {title}
-        </Text>
-      ) : (
-        <View style={{ flex: 1 }} />
-      )}
-
-      <View style={styles.rightPlaceholder}>
-        {RightIcon && (
+    <View style={[
+      styles.container,
+      {
+        paddingTop: insets.top + 8,
+        paddingHorizontal: 16,
+        backgroundColor: theme.card,
+        borderBottomColor: theme.border,
+      }
+    ]}>
+      <View style={styles.row}>
+        {/* Left/Right Button */}
+        {showBack ? (
           <TouchableOpacity
-            onPress={rightAction?.onPress}
-            style={styles.rightBtn}
-            accessibilityLabel={rightAction?.label || 'Action'}
-            accessibilityRole="button"
+            style={[styles.btn, { backgroundColor: theme.accentLight }]}
+            onPress={handleBack}
+            activeOpacity={0.7}
           >
-            <RightIcon size={22} stroke={colors.icon} />
+            <ChevronLeft
+              size={22}
+              stroke={theme.accent}
+              style={{ transform: [{ scaleX: isAr ? -1 : 1 }] }}
+            />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.btn, { backgroundColor: theme.accentLight }]}
+            onPress={handleMenu}
+            activeOpacity={0.7}
+          >
+            <Menu size={22} stroke={theme.accent} />
           </TouchableOpacity>
         )}
+
+        {/* Title */}
+        <View style={styles.titleWrap}>
+          <Sparkles size={16} stroke={theme.accent} />
+          <Text style={[styles.title, { color: theme.text }]}>
+            {isAr ? title.ar : title.en}
+          </Text>
+        </View>
+
+        {/* Spacer for balance */}
+        <View style={styles.spacer} />
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    zIndex: 100,
   },
-  backBtn: {
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    height: 56,
+  },
+  btn: {
     width: 40,
     height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
+  },
+  titleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
-  rightPlaceholder: {
+  spacer: {
     width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rightBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10,
   },
 });
+
+export default Header;

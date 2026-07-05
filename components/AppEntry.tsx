@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -10,7 +10,7 @@ import { MenuBridgeProvider, useMenuBridge } from '../lib/MenuBridge';
 import { useTwinStore } from '../store/useTwinStore';
 import { ErrorBoundary } from './ErrorBoundary';
 
-// القائمة الجانبية (نفس كود SideMenu.tsx الكامل لديك، اختياري)
+// تحميل SideMenu بأمان
 let SideMenuComp: any = null;
 try {
   SideMenuComp = require('./SideMenu').default;
@@ -56,6 +56,7 @@ function MainApp() {
     const scaleTarget = menuVisible ? 0.88 : 1;
     const opacTarget  = menuVisible ? 1 : 0;
 
+    // ✅ جميع الحركات المدعومة بـ native driver في parallel
     Animated.parallel([
       Animated.spring(mainX, { toValue: mainTarget,  damping: 22, stiffness: 160, useNativeDriver: true }),
       Animated.spring(mainS, { toValue: scaleTarget, damping: 22, stiffness: 160, useNativeDriver: true }),
@@ -65,10 +66,14 @@ function MainApp() {
       if (finished && !menuVisible) setMenuMounted(false);
     });
 
-    Animated.spring(mainB, {
+    // ✅ border radius مستقل تمامًا ولا يشارك في الـ parallel لتجنب التضارب
+    // نستخدم timing بدلاً من spring لضمان عدم التداخل مع native driver
+    Animated.timing(mainB, {
       toValue: menuVisible ? 20 : 0,
-      damping: 22, stiffness: 160, useNativeDriver: false,
+      duration: 300,
+      useNativeDriver: false,
     }).start();
+
   }, [menuVisible, isRTL, safeW, ready]);
 
   if (!ready) {
@@ -100,7 +105,8 @@ function MainApp() {
 
       <Animated.View style={[st.main, {
         transform: [{ translateX: mainX }, { scale: mainS }],
-        borderRadius: mainB, overflow: 'hidden',
+        borderRadius: mainB,
+        overflow: 'hidden',
       }]}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="splash" />
@@ -113,7 +119,10 @@ function MainApp() {
       </Animated.View>
 
       {menuVisible && (
-        <Pressable style={[st.overlay, isRTL ? { right: safeW * 0.72, left: 0 } : { left: safeW * 0.72, right: 0 }]} onPress={closeMenu} />
+        <Pressable
+          style={[st.overlay, isRTL ? { right: safeW * 0.72, left: 0 } : { left: safeW * 0.72, right: 0 }]}
+          onPress={closeMenu}
+        />
       )}
     </>
   );

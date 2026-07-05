@@ -8,7 +8,6 @@ export interface ThemeColors {
   energyLow: string; energyMedium: string; energyHigh: string;
   emotionJoy: string; emotionSad: string; emotionFear: string;
   emotionLove: string; emotionAnger: string; emotionNeutral: string;
-  // ✅ خاصية جديدة لمعرفة الثيم (للتوافق مع الملفات)
   name: 'light' | 'dark';
   mode: 'light' | 'dark';
   isDark: boolean;
@@ -41,7 +40,7 @@ const LIGHT_THEME: ThemeColors = {
 };
 
 export function useTheme(): ThemeColors {
-  const theme = useTwinStore(s => s.theme);
+  const theme = useTwinStore(s => s.theme ?? 'light');
   return theme === 'dark' ? DARK_THEME : LIGHT_THEME;
 }
 

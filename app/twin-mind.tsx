@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Animated, RefreshControl, Image,
+  Animated, RefreshControl, Image, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTwinStore } from '../store/useTwinStore';
@@ -11,8 +11,7 @@ import { router, Href } from 'expo-router';
 import { apiGet } from '../lib/httpClient';
 import { AdModal } from '../components/AdModal';
 import {
-  Sparkles, Zap, Brain, Crown, MessageSquare,
-  BatteryCharging,
+  Sparkles, Zap, Crown, MessageSquare, BatteryCharging,
 } from 'lucide-react-native';
 
 // ============================================================
@@ -65,7 +64,7 @@ export default function TwinMindCenter() {
   const safeBottom = Math.max(insets.bottom || 0, 20);
   const safeTop = insets.top || 0;
 
-  const { userId, twinName, lang } = useTwinStore();
+  const { userId, twinName, lang, hasHydrated } = useTwinStore();
   const { getRemainingMessages, dailyMessageLimit } = useEnergyStore();
   const theme = useTheme();
   const isAr = lang === 'ar';
@@ -97,19 +96,16 @@ export default function TwinMindCenter() {
     { id: 'features', icon: Zap, label_ar: 'القدرات', label_en: 'Powers', route: '/features/index', color: colors.success },
   ];
 
-  // جلب البيانات
   const fetchData = useCallback(async () => {
     if (!userId) return;
     setRefreshing(true);
     try {
       const [avatarRes, consciousnessRes] = await Promise.all([
-        apiGet(`/api/avatar/get?user_id=${userId}&gender=${useTwinStore.getState().twinGender || 'female'}`).catch(() => null) as Promise<AvatarData | null>,
+        apiGet(`/api/avatar/get?user_id=${userId}`).catch(() => null) as Promise<AvatarData | null>,
         apiGet(`/api/consciousness/status?user_id=${userId}&lang=${lang}`).catch(() => null) as Promise<ConsciousnessStatus | null>,
       ]);
 
-      // التعامل الآمن مع بيانات الأفاتار
       if (avatarRes && typeof avatarRes === 'object') {
-        // قد يكون الرد مباشرة { image_url: ... } أو { data: { image_url: ... } }
         const data = (avatarRes as any).data;
         if (data && data.image_url) {
           setAvatar({ image_url: data.image_url });
@@ -135,10 +131,11 @@ export default function TwinMindCenter() {
   }, [userId, lang]);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     fetchData();
     const interval = setInterval(fetchData, 120000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, hasHydrated]);
 
   const remainingEnergy = getRemainingMessages();
   const energyColor = remainingEnergy > 10 ? '#10B981' : remainingEnergy > 3 ? '#F59E0B' : '#EF4444';
@@ -146,6 +143,16 @@ export default function TwinMindCenter() {
   const handleNavigate = (route: string) => {
     router.push(route as Href);
   };
+
+  // 🛡️ حماية: لا تعرض حتى يكتمل rehydration
+  if (!hasHydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0014' }}>
+        <ActivityIndicator size="large" color="#7C3AED" />
+        <Text style={{ color: '#A78BFA', marginTop: 16 }}>جاري تهيئة الوعي...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[st.root, { paddingTop: safeTop, backgroundColor: colors.bg }]}>
@@ -156,7 +163,6 @@ export default function TwinMindCenter() {
         <Animated.View style={{ opacity: fadeAnim }}>
           <AvatarSection avatar={avatar} twinName={twinName} energyColor={energyColor} colors={colors} />
 
-          {/* 🫀 الشعور الموحد */}
           {unifiedFeeling ? (
             <View style={[st.unifiedCard, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}>
               <Sparkles size={20} stroke={colors.accent} />
@@ -164,7 +170,6 @@ export default function TwinMindCenter() {
             </View>
           ) : null}
 
-          {/* ⚡ الطاقة */}
           <View style={[st.energyBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={st.energyBarContent}>
               <BatteryCharging size={20} stroke={colors.accent} />
@@ -177,7 +182,6 @@ export default function TwinMindCenter() {
             </TouchableOpacity>
           </View>
 
-          {/* 💡 أسئلة التوأم */}
           {pendingQuestions
             .filter((q: string) => !q.startsWith('🎉') && !q.startsWith('📅'))
             .slice(0, 2)
@@ -194,7 +198,6 @@ export default function TwinMindCenter() {
               </TouchableOpacity>
             ))}
 
-          {/* اختصارات سريعة */}
           <Text style={[st.sectionTitle, { color: colors.text }]}>
             {isAr ? 'قدرات وعيي' : 'My Mind Powers'}
           </Text>

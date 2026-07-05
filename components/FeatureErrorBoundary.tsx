@@ -2,25 +2,27 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTwinStore } from '../store/useTwinStore';
 import { useTheme } from '../utils/theme';
-import * as Clipboard from 'expo-clipboard';
-import { AlertTriangle, RefreshCw, Copy } from 'lucide-react-native';
+import { AlertTriangle, RefreshCw } from 'lucide-react-native';
+
+// ✅ بدلاً من expo-clipboard (قد يسبب مشاكل) — نستخدم console
+const copyToClipboard = (text: string) => {
+  console.log('[FeatureErrorBoundary] Error details:', text);
+};
 
 // مكون عرض الخطأ (وظيفي – يدعم الخطافات)
 const ErrorFallback = ({
   featureName,
   error,
   onRetry,
-  onCopy,
 }: {
   featureName: string;
   error?: Error;
   onRetry: () => void;
-  onCopy: () => void;
 }) => {
   const { lang } = useTwinStore();
   const theme = useTheme();
   const isAr = lang === 'ar';
-  const isDark = theme?.mode === 'dark' || theme?.name === 'dark';
+  const isDark = theme.isDark;
 
   const colors = {
     bg: isDark ? '#0F0A1A' : '#FAFAF8',
@@ -31,7 +33,6 @@ const ErrorFallback = ({
     dangerLight: '#EF444415',
     border: isDark ? '#2D1B4D' : '#E8E8E3',
     retryBtn: '#7C3AED',
-    copyBtn: isDark ? '#1A1226' : '#F3F0FF',
   };
 
   return (
@@ -54,13 +55,6 @@ const ErrorFallback = ({
         <RefreshCw size={18} stroke="#FFF" />
         <Text style={styles.retryText}>
           {isAr ? 'إعادة المحاولة' : 'Retry'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.copyBtn, { backgroundColor: colors.copyBtn, borderColor: colors.border }]} onPress={onCopy} activeOpacity={0.7}>
-        <Copy size={16} stroke={colors.subtext} />
-        <Text style={[styles.copyText, { color: colors.subtext }]}>
-          {isAr ? 'نسخ التفاصيل' : 'Copy details'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -96,13 +90,6 @@ export class FeatureErrorBoundary extends React.Component<Props, State> {
     this.setState({ hasError: false, error: undefined });
   };
 
-  handleCopyDetails = () => {
-    const details = this.state.error
-      ? `${this.state.error.name}: ${this.state.error.message}`
-      : '';
-    Clipboard.setStringAsync(details);
-  };
-
   render() {
     if (this.state.hasError) {
       return (
@@ -110,7 +97,6 @@ export class FeatureErrorBoundary extends React.Component<Props, State> {
           featureName={this.props.featureName}
           error={this.state.error}
           onRetry={this.handleReset}
-          onCopy={this.handleCopyDetails}
         />
       );
     }
@@ -154,24 +140,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 14,
-    marginBottom: 12,
   },
   retryText: {
     color: '#FFF',
     fontWeight: '700',
     fontSize: 16,
-  },
-  copyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  copyText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

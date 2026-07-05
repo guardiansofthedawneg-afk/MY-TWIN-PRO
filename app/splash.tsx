@@ -1,20 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View, Image, Text, StyleSheet, Animated, Dimensions, StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../utils/theme';
 import { Audio } from 'expo-av';
 
-// استيراد الصور مع حماية
-let SPLASH_BG: any = null;
-let LOGO: any = null;
-try { SPLASH_BG = require('../assets/splash.png'); } catch(e) {}
-try { LOGO = require('../assets/logo.png'); } catch(e) {}
+// ✅ استيراد الصور مباشرة (Metro يتعامل معها في البناء)
+const SPLASH_BG = require('../assets/splash.png');
+const LOGO = require('../assets/logo.png');
 
 const { width, height } = Dimensions.get('window');
 
-// شبكة عصبية ذهبية
+// ============================================================
+// NEURON NETWORK – خلايا عصبية ذهبية متصلة
+// ============================================================
 const NeuronNetwork = ({ isDark }: { isDark: boolean }) => {
   const neuronCount = 12;
   const neurons = useRef(
@@ -92,15 +93,12 @@ const NeuronNetwork = ({ isDark }: { isDark: boolean }) => {
   );
 };
 
+// ============================================================
+// SPLASH SCREEN
+// ============================================================
 export default function Splash() {
-  const [isDark, setIsDark] = useState(true); // افتراضي داكن
-
-  // قراءة الثيم من AsyncStorage بدلاً من useTheme لتجنب useTwinStore
-  useEffect(() => {
-    AsyncStorage.getItem('mytwin-theme').then(theme => {
-      if (theme === 'light') setIsDark(false);
-    }).catch(() => {});
-  }, []);
+  const theme = useTheme();
+  const isDark = theme.isDark;
 
   const logoScale = useRef(new Animated.Value(0.2)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -113,15 +111,27 @@ export default function Splash() {
   const bgColor = isDark ? '#0A0014' : '#FAFAF8';
 
   useEffect(() => {
-    let soundObject: any = null;
-    try {
-      Audio.Sound.createAsync(require('../assets/start.mp3'))
-        .then(({ sound }) => {
-          soundObject = sound;
-          sound.playAsync().catch(() => {});
-        })
-        .catch(() => {});
-    } catch (e) {}
+    let soundObject: Audio.Sound | null = null;
+    let isMounted = true;
+
+    const initSound = async () => {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/start.mp3'),
+          { shouldPlay: false }
+        );
+        if (!isMounted) {
+          sound.unloadAsync().catch(() => {});
+          return;
+        }
+        soundObject = sound;
+        await sound.playAsync().catch(() => {});
+      } catch (e) {
+        // فشل صامت - الصوت ليس إلزامياً
+      }
+    };
+
+    initSound();
 
     Animated.sequence([
       Animated.parallel([
@@ -134,32 +144,43 @@ export default function Splash() {
     ]).start();
 
     const timer = setTimeout(async () => {
-      try { if (soundObject) soundObject.unloadAsync().catch(() => {}); } catch (e) {}
-      const storedUserId = await AsyncStorage.getItem('mytwin-user');
-      router.replace(storedUserId ? '/twin-mind' : '/login');
+      if (!isMounted) return;
+      try {
+        if (soundObject) {
+          await soundObject.stopAsync().catch(() => {});
+          await soundObject.unloadAsync().catch(() => {});
+        }
+      } catch (e) {}
+      
+      // ✅ قراءة userId من AsyncStorage مباشرة (بدون useTwinStore)
+      try {
+        const storedUserId = await AsyncStorage.getItem('mytwin-user');
+        if (!isMounted) return;
+        router.replace(storedUserId ? '/twin-mind' : '/login');
+      } catch (e) {
+        if (!isMounted) return;
+        router.replace('/login');
+      }
     }, 6000);
 
     return () => {
+      isMounted = false;
       clearTimeout(timer);
-      try { if (soundObject) soundObject.unloadAsync().catch(() => {}); } catch (e) {}
+      if (soundObject) {
+        soundObject.unloadAsync().catch(() => {});
+      }
     };
   }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
       <StatusBar hidden />
-      {isDark && SPLASH_BG && <Image source={SPLASH_BG} style={styles.bgImage} resizeMode="cover" />}
+      {isDark && <Image source={SPLASH_BG} style={styles.bgImage} resizeMode="cover" />}
       <NeuronNetwork isDark={isDark} />
       <View style={styles.content}>
         <Animated.View style={[styles.logoWrapper, { transform: [{ scale: logoScale }], opacity: logoOpacity }]}>
           <View style={[styles.logoGlow, isDark && styles.logoGlowDark]}>
-            {LOGO ? (
-              <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-            ) : (
-              <View style={[styles.logo, { backgroundColor: '#7C3AED', borderRadius: 34, justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ color: '#FFF', fontSize: 40, fontWeight: '900' }}>MT</Text>
-              </View>
-            )}
+            <Image source={LOGO} style={styles.logo} resizeMode="contain" />
           </View>
         </Animated.View>
         <Animated.Text style={[styles.appName, { opacity: titleOpacity, color: textColor }]}>

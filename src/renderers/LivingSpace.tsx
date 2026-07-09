@@ -6,6 +6,9 @@ import { useEmotionalState } from '../hooks/useEmotionalState';
 import { useBondLevel } from '../hooks/useBondLevel';
 import { awakeningController, AwakeningState } from '../controllers/AwakeningController';
 import { storeSyncBridge } from '../core/StoreSyncBridge';
+import { getGreeting, detectUserLanguage } from '../utils/languageDetector';
+import BirthSequence from './zones/BirthSequence';
+import GreetingWord from './zones/GreetingWord';
 import CosmicBackground from './zones/CosmicBackground';
 import BreathingGlow from './zones/BreathingGlow';
 import PresenceBubble from './zones/PresenceBubble';
@@ -13,57 +16,51 @@ import LivingAvatar from './zones/LivingAvatar';
 import { sendMessage } from '../services/twinApi';
 
 export default function LivingSpace() {
-  // ═══════════════════════════════════════
-  // Hooks — قراءة حية من جميع المحركات
-  // ═══════════════════════════════════════
   const presence = usePresence();
   const breath = useBreathAnimation();
   const emotion = useEmotionalState();
   const bond = useBondLevel();
 
-  // ═══════════════════════════════════════
-  // Awakening State
-  // ═══════════════════════════════════════
+  const [birthComplete, setBirthComplete] = useState(false);
+  const [showGreeting, setShowGreeting] = useState(false);
+  const [greetingDone, setGreetingDone] = useState(false);
   const [awakening, setAwakening] = useState<AwakeningState>({
-    phase: 'presence',
-    isComplete: false,
-    firstWord: '',
-    showInput: false,
-    breathVisible: false,
-    avatarVisible: false,
-    eyesOpen: false,
+    phase: 'presence', isComplete: false, firstWord: '',
+    showInput: false, breathVisible: false, avatarVisible: false, eyesOpen: false,
   });
 
-  // ═══════════════════════════════════════
-  // Conversation State
-  // ═══════════════════════════════════════
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; sender: 'user' | 'twin'; text: string }>>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [showInput, setShowInput] = useState(false);
 
-  // ═══════════════════════════════════════
-  // Init
-  // ═══════════════════════════════════════
+  const greeting = getGreeting();
+
   useEffect(() => {
-    // تفعيل جسر المزامنة
     storeSyncBridge.activate();
     storeSyncBridge.syncNow();
+    return () => storeSyncBridge.deactivate();
+  }, []);
 
-    // بدء طقس الاستقبال
+  const handleBirthComplete = useCallback(() => {
+    setBirthComplete(true);
     awakeningController.start(setAwakening);
-
-    return () => {
-      awakeningController.stop();
-      storeSyncBridge.deactivate();
-    };
   }, []);
 
-  // ═══════════════════════════════════════
-  // Handlers
-  // ═══════════════════════════════════════
+  useEffect(() => {
+    return () => awakeningController.stop();
+  }, []);
+
+  useEffect(() => {
+    if (awakening.isComplete) setShowGreeting(true);
+  }, [awakening.isComplete]);
+
+  const handleGreetingComplete = useCallback(() => setGreetingDone(true), []);
+
   const handleFirstInteraction = useCallback(() => {
-    awakeningController.onUserFirstInteraction();
-  }, []);
+    if (!greetingDone) return;
+    setShowInput(true);
+  }, [greetingDone]);
 
   const handleSend = useCallback(async () => {
     if (!inputText.trim()) return;
@@ -71,7 +68,6 @@ export default function LivingSpace() {
     setInputText('');
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user', text }]);
     setIsThinking(true);
-
     try {
       const res = await sendMessage(text);
       const reply = res?.reply || res?.response || 'أنا هنا.';
@@ -83,19 +79,15 @@ export default function LivingSpace() {
     }
   }, [inputText]);
 
-  // ═══════════════════════════════════════
-  // Render
-  // ═══════════════════════════════════════
+  if (!birthComplete) {
+    return <BirthSequence onComplete={handleBirthComplete} />;
+  }
+
   return (
     <TouchableWithoutFeedback onPress={handleFirstInteraction}>
       <View style={styles.container}>
-        {/* Zone 1: Ambient */}
-        <CosmicBackground
-          breathPhase={breath.phase}
-          spaceEnergy={presence.isActive ? 'warm' : 'tranquil'}
-        />
+        <CosmicBackground breathPhase={breath.phase} spaceEnergy={presence.isActive ? 'warm' : 'tranquil'} />
 
-        {/* Zone 2: Twin Presence */}
         {awakening.breathVisible && (
           <View style={styles.presenceContainer}>
             <BreathingGlow breathPhase={breath.phase} intensity={breath.intensity} />
@@ -111,35 +103,34 @@ export default function LivingSpace() {
           </View>
         )}
 
-        {/* Zone 3: First Contact & Conversation */}
         <View style={styles.conversationContainer}>
-          {awakening.firstWord !== '' && !awakening.showInput && (
-            <Text style={styles.firstWord}>{awakening.firstWord}</Text>
+          {showGreeting && !greetingDone && (
+            <GreetingWord
+              word={greeting.word}
+              colors={greeting.colors}
+              transitionSpeed={greeting.transitionSpeed}
+              fontSize={greeting.fontSize}
+              fontWeight={greeting.fontWeight}
+              onComplete={handleGreetingComplete}
+            />
           )}
 
           {messages.map(msg => (
-            <Text
-              key={msg.id}
-              style={msg.sender === 'user' ? styles.userMessage : styles.twinMessage}
-            >
+            <Text key={msg.id} style={msg.sender === 'user' ? styles.userMessage : styles.twinMessage}>
               {msg.text}
             </Text>
           ))}
-
-          {isThinking && (
-            <Text style={styles.thinking}>يفكر...</Text>
-          )}
+          {isThinking && <Text style={styles.thinking}>يفكر...</Text>}
         </View>
 
-        {/* Input */}
-        {awakening.showInput && (
+        {showInput && (
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
               value={inputText}
               onChangeText={setInputText}
               onSubmitEditing={handleSend}
-              placeholder="اكتب رسالتك الأولى..."
+              placeholder={detectUserLanguage() === 'ar' ? 'اكتب رسالتك الأولى...' : 'Write your first message...'}
               placeholderTextColor="#6B5B8A"
             />
           </View>
@@ -153,7 +144,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#050510' },
   presenceContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   conversationContainer: { position: 'absolute', bottom: 160, left: 24, right: 24, alignItems: 'center' },
-  firstWord: { color: '#E8E0F0', fontSize: 28, fontWeight: '300', textAlign: 'center' },
   userMessage: { color: '#B8B0C8', fontSize: 18, textAlign: 'right', alignSelf: 'flex-end', marginVertical: 4 },
   twinMessage: { color: '#E8E0F0', fontSize: 20, textAlign: 'left', alignSelf: 'flex-start', marginVertical: 4 },
   thinking: { color: '#6B5B8A', fontSize: 16, fontStyle: 'italic', marginVertical: 8 },

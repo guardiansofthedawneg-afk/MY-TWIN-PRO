@@ -12,7 +12,9 @@ export default function RootLayout() {
   const menuVisible = useTwinStore(s => s.menuVisible);
   const closeMenu = useTwinStore(s => s.closeMenu);
 
-  const handleCloseMenu = () => { if (typeof closeMenu === 'function') closeMenu(); };
+  const handleCloseMenu = () => {
+    if (typeof closeMenu === 'function') closeMenu();
+  };
 
   return (
     <SafeAreaProvider>
@@ -24,11 +26,15 @@ export default function RootLayout() {
               headerShown: false,
               animation: 'fade',
               animationDuration: 150,
-              contentStyle: { backgroundColor: isDark ? '#0A0014' : '#FAFAF8' },
+              contentStyle: {
+                backgroundColor: isDark ? '#0A0014' : '#FAFAF8',
+              },
             }}
           >
             <Stack.Screen name="index" />
             <Stack.Screen name="genesis" options={{ headerShown: false }} />
+            <Stack.Screen name="session-restore" options={{ headerShown: false }} />
+            <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
           </Stack>
         </SideMenu>
       </ErrorBoundary>

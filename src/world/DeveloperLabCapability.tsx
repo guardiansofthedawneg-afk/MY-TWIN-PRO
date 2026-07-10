@@ -49,6 +49,7 @@ export default function DeveloperLabCapability() {
   const [relevantMemories, setRelevantMemories] = useState<CodeMemory[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResponse, setLastResponse] = useState('');
+  const [lastSession, setLastSession] = useState<string>('');
 
   // تفعيل القدرة
   useEffect(() => {
@@ -69,65 +70,13 @@ export default function DeveloperLabCapability() {
   // تحميل سياق البرمجة من الذاكرة
   const loadCodeContext = async () => {
     try {
-      const savedSessions = await memoryEngine.retrieveByType('learning', 20);
-      const codeSessions = savedSessions
-        .filter(m => m.relatedTo.some(r => ['code', 'programming', 'dev'].includes(r)))
-        .map(m => ({
-          id: m.id, title: m.content.substring(0, 60),
-          type: (m.relatedTo.find(r => Object.keys(TYPE_CONFIG).includes(r)) || 'idea') as CodeSession['type'],
-          content: m.content, timestamp: m.timestamp,
-        }));
-      if (codeSessions.length > 0) setSessions(codeSessions);
-
-      const memories = await memoryEngine.retrieveByType('event', 10);
-      const codeMemories = memories.filter(m =>
-        m.content.toLowerCase().includes('كود') || m.content.toLowerCase().includes('برمجة') ||
-        m.content.toLowerCase().includes('code') || m.content.toLowerCase().includes('program')
-      );
-      setRelevantMemories(codeMemories.slice(0, 3).map(m => ({ id: m.id, content: m.content.substring(0, 120), importance: m.importance })));
+      const saved = await memoryEngine.getCapabilityMemory('code', 5);
+      if (saved.length > 0) {
+        setSessions(saved.map(m => ({ id: m.id, title: m.content.substring(0, 60), type: (m.relatedTo.find(r => Object.keys(TYPE_CONFIG).includes(r)) || 'idea') as CodeSession['type'], content: m.content, timestamp: m.timestamp })));
+        setLastSession(saved[0].content.substring(0, 60));
+      }
     } catch (e) {}
   };
-
-  // تنفيذ إجراء سريع
-  const handleQuickAction = async (action: typeof QUICK_ACTIONS[0]) => {
-    if (!inputText.trim() || isProcessing) return;
-    setActiveAction(action.type);
-    setIsProcessing(true);
-    setLastResponse('');
-
-    try {
-      const result = await sendMessage(inputText.trim(), [], rtl.isRTL ? 'ar' : 'en');
-      const reply = result?.reply || 'تمت المعالجة.';
-
-      const newSession: CodeSession = {
-        id: Date.now().toString(), title: inputText.trim().substring(0, 60),
-        type: action.type, content: reply, timestamp: new Date().toISOString(),
-      };
-      setSessions(prev => [newSession, ...prev.slice(0, 9)]);
-      setLastResponse(reply);
-
-      try { await memoryEngine.store('learning', inputText.trim(), 65, 'focused', ['code', action.type]); } catch (e) {}
-    } catch (e) {
-      setLastResponse(rtl.isRTL ? 'حدث خطأ. حاول مرة أخرى.' : 'An error occurred. Please try again.');
-    } finally {
-      setIsProcessing(false);
-      setInputText('');
-    }
-  };
-
-  // اقتراح من ConsciousnessCoordinator
-  useEffect(() => {
-    if (!active) return;
-    const timer = setTimeout(async () => {
-      try {
-        const decision = await consciousnessCoordinator.decide('code', 'focused');
-        if (decision.action === 'check_in') {
-          EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'هل نكمل مشروعنا؟' : 'Shall we continue our project?', tone: 'gentle' });
-        }
-      } catch (e) {}
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [active]);
 
   const handleDeactivate = () => {
     EventBus.emit('CAPABILITY_DEACTIVATED', { capability: 'code_lab', timestamp: Date.now() });
@@ -247,6 +196,8 @@ export default function DeveloperLabCapability() {
 }
 
 const styles = StyleSheet.create({
+  lastSessionCard: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(0,188,212,0.08)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: SPACE.md },
+  lastSessionText: { color: '#00BCD4', fontSize: 13, flex: 1 },
   container: { paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, maxHeight: '70%' },
   scroll: { gap: SPACE.md },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE.md },

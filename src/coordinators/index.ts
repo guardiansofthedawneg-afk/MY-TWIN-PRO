@@ -7,9 +7,13 @@ export { PresenceCoordinator, presenceCoordinator } from './PresenceCoordinator'
 export { TimelineCoordinator, timelineCoordinator } from './TimelineCoordinator';
 export { SelfAwarenessCoordinator, selfAwarenessCoordinator } from './SelfAwarenessCoordinator';
 export { ContinuityCoordinator, continuityCoordinator } from './ContinuityCoordinator';
+export { UnifiedCapabilityMemory, unifiedCapabilityMemory } from './UnifiedCapabilityMemory';
+export type { UnifiedMemoryResult, CrossCapabilityLink } from './UnifiedCapabilityMemory';
 export { ConsciousnessCoordinator, consciousnessCoordinator } from './ConsciousnessCoordinator';
 export { IdentityEngine, identityEngine } from './IdentityEngine';
 export type { TwinRole, IdentityState, LifeGraphNode } from './IdentityEngine';
 export type { Decision, DecisionAction } from './ConsciousnessCoordinator';
+export { CapabilityOrchestrator, capabilityOrchestrator } from './CapabilityOrchestrator';
+export type { OrchestrationResult } from './CapabilityOrchestrator';
 export { CapabilityResolver, capabilityResolver } from './CapabilityResolver';
 export type { CapabilityType } from './CapabilityResolver';

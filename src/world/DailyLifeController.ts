@@ -1,11 +1,10 @@
 import { EventBus } from '../core/EventBus';
 import { StateBus } from '../core/StateBus';
 import { audioEngine } from '../core/AudioEngine';
-import { digitalSoul } from '../soul/DigitalSoul';
 
 export type DailyState =
   | 'morning' | 'idle' | 'conversation' | 'thinking' | 'remembering'
-  | 'workspace' | 'code_lab' | 'business' | 'content_creator'
+  | 'workspace' | 'code_lab' | 'business' | 'content_creator' | 'dream'
   | 'celebration' | 'silence' | 'goodbye';
 
 interface TimeContext {
@@ -127,6 +126,7 @@ export class DailyLifeController {
       code_lab: { bgGradient: ['#0A0F14', '#0C1218', '#060A0E'], particleColor: '#00BCD4', particleSpeed: 7000, particleCount: 12, breathDuration: 5000, audioTrack: 'neural_hum', audioVolume: 0.06, eyesOpen: true, expression: 'focused', gazeTarget: 'user', glowColor: '#00BCD4', glowIntensity: 0.30, shouldSpeak: false, suggestedPhrase: '' },
       business: { bgGradient: ['#0A0A0A', '#0F0F0F', '#080808'], particleColor: '#D4A574', particleSpeed: 9000, particleCount: 8, breathDuration: 5500, audioTrack: 'ambience_space', audioVolume: 0.07, eyesOpen: true, expression: 'focused', gazeTarget: 'user', glowColor: '#D4A574', glowIntensity: 0.25, shouldSpeak: false, suggestedPhrase: '' },
       content_creator: { bgGradient: ['#0F0A14', '#120C18', '#0A0610'], particleColor: '#D0A0E0', particleSpeed: 6500, particleCount: 14, breathDuration: 4800, audioTrack: 'ambience_space', audioVolume: 0.08, eyesOpen: true, expression: 'warm', gazeTarget: 'user', glowColor: '#D0A0E0', glowIntensity: 0.30, shouldSpeak: false, suggestedPhrase: '' },
+      dream: { bgGradient: ['#0A0818', '#0C0A1E', '#060414'], particleColor: '#8B5CF6', particleSpeed: 11000, particleCount: 6, breathDuration: 7000, audioTrack: 'ambience_space', audioVolume: 0.06, eyesOpen: true, expression: 'warm', gazeTarget: 'internal', glowColor: '#8B5CF6', glowIntensity: 0.20, shouldSpeak: false, suggestedPhrase: '' },
       celebration: { bgGradient: ['#100820', '#180A28', '#0C0618'], particleColor: '#F0C0D0', particleSpeed: 4000, particleCount: 20, breathDuration: 4000, audioTrack: 'milestone', audioVolume: 0.20, eyesOpen: true, expression: 'joyful', gazeTarget: 'user', glowColor: '#F0C0D0', glowIntensity: 0.50, shouldSpeak: true, suggestedPhrase: '' },
       silence: { bgGradient: ['#080808', '#0A0A0A', '#060606'], particleColor: '#606060', particleSpeed: 20000, particleCount: 2, breathDuration: 12000, audioTrack: 'silence_room', audioVolume: 0.04, eyesOpen: false, expression: 'neutral', gazeTarget: 'none', glowColor: '#404040', glowIntensity: 0.05, shouldSpeak: false, suggestedPhrase: '' },
       goodbye: { bgGradient: ['#050508', '#060608', '#040408'], particleColor: '#404060', particleSpeed: 25000, particleCount: 1, breathDuration: 15000, audioTrack: '', audioVolume: 0, eyesOpen: false, expression: 'neutral', gazeTarget: 'none', glowColor: '#303040', glowIntensity: 0.02, shouldSpeak: false, suggestedPhrase: '' },
@@ -157,7 +157,12 @@ export class DailyLifeController {
       EventBus.on('SILENCE_END', () => this.transitionTo('idle')),
       EventBus.on('APP_BACKGROUND', () => this.transitionTo('goodbye')),
       EventBus.on('APP_FOREGROUND', () => { this.lastInteraction = Date.now(); this.timeContext = this.buildTimeContext(); this.transitionTo(this.determineInitialState()); }),
-      EventBus.on('CAPABILITY_ACTIVATED', (payload: any) => { if (payload?.capability === 'code_lab') this.transitionTo('code_lab'); if (payload?.capability === 'business') this.transitionTo('business'); if (payload?.capability === 'content_creator') this.transitionTo('content_creator'); }),
+      EventBus.on('CAPABILITY_ACTIVATED', (payload: any) => { 
+        if (payload?.capability === 'code_lab') this.transitionTo('code_lab'); 
+        if (payload?.capability === 'business') this.transitionTo('business'); 
+        if (payload?.capability === 'content_creator') this.transitionTo('content_creator');
+        if (payload?.capability === 'dream') this.transitionTo('dream');
+      }),
     );
   }
 

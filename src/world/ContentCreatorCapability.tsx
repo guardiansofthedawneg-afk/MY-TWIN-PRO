@@ -97,6 +97,7 @@ export default function ContentCreatorCapability() {
   const [relevantMemories, setRelevantMemories] = useState<BusinessMemory[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResponse, setLastResponse] = useState('');
+  const [lastSession, setLastSession] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('writing');
 
   useEffect(() => {
@@ -113,64 +114,13 @@ export default function ContentCreatorCapability() {
 
   const loadCreatorContext = async () => {
     try {
-      const savedSessions = await memoryEngine.retrieveByType('learning', 20);
-      const creatorSessions = savedSessions
-        .filter(m => m.relatedTo.some(r => ['content', 'creative', 'writing'].includes(r)))
-        .map(m => ({
-          id: m.id, title: m.content.substring(0, 60),
-          type: m.relatedTo.find(r => ['content', 'creative', 'writing'].includes(r)) || 'writing',
-          content: m.content, timestamp: m.timestamp,
-        }));
-      if (creatorSessions.length > 0) setSessions(creatorSessions);
-
-      const memories = await memoryEngine.retrieveByType('event', 10);
-      const creatorMemories = memories.filter(m =>
-        m.content.toLowerCase().includes('كتابة') || m.content.toLowerCase().includes('مقال') ||
-        m.content.toLowerCase().includes('write') || m.content.toLowerCase().includes('content')
-      );
-      setRelevantMemories(creatorMemories.slice(0, 3).map(m => ({ id: m.id, content: m.content.substring(0, 120), importance: m.importance })));
+      const saved = await memoryEngine.getCapabilityMemory('content', 5);
+      if (saved.length > 0) {
+        setSessions(saved.map(m => ({ id: m.id, title: m.content.substring(0, 60), type: m.relatedTo.find(r => ['content', 'creative', 'writing'].includes(r)) || 'writing', content: m.content, timestamp: m.timestamp })));
+        setLastSession(saved[0].content.substring(0, 60));
+      }
     } catch (e) {}
   };
-
-  const handleQuickAction = async (actionType: string, placeholder?: string) => {
-    if (!inputText.trim() || isProcessing) return;
-    setActiveAction(actionType);
-    setIsProcessing(true);
-    setLastResponse('');
-
-    try {
-      const enhancedMessage = `${rtl.isRTL ? 'طلب إبداعي:' : 'Creative request:'} ${actionType}: ${inputText.trim()}`;
-      const result = await sendMessage(enhancedMessage, [], rtl.isRTL ? 'ar' : 'en');
-      const reply = result?.reply || (rtl.isRTL ? 'تمت المعالجة.' : 'Processed.');
-
-      const newSession: CreatorSession = {
-        id: Date.now().toString(), title: inputText.trim().substring(0, 60),
-        type: actionType, content: reply, timestamp: new Date().toISOString(),
-      };
-      setSessions(prev => [newSession, ...prev.slice(0, 14)]);
-      setLastResponse(reply);
-
-      try { await memoryEngine.store('learning', inputText.trim(), 60, 'focused', ['content', actionType]); } catch (e) {}
-    } catch (e) {
-      setLastResponse(rtl.isRTL ? 'حدث خطأ. حاول مرة أخرى.' : 'An error occurred. Please try again.');
-    } finally {
-      setIsProcessing(false);
-      setInputText('');
-    }
-  };
-
-  useEffect(() => {
-    if (!active) return;
-    const timer = setTimeout(async () => {
-      try {
-        const decision = await consciousnessCoordinator.decide('creative', 'focused');
-        if (decision.action === 'check_in') {
-          EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'هل نبدع شيئاً جديداً؟' : 'Shall we create something new?', tone: 'gentle' });
-        }
-      } catch (e) {}
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, [active]);
 
   const handleDeactivate = () => {
     EventBus.emit('CAPABILITY_DEACTIVATED', { capability: 'content_creator', timestamp: Date.now() });

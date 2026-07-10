@@ -5,8 +5,8 @@ import { runtime } from '../src/core/TwinRuntime';
 import { storeSyncBridge } from '../src/core/StoreSyncBridge';
 import { audioEngine } from '../src/core/AudioEngine';
 import { livingIntelligence } from '../src/core/LivingIntelligence';
-import { isAuthenticated, getUserId } from '../lib/auth';
-import Genesis from './genesis';
+import { authService } from '../src/services/authService';
+import { router } from 'expo-router';
 
 export default function Index() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -15,11 +15,21 @@ export default function Index() {
 
   useEffect(() => {
     const check = async () => {
-      const authed = await isAuthenticated();
-      setUserLoggedIn(authed);
-      if (authed) {
-        const uid = await getUserId();
-        setUserId(uid || '');
+      // التحقق من استعادة الجلسة أولاً
+      const sessionRestore = await authService.checkSessionRestore();
+      if (sessionRestore.canRestore && sessionRestore.user_id) {
+        setUserLoggedIn(true);
+        setUserId(sessionRestore.user_id);
+        if (sessionRestore.lastSessionId) {
+          await authService.saveLastSession(sessionRestore.lastSessionId);
+        }
+      } else {
+        const authed = await authService.isAuthenticated();
+        setUserLoggedIn(authed);
+        if (authed) {
+          const uid = await authService.getUserId();
+          setUserId(uid || '');
+        }
       }
       setAuthChecked(true);
     };
@@ -58,7 +68,13 @@ export default function Index() {
   }
 
   if (!userLoggedIn) {
-    return <Genesis />;
+    router.replace('/genesis');
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#7C3AED" />
+        <Text style={styles.text}>جارٍ التوجيه...</Text>
+      </View>
+    );
   }
 
   return <LivingSpace userId={userId} />;

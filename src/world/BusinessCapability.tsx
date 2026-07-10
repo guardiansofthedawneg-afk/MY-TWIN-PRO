@@ -100,6 +100,7 @@ export default function BusinessCapability() {
   const [relevantMemories, setRelevantMemories] = useState<BusinessMemory[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResponse, setLastResponse] = useState('');
+  const [lastSession, setLastSession] = useState<string>('');
 
   // تفعيل القدرة
   useEffect(() => {
@@ -124,84 +125,13 @@ export default function BusinessCapability() {
   // تحميل سياق الأعمال من الذاكرة
   const loadBusinessContext = async () => {
     try {
-      const savedSessions = await memoryEngine.retrieveByType('decision', 20);
-      const businessSessions = savedSessions
-        .filter(m => m.relatedTo.some(r => ['business', 'startup', 'project', 'idea'].includes(r)))
-        .map(m => ({
-          id: m.id, 
-          title: m.content.substring(0, 60),
-          type: m.relatedTo.find(r => ['business', 'startup', 'project', 'idea'].includes(r)) || 'idea',
-          content: m.content, 
-          timestamp: m.timestamp,
-        }));
-      if (businessSessions.length > 0) setSessions(businessSessions);
-
-      const memories = await memoryEngine.retrieveByType('event', 10);
-      const bizMemories = memories.filter(m =>
-        m.content.toLowerCase().includes('مشروع') || 
-        m.content.toLowerCase().includes('فكرة') ||
-        m.content.toLowerCase().includes('business') || 
-        m.content.toLowerCase().includes('startup')
-      );
-      setRelevantMemories(
-        bizMemories.slice(0, 3).map(m => ({ 
-          id: m.id, 
-          content: m.content.substring(0, 120), 
-          importance: m.importance 
-        }))
-      );
+      const saved = await memoryEngine.getCapabilityMemory('business', 5);
+      if (saved.length > 0) {
+        setSessions(saved.map(m => ({ id: m.id, title: m.content.substring(0, 60), type: m.relatedTo.find(r => ['business', 'startup', 'project', 'idea'].includes(r)) || 'idea', content: m.content, timestamp: m.timestamp })));
+        setLastSession(saved[0].content.substring(0, 60));
+      }
     } catch (e) {}
   };
-
-  // تنفيذ إجراء سريع
-  const handleQuickAction = async (action: typeof QUICK_ACTIONS[0]) => {
-    if (!inputText.trim() || isProcessing) return;
-    setActiveAction(action.type);
-    setIsProcessing(true);
-    setLastResponse('');
-
-    try {
-      const enhancedMessage = `${rtl.isRTL ? 'طلب:' : 'Request:'} ${action.label_ar}: ${inputText.trim()}`;
-      const result = await sendMessage(enhancedMessage, [], rtl.isRTL ? 'ar' : 'en');
-      const reply = result?.reply || (rtl.isRTL ? 'تمت المعالجة.' : 'Processed.');
-
-      const newSession: BusinessSession = {
-        id: Date.now().toString(), 
-        title: inputText.trim().substring(0, 60),
-        type: action.type, 
-        content: reply, 
-        timestamp: new Date().toISOString(),
-      };
-      setSessions(prev => [newSession, ...prev.slice(0, 14)]);
-      setLastResponse(reply);
-
-      try { 
-        await memoryEngine.store('decision', inputText.trim(), 65, 'focused', ['business', action.type]); 
-      } catch (e) {}
-    } catch (e) {
-      setLastResponse(rtl.isRTL ? 'حدث خطأ. حاول مرة أخرى.' : 'An error occurred. Please try again.');
-    } finally {
-      setIsProcessing(false);
-      setInputText('');
-    }
-  };
-
-  // اقتراح من ConsciousnessCoordinator
-  useEffect(() => {
-    if (!active) return;
-    const timer = setTimeout(async () => {
-      try {
-        const decision = await consciousnessCoordinator.decide('business', 'focused');
-        if (decision.action === 'check_in') {
-          EventBus.emit('TWIN_SPEAK', { 
-            phrase: rtl.isRTL ? 'هل نراجع خطة العمل؟' : 'Shall we review the business plan?', 
-            tone: 'gentle' 
-          });
-        }
-      } catch (e) {}
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, [active]);
 
   const handleDeactivate = () => {
     EventBus.emit('CAPABILITY_DEACTIVATED', { capability: 'business', timestamp: Date.now() });

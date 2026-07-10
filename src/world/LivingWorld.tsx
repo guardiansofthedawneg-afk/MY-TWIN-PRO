@@ -11,7 +11,7 @@ import { storeSyncBridge } from '../core/StoreSyncBridge';
 import { EventBus } from '../core/EventBus';
 import { getGreeting } from '../utils/languageDetector';
 import { useRTL } from '../utils/useRTL';
-import { capabilityResolver } from '../coordinators/CapabilityResolver';
+import { capabilityOrchestrator } from '../coordinators/CapabilityOrchestrator';
 import BirthSequence from '../renderers/zones/BirthSequence';
 import GreetingWord from '../renderers/zones/GreetingWord';
 import ThinkingIndicator from '../renderers/zones/ThinkingIndicator';
@@ -26,11 +26,20 @@ import WorkspacePortal from './WorkspacePortal';
 import SoulPulseRing from './SoulPulseRing';
 import WorldTransition from './WorldTransition';
 import StudyCapability from './StudyCapability';
-import QuickActions from './QuickActions';
-import DailyTimeline from './DailyTimeline';
 import DeveloperLabCapability from './DeveloperLabCapability';
 import BusinessCapability from './BusinessCapability';
 import ContentCreatorCapability from './ContentCreatorCapability';
+import DreamCapability from './DreamCapability';
+import LifeCoachCapability from './LifeCoachCapability';
+import TaskManagerCapability from './TaskManagerCapability';
+import AIImageCapability from './AIImageCapability';
+import SmartHomeCapability from './SmartHomeCapability';
+import QuickActions from './QuickActions';
+import DailyTimeline from './DailyTimeline';
+import SessionSurface from './SessionSurface';
+import LivingTimeline from './LivingTimeline';
+import MemoryForest from './MemoryForest';
+import SoulPulse from '../renderers/zones/SoulPulse';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 
 interface LivingWorldProps { userId: string; }
@@ -84,13 +93,13 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
   const handleSend = useCallback(async () => {
     if (!inputText.trim() || isThinking) return;
     const text = inputText.trim();
+    try {
+      const orchestration = await capabilityOrchestrator.orchestrate(text, userId);
+      if (orchestration.primaryCapability !== 'general' && orchestration.primaryCapability !== null) {
+        capabilityOrchestrator.activateChain([orchestration.primaryCapability, ...orchestration.secondaryCapabilities]);
+      }
+    } catch (e) {}
 
-    // ═══════════════════════════════════════════════
-    // ✨ Capability Resolver — يقرر أي قدرة تناسب
-    // ═══════════════════════════════════════════════
-    const resolved = capabilityResolver.resolve(text);
-    if (resolved.capability !== 'general' && resolved.confidence > 0.5) {
-      capabilityResolver.activate(resolved.capability);
     }
 
     setInputText('');
@@ -122,6 +131,7 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
         <View style={styles.container}>
           <AmbientField />
           <SoulPulseRing />
+          <SoulPulse />
           <ConnectionField visible={bond.bondLevel >= 2} />
 
           {awakening.breathVisible && (
@@ -133,17 +143,18 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
           )}
 
           <ContextOverlay />
+          <SessionSurface />
 
-          {/* ═══════════════════════════════════════════ */}
-          {/* ✨ F1 — Study Capability */}
-          {/* ═══════════════════════════════════════════ */}
           <View style={styles.capabilityContainer}>
             <StudyCapability />
-          <QuickActions />
-          <DailyTimeline />
-          <DeveloperLabCapability />
-          <BusinessCapability />
-          <ContentCreatorCapability />
+            <DeveloperLabCapability />
+            <BusinessCapability />
+            <ContentCreatorCapability />
+            <DreamCapability />
+          <LifeCoachCapability />
+          <TaskManagerCapability />
+          <AIImageCapability />
+          <SmartHomeCapability />
           </View>
 
           <View style={styles.conversationContainer}>
@@ -174,6 +185,11 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
           <View style={styles.memoryContainer}>
             <MemoryRibbon userId={userId} maxCards={2} />
           </View>
+
+          <QuickActions />
+          <DailyTimeline />
+          <LivingTimeline />
+          <MemoryForest />
 
           {showInput && (
             <View style={styles.inputContainer}>

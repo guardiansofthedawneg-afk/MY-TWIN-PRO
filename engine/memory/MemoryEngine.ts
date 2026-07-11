@@ -1,5 +1,5 @@
-import { stateBus, STATE_EVENTS } from '../core/StateBus';
-import { useTwinState } from '../core/TwinState';
+import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
+import { useTwinState } from '../../src/core/TwinState';
 
 /**
  * أنواع الذاكرة
@@ -40,7 +40,7 @@ export interface MemoryEntry {
   importance: number;
   emotion: string;
   relatedTo: string[];
-  confidence: number;            // 0.0 – 1.0 مدى تأكد التوأم من الذاكرة
+  confidence: number;
 
   age: MemoryAge;
   weight: number;
@@ -112,6 +112,13 @@ export class MemoryEngine {
 
     stateBus.emit('memory:stored', { entry });
     return entry;
+  }
+
+  /**
+   * تخزين طويل المدى. يستخدم `store` داخلياً لضمان التوافق.
+   */
+  async storeLongTerm(category: string, content: string, importance: number = 65, emotion: string = 'neutral'): Promise<MemoryEntry> {
+    return this.store(category as MemoryType, content, importance, emotion, [category]);
   }
 
   /**
@@ -383,7 +390,6 @@ export class MemoryEngine {
     weight += Math.min(0.15, memory.accessCount * 0.02);
     weight += memory.revivalCount * 0.05;
     weight += Math.min(0.1, memory.links.filter(l => l.strength > 0.5).length * 0.02);
-    // الثقة تؤثر على الوزن
     weight += (memory.confidence - 0.5) * 0.1;
 
     return Math.min(1.0, Math.max(0.01, weight));
@@ -421,7 +427,4 @@ export class MemoryEngine {
   }
 }
 
-  async storeLongTerm(category: string, content: string, importance: number = 65, emotion: string = "neutral"): Promise<MemoryEntry> {
-    return this.store(category as MemoryType, content, importance, emotion, [category]);
-  }
 export const memoryEngine = new MemoryEngine();

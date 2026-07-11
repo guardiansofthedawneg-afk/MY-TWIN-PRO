@@ -1,11 +1,14 @@
 /**
- * STATE BUS v3.0 — Unified State Store + Event Emitter
- * =====================================================
+ * STATE BUS v4.0 — Unified State Store + Event Emitter (Fully Backward Compatible)
+ * ================================================================================
  * يجمع بين مخزن الحالة المركزي وأحداث StateBus البسيطة.
  * هذا هو مصدر الحقيقة الوحيد. لا يوجد نسخة أخرى.
+ * 
+ * تم التحديث ليشمل جميع الدوال والأنواع القديمة لضمان التوافق.
  */
-import { EventBus } from './EventBus';
+import { EventBus, EventName } from './EventBus';
 
+// ── الأنواع ───────────────────────────────────────
 export type PresenceLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type InterfaceState = 'dormant' | 'aware' | 'attentive' | 'listening' | 'thinking' | 'speaking' | 'remembering' | 'learning' | 'reflecting' | 'proactive' | 'twin';
 export type SpaceEnergy = 'tranquil' | 'warm' | 'focused' | 'energetic' | 'mysterious' | 'protective' | 'tense' | 'serene';
@@ -79,8 +82,14 @@ class UnifiedStateBus {
     this.subscribers.forEach(sub => { try { sub(this.state, this.prevState); } catch (e) { console.warn(e); } });
   }
 
+  // 🆕 دالة select المفقودة
+  select<T>(selector: (state: TwinState) => T): T {
+    return selector(this.state);
+  }
+
   subscribe(subscriber: StateSubscriber): () => void { this.subscribers.add(subscriber); return () => this.subscribers.delete(subscriber); }
 
+  // 🆕 دعم الأحداث المتوافقة مع EventName
   on(event: string, callback: (event: string, data: any) => void): () => void {
     if (!this.eventListeners.has(event)) this.eventListeners.set(event, []);
     this.eventListeners.get(event)!.push(callback);

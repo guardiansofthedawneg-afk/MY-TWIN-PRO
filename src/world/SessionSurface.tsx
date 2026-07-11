@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutUp } from 'react-native-reanimated';
 import { livingSession } from '../core/LivingSession';
 import { EventBus } from '../core/EventBus';
-import { useRTL } from '../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Clock, MapPin, Activity, Zap, Heart } from 'lucide-react-native';
 

@@ -10,7 +10,7 @@ import { signatureMomentsController } from '../controllers/SignatureMomentsContr
 import { storeSyncBridge } from '../core/StoreSyncBridge';
 import { EventBus } from '../core/EventBus';
 import { getGreeting } from '../utils/languageDetector';
-import { useRTL } from '../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { capabilityOrchestrator } from '../coordinators/CapabilityOrchestrator';
 import BirthSequence from '../renderers/zones/BirthSequence';
 import GreetingWord from '../renderers/zones/GreetingWord';
@@ -41,7 +41,6 @@ import SessionSurface from './SessionSurface';
 import LivingTimeline from './LivingTimeline';
 import MemoryForest from './MemoryForest';
 import SoulPulse from '../renderers/zones/SoulPulse';
-import SoulObservatory from './SoulObservatory/SoulObservatory';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 
 interface LivingWorldProps { userId: string; }
@@ -102,15 +101,13 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
       }
     } catch (e) {}
 
-    }
-
     setInputText('');
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user' as const, text }]);
     EventBus.emit('USER_SEND_MESSAGE', { message: text, timestamp: Date.now() });
     const twinMsgId = (Date.now() + 1).toString();
     setMessages(prev => [...prev, { id: twinMsgId, sender: 'twin', text: '' }]);
     await streamMessage(text);
-  }, [inputText, isThinking, streamMessage]);
+  }, [inputText, isThinking, streamMessage, userId]);
 
   useEffect(() => {
     if (streamedText && messages.length > 0) {
@@ -123,7 +120,7 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
         });
       }
     }
-  }, [streamedText]);
+  }, [streamedText, messages]);
 
   if (!birthComplete) return <BirthSequence onComplete={handleBirthComplete} />;
 
@@ -139,7 +136,7 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
 
           {awakening.breathVisible && (
             <TwinPresenceZone
-            onLongPress={() => EventBus.emit('OPEN_SOUL_OBSERVATORY')}
+              onLongPress={() => EventBus.emit('OPEN_SOUL_OBSERVATORY')}
               memoryEchoVisible={memoryEchoVisible}
               echoColor={echoColor}
               awakeningEyesOpen={awakening.eyesOpen}
@@ -155,10 +152,10 @@ export default function LivingWorld({ userId }: LivingWorldProps) {
             <BusinessCapability />
             <ContentCreatorCapability />
             <DreamCapability />
-          <LifeCoachCapability />
-          <TaskManagerCapability />
-          <AIImageCapability />
-          <SmartHomeCapability />
+            <LifeCoachCapability />
+            <TaskManagerCapability />
+            <AIImageCapability />
+            <SmartHomeCapability />
           </View>
 
           <View style={styles.conversationContainer}>

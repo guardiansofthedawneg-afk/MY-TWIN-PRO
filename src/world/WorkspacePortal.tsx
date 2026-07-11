@@ -4,7 +4,7 @@ import Animated, { FadeIn, FadeOut, SlideInUp, SlideOutDown } from 'react-native
 import { useTwinBrain } from '../hooks/useTwinBrain';
 import { EventBus } from '../core/EventBus';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
-import { useRTL } from '../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { BookOpen, Briefcase, Moon, Palette, Heart, Code } from 'lucide-react-native';
 
 interface WorkspaceSuggestion {

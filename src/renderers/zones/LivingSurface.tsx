@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, Animated, ViewStyle, TouchableOpacity } from 'r
 import { useLivingTheme } from '../../../engine/living-theme';
 import { Sparkles, Brain, Zap, Star, Cloud, Eye, Search, TrendingUp } from 'lucide-react-native';
 
-type Variant = 'twin' | 'user' | 'warning' | 'success' | 'memory' | 'dream' | 'task' | 'project' | 'insight' | 'glass';
+export type Variant = 'twin' | 'user' | 'warning' | 'success' | 'memory' | 'dream' | 'task' | 'project' | 'insight' | 'glass';
 type AwarenessLevel = 'Dormant' | 'Aware' | 'Focused' | 'DeepThinking' | 'Flow' | 'Conscious';
-type Status = 'idle' | 'thinking' | 'analyzing' | 'learning' | 'remembering' | 'speaking' | 'connecting' | 'planning' | 'researching';
-type Emotion = 'neutral' | 'happy' | 'focused' | 'curious' | 'concerned' | 'inspired' | 'calm';
+export type Status = 'idle' | 'thinking' | 'analyzing' | 'learning' | 'remembering' | 'speaking' | 'connecting' | 'planning' | 'researching';
+export type Emotion = 'neutral' | 'happy' | 'focused' | 'curious' | 'concerned' | 'inspired' | 'calm';
 
 interface LivingSurfaceProps {
   children?: React.ReactNode;

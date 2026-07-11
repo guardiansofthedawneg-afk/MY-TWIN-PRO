@@ -6,7 +6,7 @@ import { memoryEngine } from '../../engine/memory/MemoryEngine';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { consciousnessCoordinator } from '../coordinators/ConsciousnessCoordinator';
 import { sendMessage } from '../services/twinApi';
-import { useRTL } from '../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Moon, Compass, TrendingUp, Search, Clock, GitBranch, Sparkles, ChevronRight, Brain } from 'lucide-react-native';
 

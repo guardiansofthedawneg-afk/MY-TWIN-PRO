@@ -5,7 +5,7 @@ import { EventBus } from '../core/EventBus';
 import { memoryEngine } from '../../engine/memory/MemoryEngine';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { consciousnessCoordinator } from '../coordinators/ConsciousnessCoordinator';
-import { useRTL } from '../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Target, Brain, ChevronRight, Clock } from 'lucide-react-native';
 

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { timelineCoordinator } from '../coordinators/TimelineCoordinator';
 import { identityEngine } from '../coordinators/IdentityEngine';
-import { useRTL } from '../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Clock, MapPin, TrendingUp, Heart } from 'lucide-react-native';
 

@@ -4,7 +4,6 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withTiming,
   withRepeat, withSequence, Easing,
 } from 'react-native-reanimated';
-import { withSequence, withTiming } from 'react-native-reanimated';
 import { usePresence } from '../hooks/usePresence';
 import { useBondLevel } from '../hooks/useBondLevel';
 import { useEmotionalState } from '../hooks/useEmotionalState';

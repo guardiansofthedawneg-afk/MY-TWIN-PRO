@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { View, Animated, StyleSheet, useWindowDimensions } from 'react-native';
-import { useTheme } from '../../../utils/theme';
+import { useTheme } from '../../../engine/theme';
 
 interface SkeletonProps {
   width?: number | string;

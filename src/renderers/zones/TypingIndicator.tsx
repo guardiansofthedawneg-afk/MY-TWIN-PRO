@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Animated, StyleSheet, Text } from 'react-native';
 import { useTwinStore } from '../../../store/useTwinStore';
-import { useTheme } from '../../../utils/theme';
+import { useTheme } from '../../../engine/theme';
 import { Brain, Heart, Target, Search, Database, Sparkles, Zap, Cloud, Lightbulb, MessageSquare } from 'lucide-react-native';
 
 interface ThinkingStageConfig {

@@ -4,9 +4,8 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSequence,
   withTiming, Easing, FadeIn, FadeOut,
 } from 'react-native-reanimated';
-import { withSequence, withTiming } from 'react-native-reanimated';
 import { EventBus } from '../../core/EventBus';
-import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
+import { SPACE, RADIUS } from '../../design/tokens/spacing';
 import { useRTL } from '../../../lib/useRTL';
 import { Sparkles } from 'lucide-react-native';
 

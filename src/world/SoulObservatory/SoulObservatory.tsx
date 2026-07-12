@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { EventBus } from '../../core/EventBus';
-import { useRTL } from '../../lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import SoulWing from './SoulWing';
 import JourneyWing from './JourneyWing';

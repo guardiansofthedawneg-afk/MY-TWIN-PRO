@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { useTheme } from '../../../utils/theme';
+import { useTheme } from '../../../engine/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 

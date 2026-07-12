@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, Platform } from 'react-native';
 import { useTwinStore } from '../store/useTwinStore';
-import { useEnergyStore } from '../store/useEnergyStore';
+import { useCreditsStore } from '../store/useCreditsStore';
 import { useAppTheme } from '../engine/colors';
 import {
   RewardedAd,
@@ -12,7 +12,6 @@ import { Play, BatteryCharging, X, Zap, AlertCircle, MessageSquare, RefreshCw } 
 import { getTierConfig } from '../lib/tierConfig';
 import { getAdUnitId } from '../lib/adConfig';
 
-// ✅ استخدام getAdUnitId للحصول على معرف الإعلان الصحيح
 const REWARDED_AD_UNIT_ID = getAdUnitId('rewarded');
 
 interface AdModalProps {
@@ -22,7 +21,7 @@ interface AdModalProps {
 
 export function AdModal({ visible, onClose }: AdModalProps) {
   const { lang, tier } = useTwinStore();
-  const energyStore = useEnergyStore();
+  const { dailyAdsWatched, addCredits, getRemainingCredits } = useCreditsStore();
   const theme = useAppTheme();
   const isAr = lang === 'ar';
   const isDark = theme.isDark;
@@ -39,23 +38,20 @@ export function AdModal({ visible, onClose }: AdModalProps) {
 
   const config = getTierConfig(tier);
   const maxAds = config.maxDailyAds;
-  const remainingAds = Math.max(0, maxAds - energyStore.dailyAdsWatched);
+  const remainingAds = Math.max(0, maxAds - dailyAdsWatched);
   const canWatch = remainingAds > 0;
-  const remainingMessages = energyStore.getRemainingMessages();
+  const remainingMessages = getRemainingCredits();
 
   const handleClaimReward = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await energyStore.watchAd();
-      if (!result.success) {
-        setErrorMsg(t('فشل الحصول على المكافأة', 'Failed to claim reward'));
-      }
+      addCredits(config.rewardMessages);
     } catch (error) {
       setErrorMsg(t('فشل الحصول على المكافأة', 'Failed to claim reward'));
     } finally {
       setLoading(false);
     }
-  }, [energyStore, t]);
+  }, [addCredits, config.rewardMessages, t]);
 
   const handleWatchAd = useCallback(() => {
     if (!adLoaded || !rewardedAd.current) return;

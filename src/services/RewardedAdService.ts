@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { RewardedAd, RewardedAdEventType, AdEventType } from 'react-native-google-mobile-ads';
-import { getAdUnitId } from '../../lib/ads';
+import { getAdUnitId } from '../../lib/adConfig';
 
 export class RewardedAdService {
   private rewarded: RewardedAd | null = null;

@@ -4,7 +4,7 @@ import { digitalSoul } from '../../soul/DigitalSoul';
 import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
 import { personalityCoordinator } from '../../coordinators/PersonalityCoordinator';
 import { identityEngine } from '../../coordinators/IdentityEngine';
-import { useRTL } from '../../lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Heart, Brain, Sparkles, TrendingUp, Zap } from 'lucide-react-native';
 

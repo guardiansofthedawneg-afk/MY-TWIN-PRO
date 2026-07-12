@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { memoryEngine, MemoryEntry } from '../../../engine/memory/MemoryEngine';
-import { useRTL } from '../../lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Heart, Star, Cloud, Zap, BookOpen } from 'lucide-react-native';
 

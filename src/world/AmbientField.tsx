@@ -6,7 +6,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useEmotionalState } from '../hooks/useEmotionalState';
 import { usePresence } from '../hooks/usePresence';
-import { livingPresenceCoordinator } from '../../core/LivingPresenceCoordinator';
+import { livingPresenceCoordinator } from '../core/LivingPresenceCoordinator';
 import { useBreathAnimation } from '../hooks/useBreathAnimation';
 import { useBondLevel } from '../hooks/useBondLevel';
 

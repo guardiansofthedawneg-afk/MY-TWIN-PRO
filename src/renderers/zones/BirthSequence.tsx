@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, Dimensions, StatusBar } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, withRepeat, Easing } from 'react-native-reanimated';
 import { audioEngine } from '../../core/AudioEngine';
-import { RADIUS } from '../../../src/design/tokens/spacing';
+import { RADIUS } from '../../design/tokens/spacing';
 import { useRTL } from '../../../lib/useRTL';
 
 const { width, height } = Dimensions.get('window');

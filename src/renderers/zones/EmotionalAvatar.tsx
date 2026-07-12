@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, Text, Image } from 'react-native';
 import { Audio } from 'expo-av';
 import { useTwinStore } from '../../../store/useTwinStore';
-import { useTheme } from '../../../utils/theme';
+import { useTheme } from '../../../engine/theme';
 
 const EMOTION_CONFIG: Record<string, { emoji: string; color: string; pulseSpeed: number }> = {
   joy:       { emoji: '😊', color: '#F59E0B', pulseSpeed: 800 },

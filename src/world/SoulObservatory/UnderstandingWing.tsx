@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { identityEngine } from '../../coordinators/IdentityEngine';
 import { memoryEngine } from '../../../engine/memory/MemoryEngine';
 import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
-import { useRTL } from '../../lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Brain, Eye, Heart, TrendingUp, Lightbulb } from 'lucide-react-native';
 

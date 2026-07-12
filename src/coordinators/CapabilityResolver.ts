@@ -1,5 +1,5 @@
 import { EventBus } from '../core/EventBus';
-import { capabilityGate } from '../../services/CapabilityGate';
+import { capabilityGate } from '../services/CapabilityGate';
 
 /**
  * أنواع القدرات المدعومة

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { memoryEngine } from '../../../engine/memory/MemoryEngine';
 import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
 import { presenceCoordinator } from '../../coordinators/PresenceCoordinator';
-import { useRTL } from '../../lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Bell, Heart, Calendar, Moon, Brain, Sparkles } from 'lucide-react-native';
 

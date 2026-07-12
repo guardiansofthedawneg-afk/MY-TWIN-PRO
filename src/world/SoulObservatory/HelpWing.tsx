@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useTwinStore } from '../../../store/useTwinStore';
-import { useRTL } from '../../lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { HelpCircle, RefreshCw, Download, AlertTriangle, RotateCcw, MessageCircle, Mail } from 'lucide-react-native';
 import { memoryEngine } from '../../../engine/memory/MemoryEngine';

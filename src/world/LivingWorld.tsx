@@ -10,7 +10,7 @@ import { signatureMomentsController } from '../controllers/SignatureMomentsContr
 import { storeSyncBridge } from '../core/StoreSyncBridge';
 import { EventBus } from '../core/EventBus';
 import { getGreeting } from '../utils/languageDetector';
-import { useRTL } from '../../../lib/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { capabilityOrchestrator } from '../coordinators/CapabilityOrchestrator';
 import BirthSequence from '../renderers/zones/BirthSequence';
 import GreetingWord from '../renderers/zones/GreetingWord';

@@ -12,7 +12,7 @@ import type { Emotion } from '../core/TwinState';
 export type TwinGender = 'male' | 'female';
 export type VoicePersonaType = 'friend' | 'mentor' | 'romantic' | 'energetic' | 'calm' | 'genz';
 
-interface VoiceProfile {
+export interface VoiceProfile {
   baseVoice: string;        // معرف الصوت في خدمة TTS
   pitch: number;            // 0.5 - 2.0
   rate: number;             // 0.5 - 2.0

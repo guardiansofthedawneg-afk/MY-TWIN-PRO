@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useRTL } from '../../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { BookOpen, Code, Briefcase, PenTool, Moon, Heart, CheckSquare, Image, Home } from 'lucide-react-native';
 

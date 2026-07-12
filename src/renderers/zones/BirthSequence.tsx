@@ -4,7 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, w
 import { withSequence, withTiming } from 'react-native-reanimated';
 import { audioEngine } from '../../core/AudioEngine';
 import { RADIUS } from '../../../src/design/tokens/spacing';
-import { useRTL } from '../../../src/utils/useRTL';
+import { useRTL } from '../../../src/lib/useRTL';
 
 const { width, height } = Dimensions.get('window');
 const LOGO_SIZE = 80;

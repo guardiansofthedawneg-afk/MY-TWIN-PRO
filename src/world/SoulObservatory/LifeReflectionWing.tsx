@@ -4,7 +4,7 @@ import { memoryEngine } from '../../../engine/memory/MemoryEngine';
 import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
 import { livingSession } from '../../core/LivingSession';
 import { identityEngine } from '../../coordinators/IdentityEngine';
-import { useRTL } from '../../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Activity, Clock, MapPin, TrendingUp, Heart } from 'lucide-react-native';
 

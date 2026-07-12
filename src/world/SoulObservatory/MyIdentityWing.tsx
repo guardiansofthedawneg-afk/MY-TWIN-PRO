@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTwinStore } from '../../../store/useTwinStore';
-import { useRTL } from '../../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { User, Mail, Shield, Cloud, Smartphone, LogOut } from 'lucide-react-native';
 

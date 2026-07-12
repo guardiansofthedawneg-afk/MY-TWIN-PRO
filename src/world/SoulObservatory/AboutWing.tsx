@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView } from 'react-native';
-import { useRTL } from '../../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Heart, Shield, FileText, Mail, Globe, Brain, AlertTriangle } from 'lucide-react-native';
 import { LEGAL } from '../../services/LegalDocuments';

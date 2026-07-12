@@ -6,7 +6,7 @@ import { usePresence } from '../../hooks/usePresence';
 import { useBreathAnimation } from '../../hooks/useBreathAnimation';
 import { EventBus } from '../../core/EventBus';
 import { SPACE } from '../../../src/design/tokens/spacing';
-import { useRTL } from '../../../src/utils/useRTL';
+import { useRTL } from '../../../src/lib/useRTL';
 import { Eye } from 'lucide-react-native';
 
 const SILENCE_PHRASES: Record<string, { ar: string[]; en: string[] }> = {

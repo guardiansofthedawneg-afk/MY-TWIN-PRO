@@ -7,7 +7,7 @@ import Animated, {
 import { withSequence, withTiming } from 'react-native-reanimated';
 import { EventBus } from '../../core/EventBus';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
-import { useRTL } from '../../../src/utils/useRTL';
+import { useRTL } from '../../../src/lib/useRTL';
 import { Sparkles } from 'lucide-react-native';
 
 interface SignatureMoment {

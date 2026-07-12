@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Linking, ActivityIndicator } from 'react-native';
 import { useTwinStore } from '../../../store/useTwinStore';
-import { useRTL } from '../../utils/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { subscriptionService } from '../../services/SubscriptionService';
 import { adService, AdStatus } from '../../services/AdService';

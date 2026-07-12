@@ -3,7 +3,7 @@ import { View, Image, StyleSheet, Dimensions, StatusBar } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, withRepeat, Easing } from 'react-native-reanimated';
 import { audioEngine } from '../../core/AudioEngine';
 import { RADIUS } from '../../../src/design/tokens/spacing';
-import { useRTL } from '../../../src/lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 
 const { width, height } = Dimensions.get('window');
 const LOGO_SIZE = 80;
@@ -93,7 +93,7 @@ export default function BirthSequence({ onComplete }: { onComplete: () => void }
                 {phase === 'eyes' && <View style={styles.eyesRow}><View style={styles.eye} /><View style={styles.eye} /></View>}
               </Animated.View>
             ) : (
-              <Image source={require('../../assets/brand/logo.png')} style={styles.logo} resizeMode="contain" />
+              <Image source={require('../../../assets/brand/logo.png')} style={styles.logo} resizeMode="contain" />
             )}
           </Animated.View>
         )}

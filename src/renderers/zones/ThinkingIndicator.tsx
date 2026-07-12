@@ -5,7 +5,7 @@ import { Brain, Eye, Search, Lightbulb, MessageCircle } from 'lucide-react-nativ
 import { ThinkingPhase } from '../../../src/core/TwinBrain';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { TYPO } from '../../../src/design/tokens/typography';
-import { useRTL } from '../../../src/lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 
 interface ThinkingIndicatorProps {
   phase: ThinkingPhase;

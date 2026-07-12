@@ -7,7 +7,7 @@ import Animated, {
   Easing,
   interpolateColor,
 } from 'react-native-reanimated';
-import { useRTL } from '../../../src/lib/useRTL';
+import { useRTL } from '../../../lib/useRTL';
 
 interface GreetingWordProps {
   word: string;

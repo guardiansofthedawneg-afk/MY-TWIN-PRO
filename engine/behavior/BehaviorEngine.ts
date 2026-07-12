@@ -7,7 +7,7 @@
  * - متى يبحث في الذاكرة
  * - كيف يستجيب للمستخدم
  */
-import { stateBus, STATE_EVENTS } from '../core/StateBus';
+import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
 import { useTwinState, ConsciousnessMode } from '../core/TwinState';
 import { stateMachine } from '../core/StateMachine';
 import { presenceEngine } from '../presence/PresenceEngine';

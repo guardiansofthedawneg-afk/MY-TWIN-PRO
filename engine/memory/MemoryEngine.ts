@@ -1,5 +1,5 @@
 import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
-import { useTwinState } from '../../src/core/TwinState';
+import { useTwinState } from '../core/TwinState';
 
 /**
  * أنواع الذاكرة

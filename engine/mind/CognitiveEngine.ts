@@ -14,7 +14,7 @@
  */
 
 import { useTwinState, ThinkingStage } from '../core/TwinState';
-import { stateBus, STATE_EVENTS } from '../core/StateBus';
+import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
 import { stateMachine } from '../core/StateMachine';
 import { memoryEngine } from '../memory/MemoryEngine';
 

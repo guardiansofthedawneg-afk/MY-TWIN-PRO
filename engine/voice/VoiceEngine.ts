@@ -3,7 +3,7 @@
  * ========================================================
  * يدير: التحدث، الاستماع، المقاطعات، طابور الصوت، شخصية الصوت.
  */
-import { stateBus, STATE_EVENTS } from '../core/StateBus';
+import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
 import { useTwinState, Emotion } from '../core/TwinState';
 import { relationshipEngine } from '../relationship/RelationshipEngine';
 

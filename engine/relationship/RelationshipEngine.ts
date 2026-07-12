@@ -1,5 +1,5 @@
 import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
-import { useTwinState } from '../../src/core/TwinState';
+import { useTwinState } from '../core/TwinState';
 
 type RelationshipPhase = 'stranger' | 'acquaintance' | 'friend' | 'close_friend' | 'soulmate';
 interface BondMetrics { trust: number; intimacy: number; consistency: number; shared_experiences: number; }

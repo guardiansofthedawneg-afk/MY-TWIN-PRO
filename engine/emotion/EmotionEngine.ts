@@ -1,4 +1,4 @@
-import { stateBus, STATE_EVENTS } from '../core/StateBus';
+import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
 import { useTwinState, Emotion } from '../core/TwinState';
 
 const EMOTION_COMPATIBILITY: Record<Emotion, Emotion[]> = {

@@ -1,4 +1,4 @@
-import { stateBus } from '../core/StateBus';
+import { stateBus } from '../../src/core/StateBus';
 import { useTwinState } from '../core/TwinState';
 import { voiceSynthesizer } from './VoiceSynthesizer';
 import { voicePersona } from './VoicePersona';

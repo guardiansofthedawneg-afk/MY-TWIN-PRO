@@ -5,7 +5,7 @@ import { memoryEngine } from '../../engine/memory/MemoryEngine';
 import { relationshipEngine } from '../../engine/relationship/RelationshipEngine';
 import { goalCoordinator } from '../coordinators/GoalCoordinator';
 import { presenceCoordinator } from '../coordinators/PresenceCoordinator';
-import { useRTL } from '../../../lib/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Briefcase, Moon, Sparkles, ArrowRight } from 'lucide-react-native';
 

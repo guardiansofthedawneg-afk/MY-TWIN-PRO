@@ -7,7 +7,7 @@ import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { consciousnessCoordinator } from '../coordinators/ConsciousnessCoordinator';
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
-import { useRTL } from '../../../lib/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Image as ImageIcon, Palette, Wand2, Search, Camera, Clock, Sparkles, ChevronRight, Brain } from 'lucide-react-native';
 

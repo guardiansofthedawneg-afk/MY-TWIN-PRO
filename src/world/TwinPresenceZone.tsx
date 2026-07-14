@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { usePresence } from '../hooks/usePresence';
 import { useBreathAnimation } from '../hooks/useBreathAnimation';
 import { useEmotionalState } from '../hooks/useEmotionalState';
@@ -15,10 +15,11 @@ interface TwinPresenceZoneProps {
   memoryEchoVisible: boolean;
   echoColor: string;
   awakeningEyesOpen: boolean;
+  onLongPress?: () => void;
 }
 
 export default function TwinPresenceZone({
-  memoryEchoVisible, echoColor, awakeningEyesOpen,
+  memoryEchoVisible, echoColor, awakeningEyesOpen, onLongPress,
 }: TwinPresenceZoneProps) {
   const presence = usePresence();
   const breath = useBreathAnimation();
@@ -26,7 +27,12 @@ export default function TwinPresenceZone({
   const bond = useBondLevel();
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={styles.container}
+      onLongPress={onLongPress}
+      disabled={!onLongPress}
+      activeOpacity={1}
+    >
       <DigitalSoulPulse />
       <RelationshipAura size={240} />
       <TrustPulse size={14} />
@@ -41,7 +47,7 @@ export default function TwinPresenceZone({
           bondLevel={bond.bondLevel}
         />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

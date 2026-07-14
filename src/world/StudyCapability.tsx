@@ -6,7 +6,7 @@ import { memoryEngine } from '../../engine/memory/MemoryEngine';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { consciousnessCoordinator } from '../coordinators/ConsciousnessCoordinator';
 import { economyEngine } from '../services/EconomyEngine';
-import { useRTL } from '../../../lib/useRTL';
+import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Target, Brain, ChevronRight, Clock } from 'lucide-react-native';
 

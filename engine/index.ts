@@ -15,7 +15,7 @@ export type {
   ThinkingStage,
 } from './core/TwinState';
 
-export { stateBus, STATE_EVENTS } from './core/StateBus';
+export { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
 export { stateMachine } from './core/StateMachine';
 
 // ── Engines ────────────────────────────────────────

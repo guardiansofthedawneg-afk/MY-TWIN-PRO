@@ -57,22 +57,48 @@ export class SecurityService {
     return false;
   }
 
-  /** تشفير بسيط للبيانات الحساسة (للتخزين المحلي) */
+  /** تشفير Base64 بسيط للبيانات الحساسة (للتخزين المحلي) */
   encryptData(data: string): string {
-    // تشفير Base64 بسيط للتخزين المحلي
-    return typeof Buffer !== 'undefined' ? Buffer.from : (str: string) => ({ toString: () => str })(data).toString('base64');
+    try {
+      if (typeof btoa === 'function') {
+        return btoa(data);
+      }
+      return Buffer.from(data, 'utf-8').toString('base64');
+    } catch (e) {
+      return data;
+    }
   }
 
+  /** فك تشفير Base64 */
   decryptData(encrypted: string): string {
-    return typeof Buffer !== 'undefined' ? Buffer.from : (str: string) => ({ toString: () => str })(encrypted, 'base64').toString('utf-8');
+    try {
+      if (typeof atob === 'function') {
+        return atob(encrypted);
+      }
+      return Buffer.from(encrypted, 'base64').toString('utf-8');
+    } catch (e) {
+      return encrypted;
+    }
   }
 
   /** التحقق من صلاحية التوكن */
   isTokenExpired(token: string): boolean {
     try {
-      const payload = JSON.parse(typeof Buffer !== 'undefined' ? Buffer.from : (str: string) => ({ toString: () => str })(token.split('.')[1], 'base64').toString());
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+
+      const payload = parts[1];
+      let decoded: string;
+      
+      if (typeof atob === 'function') {
+        decoded = atob(payload);
+      } else {
+        decoded = Buffer.from(payload, 'base64').toString('utf-8');
+      }
+
+      const parsed = JSON.parse(decoded);
       const now = Math.floor(Date.now() / 1000);
-      return payload.exp < now;
+      return parsed.exp < now;
     } catch (e) {
       return true;
     }

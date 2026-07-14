@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   StyleSheet,
   Animated,
   Easing,
-  useRef,
-  useEffect,
 } from 'react-native';
 import { router } from 'expo-router';
 import { authService } from '../src/services/authService';
@@ -71,7 +69,6 @@ export default function ForgotPassword() {
       </View>
       <View style={styles.breathContainer}>
         <BreathingGlow
-          visible={true}
           color="#7C3AED"
           speed={0.6}
         />

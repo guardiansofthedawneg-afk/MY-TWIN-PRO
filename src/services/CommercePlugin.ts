@@ -70,7 +70,8 @@ export class CommercePlugin {
     try {
       // استخدام iapService للشراء الحقيقي عبر Google Play
       if (typeof iapPurchase === 'function') {
-        return await iapPurchase(planId, userId);
+        const result = await iapPurchase(planId, userId);
+        return result;
       }
 
       // fallback: شراء عبر الويب

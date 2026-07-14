@@ -38,6 +38,7 @@ export default function Index() {
     // الانتقال إلى الوجهة المناسبة بعد 3 ثوانٍ
     setTimeout(() => {
       if (result.isReturning) {
+        // ✅ تم تصحيح المسار ليشير مباشرة إلى شاشة LivingWorld الحقيقية
         router.replace('/living-world');
       } else {
         router.replace('/genesis');
@@ -61,7 +62,6 @@ export default function Index() {
       
       <Animated.View style={[styles.breathContainer, { opacity }]}>
         <BreathingGlow
-          visible={true}
           color={phase === 'found' ? '#A78BFA' : '#7C3AED'}
           speed={phase === 'searching' ? 1.4 : 0.8}
         />

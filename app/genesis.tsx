@@ -96,17 +96,35 @@ const BreathingHalo = ({ phase }: { phase: GenesisPhase }) => {
 };
 
 const ParticleField = ({ active }: { active: boolean }) => {
-  const particles = useRef(Array.from({ length: 20 }).map(() => ({ x: Math.random() * width, y: Math.random() * height, size: 1.5 + Math.random() * 3, speed: 800 + Math.random() * 2000, opacity: useSharedValue(0) }))).current;
+  const opacityValues = useRef(Array.from({ length: 20 }, () => useSharedValue(0))).current;
 
   useEffect(() => {
     if (active) {
-      particles.forEach((p, i) => {
-        p.opacity.value = withDelay(i * 100, withRepeat(withSequence(withTiming(0.5, { duration: p.speed }), withTiming(0, { duration: p.speed })), -1, true));
+      opacityValues.forEach((opacity, i) => {
+        const speed = 800 + Math.random() * 2000;
+        opacity.value = withDelay(i * 100, withRepeat(withSequence(withTiming(0.5, { duration: speed }), withTiming(0, { duration: speed })), -1, true));
       });
     }
   }, [active]);
 
-  return <View style={StyleSheet.absoluteFill} pointerEvents="none">{particles.map((p, i) => <Animated.View key={i} style={[{ position: 'absolute', left: p.x, top: p.y, width: p.size, height: p.size, borderRadius: p.size / 2, backgroundColor: '#B8A0D0' }, { opacity: p.opacity }]} />)}</View>;
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {opacityValues.map((opacity, i) => {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const size = 1.5 + Math.random() * 3;
+        return (
+          <Animated.View
+            key={i}
+            style={[
+              { position: 'absolute', left: x, top: y, width: size, height: size, borderRadius: size / 2, backgroundColor: '#B8A0D0' },
+              { opacity },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
 };
 
 export default function Genesis() {
@@ -154,7 +172,7 @@ export default function Genesis() {
 
   useEffect(() => {
     const onPhase = (payload: any) => setPhase(payload.phase);
-    const onStep = (payload: any) => setConsciousnessSteps(prev => [...prev, payload.step]);
+    const onStep = (payload: any) => setConsciousnessSteps((prev: string[]) => [...prev, payload.step]);
     const onBond = () => setBondSaved(true);
     const onProgressive = () => setProgressiveDone(true);
 
@@ -222,6 +240,22 @@ export default function Genesis() {
     } catch (e: any) {
       setAuthError(e.message || t.errorAuth);
     } finally { setAuthLoading(false); }
+  };
+
+  const handleBondSubmit = async () => {
+    if (!bondAnswer.trim()) return;
+    setBondSaved(true);
+    await relationshipCoordinator.recordFirstBond(bondAnswer.trim());
+    setTwinName(lang === 'ar' ? 'توأمك' : 'MyTwin');
+    setTwinGender('female');
+    await genesisCoordinator.recordFirstBond(bondAnswer.trim());
+  };
+
+  const handleProgressiveSubmit = async () => {
+    if (!progressiveAnswer.trim()) return;
+    setProgressiveDone(true);
+    await identityCoordinator.completeProgressiveIdentity(progressiveAnswer.trim());
+    await genesisCoordinator.completeProgressiveIdentity(progressiveAnswer.trim());
   };
 
   const splashStyle = useAnimatedStyle(() => ({ opacity: splashOpacity.value, transform: [{ scale: splashScale.value }] }));

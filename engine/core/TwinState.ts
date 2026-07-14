@@ -32,6 +32,7 @@ export interface TwinState {
   isSpeaking: boolean;
   isListening: boolean;
   isProcessing: boolean;
+  isSearchingMemory: boolean;
 
   // ── Setters ──
   setMode: (mode: ConsciousnessMode) => void;
@@ -47,6 +48,7 @@ export interface TwinState {
   setIsSpeaking: (value: boolean) => void;
   setIsListening: (value: boolean) => void;
   setIsProcessing: (value: boolean) => void;
+  setIsSearchingMemory: (value: boolean) => void;
 
   // ── دوال مركبة ──
   startThinking: () => void;
@@ -63,6 +65,7 @@ const initialState = {
   attention: 80, confidence: 70,
   bondLevel: 50, energy: 80,
   isThinking: false, isSpeaking: false, isListening: true, isProcessing: false,
+  isSearchingMemory: false,
 };
 
 export const useTwinState = create<TwinState>((set) => ({
@@ -80,6 +83,7 @@ export const useTwinState = create<TwinState>((set) => ({
   setIsSpeaking: (v) => set({ isSpeaking: v }),
   setIsListening: (v) => set({ isListening: v }),
   setIsProcessing: (v) => set({ isProcessing: v }),
+  setIsSearchingMemory: (v) => set({ isSearchingMemory: v }),
   startThinking: () => set({ consciousnessMode: 'thinking', isThinking: true, isListening: false }),
   startSpeaking: () => set({ consciousnessMode: 'speaking', isSpeaking: true, isThinking: false }),
   stopSpeaking: () => set({ consciousnessMode: 'listening', isSpeaking: false, isListening: true }),

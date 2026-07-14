@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiPost } from './httpClient';
-import { useTwinStore } from '../store/useTwinStore';
+import { useTwinCoreStore } from '../store/useTwinCoreStore';
 
 const OFFLINE_QUEUE_KEY = 'mytwin_offline_queue';
 const RESPONSE_CACHE_KEY = 'mytwin_response_cache';
@@ -63,7 +63,7 @@ function simpleHash(str: string): string {
 // ========== Offline Queue ==========
 export async function addToOfflineQueue(message: string): Promise<void> {
   try {
-    const state = useTwinStore.getState();
+    const state = useTwinCoreStore.getState();
     const queue = await getOfflineQueue();
     queue.push({
       id: `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,

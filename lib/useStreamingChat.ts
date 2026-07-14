@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { apiPost } from './httpClient';
 import { useTwinStore } from '../store/useTwinStore';
+import { useTwinCoreStore } from '../store/useTwinCoreStore';
+import { useConversationStore } from '../store/useConversationStore';
+import { useRelationshipStore } from '../store/useRelationshipStore';
 
 interface StreamingState {
   isStreaming: boolean;
@@ -52,20 +55,22 @@ export function useStreamingChat() {
       setThinkingStage('memory');
 
       try {
-        const store = useTwinStore.getState();
+        // Read state directly from Zustand stores
+        const coreState = useTwinCoreStore.getState();
+        const conversationState = useConversationStore.getState();
+        const relationshipState = useRelationshipStore.getState();
 
         // محاكاة مرحلة استرجاع الذاكرة
         await new Promise(resolve => setTimeout(resolve, 300));
         setThinkingStage('generating');
 
-        // استخدام apiPost العادي بدلاً من streamChat
         const response = await apiPost('/api/chat', {
           message,
-          history: store.chatHistory.slice(-10).map((h) => ({
+          history: conversationState.chatHistory.slice(-10).map((h: any) => ({
             role: h.role,
             content: h.content,
           })),
-          lang: store.lang,
+          lang: coreState.lang,
         });
 
         const fullText = response?.reply || '';
@@ -77,8 +82,9 @@ export function useStreamingChat() {
           await new Promise(resolve => setTimeout(resolve, 10));
         }
 
-        useTwinStore.setState((s) => ({
-          chatHistory: s.chatHistory.map((msg) =>
+        // تحديث المحادثة باستخدام الـ store مباشرة
+        useConversationStore.setState((s) => ({
+          chatHistory: s.chatHistory.map((msg: any) =>
             msg.id === twinMsgId
               ? { ...msg, content: fullText, thinkingStage: 'complete', provider: response?.provider || 'orchestrator' }
               : msg
@@ -86,10 +92,10 @@ export function useStreamingChat() {
         }));
 
         // تحديث الطاقة والترابط
-        const newEnergy = Math.max(0, store.twinEnergy - 2);
+        const newEnergy = Math.max(0, relationshipState.twinEnergy - 2);
         setTwinEnergy(newEnergy);
         
-        const newBond = Math.min(store.bondLevel + (Math.random() * 0.3 + 0.1), 100);
+        const newBond = Math.min(relationshipState.bondLevel + (Math.random() * 0.3 + 0.1), 100);
         updateBond(newBond);
 
         setThinking(false);
@@ -112,8 +118,8 @@ export function useStreamingChat() {
             ? 'انتهت الجلسة، الرجاء تسجيل الدخول مجدداً'
             : 'حدث خطأ في الاتصال';
 
-        useTwinStore.setState((s) => ({
-          chatHistory: s.chatHistory.map((msg) =>
+        useConversationStore.setState((s) => ({
+          chatHistory: s.chatHistory.map((msg: any) =>
             msg.id === twinMsgId
               ? { ...msg, content: errorMsg, failed: true, thinkingStage: 'complete' }
               : msg

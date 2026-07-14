@@ -4,7 +4,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Audio } from 'expo-av';
 import { apiPost } from './httpClient';
-import { useTwinStore } from '../store/useTwinStore';
+import { useTwinCoreStore } from '../store/useTwinCoreStore';
 
 // تشغيل نبض التوأم عند استلام إشعار
 async function playPulseSound(): Promise<void> {
@@ -62,7 +62,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
       });
     }
 
-    const userId = useTwinStore.getState().userId;
+    const userId = useTwinCoreStore.getState().userId;
     if (userId && token.data) {
       await apiPost('/api/awareness/register-player', {
         user_id: userId,

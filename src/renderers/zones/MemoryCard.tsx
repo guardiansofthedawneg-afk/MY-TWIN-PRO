@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Animated, { withSequence, withTiming,  useSharedValue, useAnimatedStyle, withTiming, withSequence, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { MOTION } from '../../../src/design/tokens/motion';
 import { Calendar, Heart, Sparkles, Clock, X } from 'lucide-react-native';

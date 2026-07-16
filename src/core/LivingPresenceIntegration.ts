@@ -6,6 +6,7 @@ import { memoryEngine } from '../../engine/memory/MemoryEngine';
 import { presenceEngine } from '../../engine/presence/PresenceEngine';
 import { personalityCoordinator } from '../coordinators/PersonalityCoordinator';
 import { digitalSoul } from '../soul/DigitalSoul';
+import { longTermEvolution } from '../core/LongTermEvolution';
 import { EventBus } from './EventBus';
 import { stateBus } from './StateBus';
 
@@ -105,6 +106,7 @@ export class LivingPresenceIntegration {
   async consolidateMemory(message: string, reply: string, context: Partial<LifecycleContext>): Promise<void> {
     this.messagesInSession++;
     await memoryEngine.store('conversation', `${message} → ${reply}`, 50, context.currentEmotion || 'neutral', ['session']);
+    longTermEvolution.recordInteraction('positive');
 
     if (this.messagesInSession % 10 === 0) {
       try { digitalSoul.evolve?.(); } catch { console.log('[LivingPresence] digitalSoul.evolve not implemented'); }

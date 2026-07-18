@@ -17,7 +17,6 @@ export interface MemoryState { lastSurfacedId: string | null; pendingSurfacing: 
 export interface WorkspaceState { active: string | null; previous: string | null; isTransforming: boolean; transformProgress: number; spatialMemory: Record<string, any>; }
 export interface RelationshipState { bondLevel: number; attachmentStyle: string; trustScore: number; firstContactTimestamp: number | null; }
 
-// تصدير نوع Message لتتوافق مع استيرادات index.ts
 export interface Message {
   id: string;
   sender: 'user' | 'twin';
@@ -28,7 +27,7 @@ export interface Message {
 }
 
 export interface TwinState {
-  presenceLevel: number; // تغيير النوع إلى number لتجنب خطأ TS2322
+  presenceLevel: number;
   interfaceState: InterfaceState; isAwakening: boolean; awakeningPhase: string;
   breath: BreathState; avatar: AvatarState; emotion: EmotionalState; spaceEnergy: SpaceEnergy; silenceLevel: number;
   conversation: ConversationState; memory: MemoryState; workspace: WorkspaceState; relationship: RelationshipState;
@@ -63,14 +62,12 @@ export class StateBusClass {
   private prevState: TwinState;
   private subscribers: Set<StateSubscriber> = new Set();
   private eventListeners: Map<string, Array<(event: string, data: any) => void>> = new Map();
-  private _batching = false;
 
   constructor() { this.state = { ...DEFAULT_STATE }; this.prevState = { ...DEFAULT_STATE }; }
 
   getState(): Readonly<TwinState> { return this.state; }
 
   update(partial: Partial<TwinState>): void {
-    if (this._batching) return this.flushLater(partial);
     this.applyUpdate(partial);
   }
 
@@ -89,27 +86,8 @@ export class StateBusClass {
     this.subscribers.forEach(sub => { try { sub(this.state, this.prevState); } catch (e) { console.warn(e); } });
   }
 
-  batch(callback: () => void) {
-    this._batching = true;
-    callback();
-    this._batching = false;
-    this.emitChanges();
-  }
-
-  private flushLater(partial: Partial<TwinState>) {
-    this.state = { ...this.state, ...partial };
-  }
-
-  private emitChanges() {
-    this.subscribers.forEach(sub => { try { sub(this.state, this.prevState); } catch (e) { console.warn(e); } });
-  }
-
-  select<T>(selector: (state: TwinState) => T): T {
-    return selector(this.state);
-  }
-
+  select<T>(selector: (state: TwinState) => T): T { return selector(this.state); }
   subscribe(subscriber: StateSubscriber): () => void { this.subscribers.add(subscriber); return () => this.subscribers.delete(subscriber); }
-
   subscribeTo<T>(selector: (state: TwinState) => T, callback: (value: T) => void): () => void {
     const listener = (state: TwinState, _prev: TwinState) => callback(selector(state));
     return this.subscribe(listener);
@@ -126,6 +104,69 @@ export class StateBusClass {
   private emitEvent(event: string, data: any): void {
     const arr = this.eventListeners.get(event);
     if (arr) arr.forEach(cb => { try { cb(event, data); } catch (e) { console.warn(`[StateBus] Error: ${event}`, e); } });
+  }
+
+  // ✅ الجديد: تحديث الحالة من UnifiedResponse
+  updateFromUnifiedResponse(response: any): void {
+    if (!response) return;
+    const p = response.presence_state || {};
+    const e = response.twin_emotional_state || {};
+    const b = response.behavior || {};
+    const r = response.twin_state_update?.relationship || {};
+    const m = response.memory_surfaced;
+
+    this.applyUpdate({
+      emotion: {
+        primaryEmotion: p.emotion || e.current_emotion || 'neutral',
+        intensity: p.intensity || e.intensity || 0.5,
+        valence: (e.intensity > 0.5 || p.emotion === 'joy') ? 'positive' : (p.emotion === 'sadness' || p.emotion === 'fear' ? 'negative' : 'neutral'),
+        confidence: e.confidence || 0.7,
+        duration: 0,
+        trend: 'stable',
+      },
+      relationship: {
+        bondLevel: r.bond_level || 0,
+        attachmentStyle: 'secure',
+        trustScore: (r.trust || 50) / 100,
+        firstContactTimestamp: null,
+      },
+      memory: {
+        lastSurfacedId: m?.id || null,
+        pendingSurfacing: false,
+        recentContext: m?.content || null,
+      },
+      spaceEnergy: p.emotion === 'joy' ? 'energetic' : p.emotion === 'sadness' ? 'serene' : p.emotion === 'fear' ? 'tense' : 'tranquil',
+      interfaceState: 'twin',
+      presenceLevel: Math.round(p.intensity * 5) as any,
+    });
+
+    // إرسال presence:state_updated ليغذي LivingLightEntity
+    this.emitEvent('presence:state_updated', {
+      breathRate: p.breath_rate || 12,
+      breathDepth: p.intensity || 0.5,
+      heartRate: 60 + (p.energy || 0.7) * 40,
+      heartVariability: 0.5,
+      haloRadius: 50 + (p.warmth || 0.5) * 30,
+      haloIntensity: p.intensity || 0.5,
+      haloColorShift: 0,
+      particleCount: Math.round((p.energy || 0.7) * 100),
+      particleVelocity: p.energy || 0.7,
+      particleSpread: 0.5,
+      focusLevel: p.emotion === 'focused' ? 0.9 : 0.5,
+      eyeTracking: true,
+      eyeBlinkRate: 4,
+      energyLevel: p.energy || 0.7,
+      warmth: p.warmth || 0.7,
+      stability: 0.8,
+      voicePitch: 0.5,
+      voiceSpeed: p.voice_tone === 'soft' ? 0.4 : 0.6,
+      voiceWarmth: p.warmth || 0.7,
+      movementFluidity: 0.5,
+      socialDistance: 0.3,
+      glowIntensity: p.intensity || 0.5,
+      breathDuration: p.breath_rate || 12,
+      attentionLevel: Math.round((p.energy || 0.7) * 100),
+    });
   }
 
   reset(): void { this.prevState = { ...this.state }; this.state = { ...DEFAULT_STATE }; this.subscribers.forEach(s => s(this.state, this.prevState)); }

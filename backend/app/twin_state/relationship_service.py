@@ -57,6 +57,11 @@ QUICK_INTENT = {
 
 async def load(user_id: str) -> Dict[str, Any]:
     """تحميل حالة العلاقة من TCMA أو محلياً"""
+    # تحديث bond_level (متوسط trust + عدد التفاعلات)
+    interaction_count = state.get("interaction_count", 0) + 1
+    state["interaction_count"] = interaction_count
+    state["bond_level"] = min(100, (state.get("trust", 50) + min(interaction_count * 0.1, 30)))
+    
     if TCMA_RELATIONSHIP_AVAILABLE:
         try:
             context = await get_relationship_context_for_response(user_id, "")
@@ -67,13 +72,13 @@ async def load(user_id: str) -> Dict[str, Any]:
                 "attachment": rel.get("attachment", 30),
                 "comfort": rel.get("comfort", 50),
                 "stage": "friend",
-                "bond_level": rel.get("trust", 50),
+                "bond_level": rel.get("bond_level", rel.get("trust", 50)),
                 "interaction_count": 0,
             }
         except Exception as e:
             logger.warning(f"TCMA relationship failed: {e}")
 
-    return {"trust": 50, "openness": 50, "attachment": 30, "comfort": 50, "stage": "friend", "bond_level": 50}
+    return {"trust": 50, "openness": 50, "attachment": 30, "comfort": 50, "stage": "friend", "bond_level": 50, "trend": "stable", "interaction_count": 0}
 
 async def update(user_id: str, emotion: Optional[Dict] = None, message: Optional[str] = None,
                  journey_phase: Optional[str] = None, attachment_style: Optional[str] = None) -> Optional[Dict[str, str]]:
@@ -87,6 +92,11 @@ async def update(user_id: str, emotion: Optional[Dict] = None, message: Optional
         effects = {"joy": 2, "sadness": 3, "fear": 2, "anger": -1}
         state["trust"] = max(0, min(100, state.get("trust", 50) + effects.get(primary, 0) * intensity))
 
+    # تحديث bond_level (متوسط trust + عدد التفاعلات)
+    interaction_count = state.get("interaction_count", 0) + 1
+    state["interaction_count"] = interaction_count
+    state["bond_level"] = min(100, (state.get("trust", 50) + min(interaction_count * 0.1, 30)))
+    
     if TCMA_RELATIONSHIP_AVAILABLE:
         try:
             dims = {

@@ -26,6 +26,9 @@ from app.twin_state.personality_engine import (
 )
 from app.twin_brain.identity_service import get_identity_context
 from app.twin_brain.response_builder import build_response
+from app.twin_state.unified_soul import unified_soul_engine
+from app.twin_state.unified_evolution import unified_evolution_engine
+
 from app.twin_state.relationship_service import load as load_relationship
 
 
@@ -165,7 +168,7 @@ class UnifiedTwinBrain:
                 "is_culturally_disguised": is_disguised,
             },
             memory_context={"recent_conversations": [
-                {"content": m.get("content", ""), "importance": m.get("importance", 50)}
+                {"role": "user", "content": m.get("content", ""), "importance": m.get("importance", 50)}
                 for m in relevant_memories
             ]},
             strategy=strategy,
@@ -204,6 +207,22 @@ class UnifiedTwinBrain:
             silence_before_ms=silence.get("suggested_pause_ms", 0),
         )
         
+
+        # ═══════════════════════════════
+        # 13.5 تطور الروح (كل 10 رسائل)
+        # ═══════════════════════════════
+        interaction_count = await unified_evolution_engine._get_interaction_count(user_id)
+        soul_state = {}
+        if interaction_count % 10 == 0:
+            soul_state = await unified_soul_engine.evolve(user_id, real_emotion, evolved_dna)
+        else:
+            soul_state = await unified_soul_engine.get_soul_state(user_id, lang)
+        
+        # ═══════════════════════════════
+        # 13.6 التطور طويل المدى
+        # ═══════════════════════════════
+        evolution_updates = await unified_evolution_engine.record_interaction(user_id, real_emotion, evolved_dna)
+
         # ═══════════════════════════════
         # 14. تجميع الاستجابة الموحدة
         # ═══════════════════════════════
@@ -212,6 +231,8 @@ class UnifiedTwinBrain:
         return {
             "reply": reply,
             "presence_state": presence_state,
+            "soul_state": soul_state,
+            "evolution_updates": evolution_updates,
             "twin_emotional_state": {
                 "current_emotion": current_emotion,
                 "real_emotion": real_emotion,

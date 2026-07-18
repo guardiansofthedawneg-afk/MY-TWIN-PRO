@@ -1,20 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableWithoutFeedback } from 'react-native';
-import { usePresence } from '../hooks/usePresence';
-import { useBreathAnimation } from '../hooks/useBreathAnimation';
-import { useEmotionalState } from '../hooks/useEmotionalState';
-import { useBondLevel } from '../hooks/useBondLevel';
-import { useTwinBrain } from '../hooks/useTwinBrain';
-import { awakeningController, AwakeningState } from '../controllers/AwakeningController';
-import { signatureMomentsController } from '../controllers/SignatureMomentsController';
-import { storeSyncBridge } from '../core/StoreSyncBridge';
-import { EventBus } from '../core/EventBus';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import { stateBus } from '../core/StateBus';
+import { EventBus } from '../core/EventBus';
+import { unifiedBrainBridge, UnifiedResponse } from '../core/UnifiedBrainBridge';
+import { perceptionEngine } from '../../engine/perception/PerceptionEngine';
+import { presenceEngine } from '../../engine/presence/PresenceEngine';
 import { getGreeting } from '../utils/languageDetector';
 import { useRTL } from '../../lib/useRTL';
 import { capabilityOrchestrator } from '../coordinators/CapabilityOrchestrator';
-import { presenceEngine } from '../../engine/presence/PresenceEngine';
-import { perceptionEngine } from '../../engine/perception/PerceptionEngine';
 import BirthSequence from '../renderers/zones/BirthSequence';
 import GreetingWord from '../renderers/zones/GreetingWord';
 import ThinkingIndicator from '../renderers/zones/ThinkingIndicator';
@@ -50,30 +43,36 @@ import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 
 export default function LivingWorld() {
   const userId = useTwinStore(s => s.userId) || '';
-  const presence = usePresence();
-  const breath = useBreathAnimation();
-  const emotion = useEmotionalState();
-  const bond = useBondLevel();
-  const { isThinking, thinkingPhase, streamedText, streamMessage, setUserId } = useTwinBrain();
   const rtl = useRTL();
-
-  useEffect(() => { if (userId) setUserId(userId); }, [userId, setUserId]);
+  const greeting = getGreeting();
 
   const [birthComplete, setBirthComplete] = useState(false);
   const [showGreeting, setShowGreeting] = useState(false);
   const [greetingDone, setGreetingDone] = useState(false);
-  const [awakening, setAwakening] = useState<AwakeningState>({
-    phase: 'presence', isComplete: false, firstWord: '',
-    showInput: false, breathVisible: false, avatarVisible: false, eyesOpen: false,
-  });
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; sender: 'user' | 'twin'; text: string }>>([]);
   const [showInput, setShowInput] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [thinkingPhase, setThinkingPhase] = useState<{ phase: string; progress: number; label: string } | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [streamedText, setStreamedText] = useState('');
   const [memoryEchoVisible, setMemoryEchoVisible] = useState(false);
   const [echoColor, setEchoColor] = useState('#A855F7');
   const [isWriting, setIsWriting] = useState(false);
-  const greeting = getGreeting();
+  const messagesEndRef = useRef<View>(null);
 
+  // تهيئة userId للجسر
+  useEffect(() => {
+    if (userId) unifiedBrainBridge.setUserId(userId);
+  }, [userId]);
+
+  // بدء حلقة الحضور (بعد أن تصبح PresenceEngine مستهلكاً)
+  useEffect(() => {
+    presenceEngine.startPresenceLoop();
+    return () => presenceEngine.stopPresenceLoop();
+  }, []);
+
+  // استماع لتغيرات audio من stateBus
   useEffect(() => {
     const unsubscribe = stateBus.on('presence:state_updated', (event: string, data: any) => {
       if (data.warmth > 0.8) audioMixer.setContext('celebration');
@@ -84,18 +83,7 @@ export default function LivingWorld() {
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    presenceEngine.startPresenceLoop();
-    return () => presenceEngine.stopPresenceLoop();
-  }, []);
-
-  useEffect(() => {
-    storeSyncBridge.activate();
-    storeSyncBridge.syncNow();
-    signatureMomentsController.start();
-    return () => { storeSyncBridge.deactivate(); signatureMomentsController.stop(); };
-  }, []);
-
+  // استماع لـ MEMORY_SURFACED من EventBus (قد يأتي من UnifiedBrainBridge)
   useEffect(() => {
     const unsub = EventBus.on('MEMORY_SURFACED', (payload: any) => {
       setEchoColor(payload?.color || '#A855F7');
@@ -105,33 +93,7 @@ export default function LivingWorld() {
     return unsub;
   }, []);
 
-  const handleBirthComplete = useCallback(() => { setBirthComplete(true); awakeningController.start(setAwakening); }, []);
-  useEffect(() => { return () => awakeningController.stop(); }, []);
-  useEffect(() => { if (awakening.isComplete) setShowGreeting(true); }, [awakening.isComplete]);
-  const handleGreetingComplete = useCallback(() => setGreetingDone(true), []);
-  const handleFirstInteraction = useCallback(() => { if (!greetingDone) return; setShowInput(true); }, [greetingDone]);
-
-  const handleSend = useCallback(async () => {
-    if (!inputText.trim() || isThinking) return;
-    const text = inputText.trim();
-    
-    perceptionEngine.analyze(text);
-
-    try {
-      const orchestration = await capabilityOrchestrator.orchestrate(text, userId);
-      if (orchestration.primaryCapability !== 'general' && orchestration.primaryCapability !== null) {
-        capabilityOrchestrator.activateChain([orchestration.primaryCapability, ...orchestration.secondaryCapabilities]);
-      }
-    } catch (e) {}
-
-    setInputText('');
-    setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user' as const, text }]);
-    EventBus.emit('USER_SEND_MESSAGE', { message: text, timestamp: Date.now() });
-    const twinMsgId = (Date.now() + 1).toString();
-    setMessages(prev => [...prev, { id: twinMsgId, sender: 'twin', text: '' }]);
-    await streamMessage(text);
-  }, [inputText, isThinking, streamMessage, userId]);
-
+  // تحديث آخر رسالة بالـ streamedText
   useEffect(() => {
     if (streamedText && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
@@ -143,7 +105,101 @@ export default function LivingWorld() {
         });
       }
     }
-  }, [streamedText, messages]);
+  }, [streamedText]);
+
+  const handleBirthComplete = useCallback(() => {
+    setBirthComplete(true);
+    // بدء تسلسل التحية
+    setTimeout(() => setShowGreeting(true), 1500);
+  }, []);
+
+  const handleGreetingComplete = useCallback(() => {
+    setGreetingDone(true);
+    setShowInput(true);
+  }, []);
+
+  const handleFirstInteraction = useCallback(() => {
+    if (!greetingDone) return;
+    setShowInput(true);
+  }, [greetingDone]);
+
+  // إرسال رسالة
+  const handleSend = useCallback(async () => {
+    if (!inputText.trim() || isThinking) return;
+    const text = inputText.trim();
+
+    // جمع بيانات الإدراك
+    const perception = perceptionEngine.analyze(text);
+
+    // إضافة رسالة المستخدم للعرض
+    setInputText('');
+    setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user' as const, text }]);
+    EventBus.emit('USER_SEND_MESSAGE', { message: text, timestamp: Date.now() });
+
+    // إضافة رسالة مؤقتة للتوأم
+    const twinMsgId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, { id: twinMsgId, sender: 'twin', text: '' }]);
+
+    setIsThinking(true);
+    setStreamedText('');
+
+    try {
+      // إرسال عبر الجسر الموحد
+      const response: UnifiedResponse = await unifiedBrainBridge.process(text, {
+        typingSpeed: perception.typingSpeed,
+        messageLength: perception.messageLength,
+        absenceDurationMinutes: perception.absenceDuration,
+        timeOfDay: perception.timeOfDay,
+        userState: perception.userState,
+      });
+
+      // تحديث StateBus من الاستجابة (سيغذي PresenceEngine و LivingLightEntity)
+      stateBus.updateFromUnifiedResponse(response);
+
+      // عرض الذاكرة المسترجعة إن وجدت
+      if (response.memory_surfaced) {
+        EventBus.emit('MEMORY_SURFACED', {
+          memoryId: response.memory_surfaced.id,
+          relevance: 0.8,
+          emotionalWeight: 0.7,
+          color: '#A855F7',
+        });
+      }
+
+      // تحديث حالة التحدث
+      setIsSpeaking(response.reply.length > 0);
+      setStreamedText(response.reply);
+      
+      // محاكاة مراحل التفكير (اختياري)
+      if (response.timing) {
+        setThinkingPhase({ phase: 'observe', progress: 0, label: 'يراقب...' });
+        setTimeout(() => setThinkingPhase({ phase: 'understand', progress: 0.25, label: 'يفهم...' }), response.timing.observe_ms);
+        setTimeout(() => setThinkingPhase({ phase: 'recall', progress: 0.5, label: 'يتذكر...' }), response.timing.observe_ms + response.timing.understand_ms);
+        setTimeout(() => setThinkingPhase({ phase: 'reason', progress: 0.75, label: 'يفكر...' }), response.timing.observe_ms + response.timing.understand_ms + response.timing.recall_ms);
+        setTimeout(() => {
+          setThinkingPhase(null);
+          setIsThinking(false);
+        }, response.timing.observe_ms + response.timing.understand_ms + response.timing.recall_ms + response.timing.reason_ms);
+      } else {
+        setTimeout(() => {
+          setThinkingPhase(null);
+          setIsThinking(false);
+        }, 1000);
+      }
+
+      // تحديث Zustand stores
+      const store = useTwinStore.getState();
+      if (response.twin_state_update) {
+        store.updateFromUnifiedResponse?.(response);
+      }
+
+    } catch (error) {
+      console.error('Error processing message:', error);
+      setIsThinking(false);
+      setThinkingPhase(null);
+      setStreamedText('');
+    }
+  }, [inputText, isThinking]);
 
   if (!birthComplete) return <BirthSequence onComplete={handleBirthComplete} />;
 
@@ -155,22 +211,20 @@ export default function LivingWorld() {
           
           <LivingLightEntity 
             isThinking={isThinking}
-            isSpeaking={emotion.isSpeaking}
-            isListening={emotion.isListening}
+            isSpeaking={isSpeaking}
+            isListening={!isThinking && !isSpeaking}
             onLongPress={() => EventBus.emit('OPEN_SOUL_OBSERVATORY')}
           />
           
           <SoulObservatory />
-          <ConnectionField visible={bond.bondLevel >= 2} />
+          <ConnectionField visible={true} />
 
-          {awakening.breathVisible && (
-            <TwinPresenceZone
-              onLongPress={() => EventBus.emit('OPEN_SOUL_OBSERVATORY')}
-              memoryEchoVisible={memoryEchoVisible}
-              echoColor={echoColor}
-              awakeningEyesOpen={awakening.eyesOpen}
-            />
-          )}
+          <TwinPresenceZone
+            onLongPress={() => EventBus.emit('OPEN_SOUL_OBSERVATORY')}
+            memoryEchoVisible={memoryEchoVisible}
+            echoColor={echoColor}
+            awakeningEyesOpen={true}
+          />
 
           <ContextOverlay />
           <SessionSurface />
@@ -239,7 +293,7 @@ export default function LivingWorld() {
                 }}
                 onSubmitEditing={handleSend}
                 editable={!isThinking}
-                placeholder={rtl.isRTL ? 'اكتب رسالتك الأولى...' : 'Write your first message...'}
+                placeholder={rtl.isRTL ? 'اكتب رسالتك...' : 'Write your message...'}
                 placeholderTextColor="#6B5B8A"
               />
             </View>

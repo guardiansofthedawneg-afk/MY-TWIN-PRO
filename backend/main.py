@@ -1,5 +1,5 @@
 """
-MyTwin API v18.0.0 – Living Digital Twin Backend
+MyTwin API v20.0.0 – Living Digital Twin Backend
 ==================================================
 """
 import logging, sys, os, time, importlib
@@ -16,7 +16,7 @@ logging.basicConfig(
     datefmt='%H:%M:%S',
 )
 logger = logging.getLogger("mytwin.api")
-logger.info("🚀 MyTwin API v18.0.0 starting...")
+logger.info("🚀 MyTwin API v20.0.0 starting...")
 
 from dotenv import load_dotenv
 load_dotenv(BASE_DIR / '.env')
@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
 
     # الأنظمة الاختيارية
     optional_systems = [
-        ("Twin Brain",            "app.twin_brain.brain_orchestrator",        "twin_brain",            True),
+        ("Unified Twin Brain",    "app.twin_brain.unified_brain",             "unified_brain",         True),
         ("Twin Internal State",   "app.twin_state.internal_state",            "twin_internal_state",   False),
         ("Relationship Economy",  "app.twin_state.relationship_economy",      "relationship_economy",  False),
         ("Dynamic Personality",   "app.twin_state.dynamic_personality",       "dynamic_personality",   False),
@@ -100,7 +100,7 @@ async def lifespan(app: FastAPI):
     # Core Routes
     _register_core_routes(app)
 
-    logger.info("🌟 MyTwin API v18.0.0 fully started ✅")
+    logger.info("🌟 MyTwin API v20.0.0 fully started ✅")
     yield
 
     # Shutdown
@@ -114,6 +114,7 @@ async def lifespan(app: FastAPI):
 def _register_core_routes(app: FastAPI):
     core_modules = [
         # المحادثة والذكاء
+        "app.api.routes.unified_chat",  # ✅ نقطة النهاية الموحدة
         "app.api.routes.chat",
         "app.api.routes.twin_state_routes",
         "app.api.routes.consciousness_routes",
@@ -190,7 +191,7 @@ def _register_core_routes(app: FastAPI):
 # ════════════════════════════════════════════════════════════════
 app = FastAPI(
     title="MyTwin API",
-    version="18.0.0",
+    version="20.0.0",
     description="Living Digital Twin – Twin OS Kernel",
     docs_url="/docs"  if getattr(config, 'DEBUG', True) else None,
     redoc_url="/redoc" if getattr(config, 'DEBUG', True) else None,

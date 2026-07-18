@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Canvas, Circle, Paint, BlurMask, RadialGradient, SweepGradient, Group, vec } from "@shopify/react-native-skia";
 import { useSharedValue, withTiming, useDerivedValue } from "react-native-reanimated";
-import { presenceEngine, PresenceState } from '../../../engine/presence/PresenceEngine';
+import { presenceEngine } from '../../../engine/presence/PresenceEngine';
+import type { PresenceState } from '../../../engine/presence/PresenceEngine';
 import { stateBus } from '../../../src/core/StateBus';
 
 interface LivingLightEntityProps {

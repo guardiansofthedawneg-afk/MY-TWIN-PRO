@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { memoryEngine } from '../../../engine/memory/MemoryEngine';
+// ✅ memoryEngine removed — use stateBus
 import { useTwinState } from '../../../engine/core/TwinState';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Calendar, Heart, Sparkles } from 'lucide-react-native';

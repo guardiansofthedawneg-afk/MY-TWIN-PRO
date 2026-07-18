@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInRight } from 'react-native-reanimated';
 import { memoryEngine } from '../../engine/memory/MemoryEngine';
 import { relationshipEngine } from '../../engine/relationship/RelationshipEngine';
-import { goalCoordinator } from '../coordinators/GoalCoordinator';
+// ✅ goalCoordinator removed
 import { presenceCoordinator } from '../coordinators/PresenceCoordinator';
 import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';

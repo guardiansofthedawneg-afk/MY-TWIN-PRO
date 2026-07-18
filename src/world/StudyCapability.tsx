@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
-import { memoryEngine } from '../../engine/memory/MemoryEngine';
+// ✅ memoryEngine removed
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-import { consciousnessCoordinator } from '../coordinators/ConsciousnessCoordinator';
+// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
@@ -65,7 +65,7 @@ export default function StudyCapability() {
   useEffect(() => {
     if (!active) return;
     const timer = setTimeout(async () => {
-      const decision = await consciousnessCoordinator.decide(
+      const decision = await // consciousnessCoordinator removed(
         rtl.isRTL ? 'أريد أن أدرس' : 'I want to study',
         'focused'
       );

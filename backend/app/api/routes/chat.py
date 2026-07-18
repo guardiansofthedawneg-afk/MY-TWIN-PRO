@@ -1,5 +1,5 @@
 """
-CHAT ROUTER v6.0 – توجيه ذكي + صوت + بيانات عاطفية/علائقية
+CHAT ROUTER v7.0 — توجيه ذكي + Unified Brain
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -86,12 +86,13 @@ async def chat(req: ChatRequest):
             reply = result.get("coach_reply", "")
             provider = "life_coach"
         else:
-            from app.twin_brain.brain_orchestrator import brain_orchestrator
-            response = await brain_orchestrator.process(req.user_id, message, req.history, req.lang)
+            # ✅ Unified Brain بدلاً من brain_orchestrator القديم
+            from app.twin_brain.unified_brain import unified_brain
+            response = await unified_brain.process(req.user_id, message, req.lang, history=req.history)
             reply = response.get("reply", "")
-            provider = "twin_brain"
+            provider = "unified_brain"
             twin_emotional_state = response.get("twin_emotional_state", {})
-            relationship_update = response.get("relationship_update", {})
+            relationship_update = response.get("twin_state_update", {}).get("relationship", {})
 
         return {
             "reply": reply,

@@ -4,7 +4,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
 import { memoryEngine } from '../../engine/memory/MemoryEngine';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-import { consciousnessCoordinator } from '../coordinators/ConsciousnessCoordinator';
+// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
@@ -151,7 +151,7 @@ export default function ContentCreatorCapability() {
     if (!active) return;
     const timer = setTimeout(async () => {
       try {
-        const decision = await consciousnessCoordinator.decide(
+        const decision = await // consciousnessCoordinator removed(
           rtl.isRTL ? 'أريد صناعة محتوى' : 'I want to create content',
           'inspired'
         );

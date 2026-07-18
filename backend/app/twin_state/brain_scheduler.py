@@ -92,8 +92,8 @@ class BrainScheduler:
             except Exception as e:
                 logger.debug(f"Light/energy {uid}: {e}")
             try:
-                from app.twin_state.curiosity_engine import curiosity_engine
-                q = await curiosity_engine.generate_question(uid)
+                from app.twin_state.unified_curiosity import unified_curiosity_engine
+                q = await unified_curiosity_engine.generate(uid)
                 if q:
                     from app.twin_state.internal_state import twin_internal_state
                     await twin_internal_state.add_pending_question(uid, q)

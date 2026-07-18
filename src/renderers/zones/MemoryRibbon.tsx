@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
-import { memoryEngine } from '../../../engine/memory/MemoryEngine';
+// ✅ memoryEngine removed — use stateBus
 import { useTwinState, Emotion } from '../../../engine/core/TwinState';
 import { stateBus } from '../../../src/core/StateBus';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';

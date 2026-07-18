@@ -8,7 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { digitalSoul } from '../../soul/DigitalSoul';
-import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
+// ✅ relationshipEngine removed — use stateBus
 import { emotionEngine } from '../../../engine/emotion/EmotionEngine';
 import { usePresence } from '../../hooks/usePresence';
 

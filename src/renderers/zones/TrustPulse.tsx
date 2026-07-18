@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, withDelay, Easing } from 'react-native-reanimated';
-import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
+// ✅ relationshipEngine removed — use stateBus
 import { stateBus, STATE_EVENTS } from '../../../src/core/StateBus';
 
 interface TrustPulseProps {

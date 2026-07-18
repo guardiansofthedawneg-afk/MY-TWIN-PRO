@@ -42,7 +42,7 @@ export class CapabilityOrchestrator {
   ): Promise<OrchestrationResult> {
     const primary = capabilityResolver.resolve(message);
 
-    // ✅ قرار محلي بسيط بدلاً من consciousnessCoordinator.decide()
+    // ✅ قرار محلي بسيط بدلاً من // consciousnessCoordinator removed()
     const decision: Decision = {
       action: primary.confidence > 0.6 ? 'activate_capability' : 'general_conversation',
       workspaceType: primary.capability !== 'general' ? primary.capability : undefined,

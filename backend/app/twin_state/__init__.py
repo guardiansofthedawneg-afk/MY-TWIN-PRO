@@ -8,7 +8,7 @@ Twin State – خدمات حالة التوأم والعلاقة (متوافقة
 - intent_service: كشف نية المستخدم
 - journey_service: مراحل رحلة المستخدم
 - identity_service: هوية التوأم
-- emotional_service: تحليل المشاعر
+- unified_emotion: محرك المشاعر الموحد
 - emotional_timeline: الخط الزمني للمشاعر
 """
 from .attachment_service import detect as detect_attachment, get_adjustments
@@ -41,7 +41,8 @@ from .identity_service import (
     evolve as evolve_twin_identity,
     get_traits as get_twin_traits,
 )
-from .emotional_service import emotional_service
+# ✅ Unified Emotion Engine (يستبدل emotional_service القديم)
+from .unified_emotion import unified_emotion_engine as emotional_service
 from .emotional_timeline import emotional_timeline
 
 __all__ = [

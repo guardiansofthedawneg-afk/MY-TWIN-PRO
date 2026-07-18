@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
+// ✅ relationshipEngine removed
 import { timelineCoordinator } from '../../coordinators/TimelineCoordinator';
 import { livingSession } from '../../core/LivingSession';
 import { useRTL } from '../../../lib/useRTL';

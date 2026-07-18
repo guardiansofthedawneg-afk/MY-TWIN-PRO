@@ -1,5 +1,5 @@
 """
-Emotional Timeline v3.0 – متكامل مع TCMA Emotional Memory
+Emotional Timeline v4.0 — متكامل مع Unified Emotion Engine
 =============================================================
 يسجل المشاعر في TCMA (التي تخزّنها في Supabase تلقائياً).
 يحلل الاتجاهات من الذاكرة العاطفية مباشرة.
@@ -22,8 +22,9 @@ class EmotionalTimeline:
         if not TCMA_AVAILABLE:
             return None
         try:
-            from app.twin_state.emotional_service import emotional_service
-            result = await emotional_service.analyze(text, user_id)
+            # ✅ Unified Emotion Engine بدلاً من emotional_service القديم
+            from app.twin_state.unified_emotion import unified_emotion_engine
+            result = await unified_emotion_engine.analyze(user_id=user_id, text=text)
             if result:
                 # TCMA تخزّن في Supabase داخلياً
                 await store_emotional_memory(

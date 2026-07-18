@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { identityEngine } from '../../coordinators/IdentityEngine';
-import { memoryEngine } from '../../../engine/memory/MemoryEngine';
-import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
+// ✅ identityEngine removed
+// ✅ memoryEngine removed
+// ✅ relationshipEngine removed
 import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Brain, Eye, Heart, TrendingUp, Lightbulb } from 'lucide-react-native';

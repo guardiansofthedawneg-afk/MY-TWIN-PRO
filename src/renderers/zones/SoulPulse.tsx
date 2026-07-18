@@ -7,10 +7,9 @@ import Animated, {
   withRepeat,
   Easing,
 } from 'react-native-reanimated';
-import { digitalSoul } from '../../soul/DigitalSoul';
-// ✅ relationshipEngine removed — use stateBus
-import { emotionEngine } from '../../../engine/emotion/EmotionEngine';
-import { usePresence } from '../../hooks/usePresence';
+import { unifiedBrainBridge } from '../../core/UnifiedBrainBridge';
+import { stateBus } from '../../../src/core/StateBus';
+import { useAppTheme } from '../../../engine/colors';
 
 const SOUL_COLORS: Record<string, string> = {
   friend: '#A855F7',
@@ -22,20 +21,41 @@ const SOUL_COLORS: Record<string, string> = {
   protector: '#6366F1',
   mirror: '#14B8A6',
   cheerleader: '#F97316',
+  observer: '#A855F7',
+  companion: '#8B5CF6',
+  confidant: '#EC4899',
+  soul_partner: '#EC4899',
+  explorer: '#10B981',
 };
 
 export default function SoulPulse() {
-  const soul = digitalSoul.read();
-  const presence = usePresence();
-  const bond = relationshipEngine.getBondLevel();
-  const emotion = emotionEngine.getCurrentEmotion();
-
-  const color = SOUL_COLORS[soul.core.role] || '#A855F7';
+  const { colors } = useAppTheme();
+  const [role, setRole] = useState('observer');
+  const [harmony, setHarmony] = useState(0.5);
+  const [syncLevel, setSyncLevel] = useState('moderate');
+  
+  const color = SOUL_COLORS[role] || colors.accent;
   const pulseOpacity = useSharedValue(0.1);
   const pulseScale = useSharedValue(0.8);
 
   useEffect(() => {
-    const harmony = soul.resonance.harmony;
+    const loadSoul = async () => {
+      try {
+        const twinState = await unifiedBrainBridge.getTwinState();
+        const soul = twinState?.soul_state || {};
+        setRole(soul.core?.role || 'observer');
+        setHarmony(soul.resonance?.harmony || 0.5);
+        setSyncLevel(soul.resonance?.sync_level || 'moderate');
+      } catch (e) {
+        setRole('observer');
+        setHarmony(0.5);
+        setSyncLevel('moderate');
+      }
+    };
+    loadSoul();
+  }, []);
+
+  useEffect(() => {
     const speed = 4000 - harmony * 2000;
     const intensity = 0.1 + harmony * 0.25;
 
@@ -49,7 +69,7 @@ export default function SoulPulse() {
       -1,
       true,
     );
-  }, [soul.resonance.harmony]);
+  }, [harmony]);
 
   const ringStyle = useAnimatedStyle(() => ({
     opacity: pulseOpacity.value,
@@ -68,7 +88,7 @@ export default function SoulPulse() {
       <Animated.View style={[styles.core, { backgroundColor: color, opacity: pulseOpacity }]}>
         <View style={styles.innerDot} />
       </Animated.View>
-      {soul.resonance.syncLevel === 'complete' && (
+      {syncLevel === 'complete' && (
         <View style={styles.particles}>
           {[0, 1, 2].map((i) => (
             <View

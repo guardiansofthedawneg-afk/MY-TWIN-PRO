@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { unifiedBrainBridge } from '../../core/UnifiedBrainBridge';
 import { useTwinStore } from '../../../store/useTwinStore';
+import { useAppTheme } from '../../../engine/colors';
 import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { HelpCircle, RefreshCw, Download, AlertTriangle, RotateCcw, MessageCircle, Mail } from 'lucide-react-native';
-import { memoryEngine } from '../../../engine/memory/MemoryEngine';
 
 const CONTENT = {
   ar: {
@@ -37,8 +38,9 @@ const CONTENT = {
 
 export default function HelpWing() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const t = CONTENT[rtl.isRTL ? 'ar' : 'en'];
-  const { logout } = useTwinStore();
+  const { reset } = useTwinStore();
 
   const handleReset = () => {
     Alert.alert(
@@ -46,63 +48,65 @@ export default function HelpWing() {
       t.resetMsg,
       [
         { text: rtl.isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
-        { text: rtl.isRTL ? 'إعادة ضبط' : 'Reset', style: 'destructive', onPress: () => {
-          memoryEngine.applyForgettingRules();
-          logout();
+        { text: rtl.isRTL ? 'إعادة ضبط' : 'Reset', style: 'destructive', onPress: async () => {
+          try {
+            await unifiedBrainBridge.resetAllData();
+          } catch (e) {}
+          reset();
         }},
       ]
     );
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t.title}</Text>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
 
       {/* FAQ */}
       {t.faq.map((item, i) => (
-        <View key={i} style={styles.faqCard}>
+        <View key={i} style={[styles.faqCard, { backgroundColor: colors.card }]}>
           <View style={styles.faqHeader}>
-            <HelpCircle size={18} stroke="#A855F7" />
-            <Text style={styles.faqQ}>{item.q}</Text>
+            <HelpCircle size={18} stroke={colors.accent} />
+            <Text style={[styles.faqQ, { color: colors.text }]}>{item.q}</Text>
           </View>
-          <Text style={styles.faqA}>{item.a}</Text>
+          <Text style={[styles.faqA, { color: colors.textSecondary }]}>{item.a}</Text>
         </View>
       ))}
 
       {/* Actions */}
-      <TouchableOpacity style={styles.actionBtn}>
-        <RefreshCw size={18} stroke="#A855F7" />
-        <Text style={styles.actionText}>{t.sync}</Text>
+      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <RefreshCw size={18} stroke={colors.accent} />
+        <Text style={[styles.actionText, { color: colors.accent }]}>{t.sync}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.actionBtn}>
-        <Download size={18} stroke="#A855F7" />
-        <Text style={styles.actionText}>{t.export}</Text>
+      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Download size={18} stroke={colors.accent} />
+        <Text style={[styles.actionText, { color: colors.accent }]}>{t.export}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.actionBtn}>
-        <AlertTriangle size={18} stroke="#F59E0B" />
-        <Text style={[styles.actionText, { color: '#F59E0B' }]}>{t.report}</Text>
+      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <AlertTriangle size={18} stroke={colors.gold} />
+        <Text style={[styles.actionText, { color: colors.gold }]}>{t.report}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.actionBtn, { borderColor: '#EF444430' }]} onPress={handleReset}>
-        <RotateCcw size={18} stroke="#EF4444" />
-        <Text style={[styles.actionText, { color: '#EF4444' }]}>{t.reset}</Text>
+      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.danger + '30' }]} onPress={handleReset}>
+        <RotateCcw size={18} stroke={colors.danger} />
+        <Text style={[styles.actionText, { color: colors.danger }]}>{t.reset}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.contact}>{t.contact}</Text>
+      <Text style={[styles.contact, { color: colors.textSecondary }]}>{t.contact}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { gap: SPACE.md },
-  title: { color: '#E8E0F0', fontSize: 18, fontWeight: '700' },
-  faqCard: { backgroundColor: 'rgba(26,18,38,0.8)', borderRadius: RADIUS.sm, padding: SPACE.md, gap: 6 },
+  title: { fontSize: 18, fontWeight: '700' },
+  faqCard: { borderRadius: RADIUS.sm, padding: SPACE.md, gap: 6 },
   faqHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
-  faqQ: { color: '#E8E0F0', fontSize: 14, fontWeight: '600' },
-  faqA: { color: '#6B5B8A', fontSize: 13, lineHeight: 20 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(26,18,38,0.8)', borderRadius: RADIUS.sm, padding: SPACE.md, borderWidth: 1, borderColor: 'transparent' },
-  actionText: { color: '#A855F7', fontSize: 14, fontWeight: '500' },
-  contact: { color: '#6B5B8A', fontSize: 12, textAlign: 'center', marginTop: SPACE.sm },
+  faqQ: { fontSize: 14, fontWeight: '600' },
+  faqA: { fontSize: 13, lineHeight: 20 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, borderRadius: RADIUS.sm, padding: SPACE.md, borderWidth: 1 },
+  actionText: { fontSize: 14, fontWeight: '500' },
+  contact: { fontSize: 12, textAlign: 'center', marginTop: SPACE.sm },
 });

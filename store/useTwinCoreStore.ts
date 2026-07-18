@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 
 export type Tier = 'free' | 'plus' | 'premium' | 'pro' | 'yearly';
 export type TwinGender = 'female' | 'male';
@@ -19,6 +20,7 @@ export interface TwinCore {
   replyStyle: ReplyStyle;
   tier: Tier;
   theme: Theme;
+  themeManuallySet: boolean;
   lang: Lang;
   calmMode: boolean;
   voiceEnabled: boolean;
@@ -30,6 +32,7 @@ export interface TwinCore {
   setTier: (tier: Tier) => void;
   setLang: (lang: Lang) => void;
   toggleTheme: () => void;
+  syncSystemTheme: () => void;
   toggleCalmMode: () => void;
   setVoiceEnabled: (enabled: boolean) => void;
   setVoicePersonality: (personality: VoicePersonality) => void;
@@ -52,6 +55,7 @@ const initialState = {
   replyStyle: 'medium' as ReplyStyle,
   tier: 'free' as Tier,
   theme: 'light' as Theme,
+  themeManuallySet: false,
   lang: 'ar' as Lang,
   calmMode: false,
   voiceEnabled: true,
@@ -62,13 +66,26 @@ const initialState = {
 
 export const useTwinCoreStore = create<TwinCore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
       setAuth: (userId) => set({ userId }),
       setTier: (tier) => set({ tier }),
       setLang: (lang) => set({ lang }),
-      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+      toggleTheme: () =>
+        set((s) => ({
+          theme: s.theme === 'dark' ? 'light' : 'dark',
+          themeManuallySet: true,
+        })),
+      syncSystemTheme: () => {
+        const state = get();
+        if (!state.themeManuallySet) {
+          const systemTheme = Appearance.getColorScheme();
+          if (systemTheme) {
+            set({ theme: systemTheme, themeManuallySet: false });
+          }
+        }
+      },
       toggleCalmMode: () => set((s) => ({ calmMode: !s.calmMode })),
       setVoiceEnabled: (enabled) => set({ voiceEnabled: enabled }),
       setVoicePersonality: (personality) => set({ voicePersonality: personality }),
@@ -82,8 +99,8 @@ export const useTwinCoreStore = create<TwinCore>()(
       reset: () => set({ ...initialState }),
     }),
     {
-      name: 'mytwin-core-v1',
-      version: 1,
+      name: 'mytwin-core-v2',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

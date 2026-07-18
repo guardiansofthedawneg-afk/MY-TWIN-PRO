@@ -1,29 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, withDelay, Easing } from 'react-native-reanimated';
-// ✅ relationshipEngine removed — use stateBus
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 import { stateBus, STATE_EVENTS } from '../../../src/core/StateBus';
+import { useAppTheme } from '../../../engine/colors';
 
 interface TrustPulseProps {
   size?: number;
 }
 
 export default function TrustPulse({ size = 16 }: TrustPulseProps) {
-  const [trust, setTrust] = useState(50);
+  const { colors } = useAppTheme();
+  const [trust, setTrust] = useState(
+    () => stateBus.getState().relationship.trustScore * 100 || 50
+  );
   const [pulsing, setPulsing] = useState(false);
-
   const pulseOpacity = useSharedValue(0);
   const pulseScale = useSharedValue(0.5);
 
   useEffect(() => {
-    const metrics = relationshipEngine.getMetrics();
-    setTrust(metrics.trust);
-
-    const unsub = stateBus.on(STATE_EVENTS.BOND_CHANGED, () => {
-      const m = relationshipEngine.getMetrics();
-      setTrust(m.trust);
-
-      if (m.trust > trust) {
+    const unsub = stateBus.on(STATE_EVENTS.BOND_CHANGED, (data: any) => {
+      const newTrust = data?.bondLevel || stateBus.getState().relationship.bondLevel;
+      if (newTrust > trust) {
         setPulsing(true);
         pulseOpacity.value = withSequence(
           withTiming(0.6, { duration: 400 }),
@@ -35,15 +38,15 @@ export default function TrustPulse({ size = 16 }: TrustPulseProps) {
         );
         setTimeout(() => setPulsing(false), 1200);
       }
+      setTrust(newTrust);
     });
-
     return () => unsub();
   }, [trust]);
 
   const getColor = () => {
-    if (trust >= 80) return '#10B981';
-    if (trust >= 60) return '#A855F7';
-    if (trust >= 40) return '#F59E0B';
+    if (trust >= 80) return colors.success;
+    if (trust >= 60) return colors.accent;
+    if (trust >= 40) return colors.gold;
     return '#6B7280';
   };
 

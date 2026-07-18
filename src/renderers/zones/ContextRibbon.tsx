@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-// ✅ memoryEngine removed — use stateBus
-import { useTwinState } from '../../../engine/core/TwinState';
+import { unifiedBrainBridge } from '../../core/UnifiedBrainBridge';
+import { stateBus } from '../../../src/core/StateBus';
+import { useAppTheme } from '../../../engine/colors';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Calendar, Heart, Sparkles } from 'lucide-react-native';
 
@@ -15,46 +16,50 @@ interface ContextItem {
 }
 
 export default function ContextRibbon() {
+  const { colors } = useAppTheme();
   const [items, setItems] = useState<ContextItem[]>([]);
   const [visible, setVisible] = useState(false);
 
   const fetchContext = useCallback(async () => {
     try {
-      const now = new Date();
       const ribbonItems: ContextItem[] = [];
 
-      const todayMemories = await memoryEngine.onThisDay();
+      // 1. ذكريات اليوم من TCMA الحقيقية
+      const todayMemories = await unifiedBrainBridge.getOnThisDay(2);
       if (todayMemories.length > 0) {
         ribbonItems.push({
           id: 'today',
           type: 'event',
-          text: `في مثل هذا اليوم: ${todayMemories[0].content.substring(0, 60)}...`,
-          color: '#F59E0B',
+          text: `في مثل هذا اليوم: ${(todayMemories[0].expressed_text || todayMemories[0].content || '').substring(0, 60)}...`,
+          color: colors.gold,
           icon: Calendar,
         });
       }
 
-      const emotionMemories = await memoryEngine.byEmotion(
-        useTwinState.getState().emotion,
-        1,
+      // 2. ذكريات مرتبطة بالعاطفة الحالية من StateBus
+      const currentEmotion = stateBus.getState().emotion.primaryEmotion;
+      const emotionMemories = await unifiedBrainBridge.getCapabilityMemory('emotion', 3);
+      const filteredByEmotion = emotionMemories.filter(
+        m => m.real_emotion === currentEmotion
       );
-      if (emotionMemories.length > 0) {
+      if (filteredByEmotion.length > 0) {
         ribbonItems.push({
           id: 'emotion',
           type: 'emotion',
-          text: `آخر مرة شعرت بهذا: ${emotionMemories[0].content.substring(0, 50)}...`,
-          color: '#EC4899',
+          text: `آخر مرة شعرت بهذا: ${(filteredByEmotion[0].expressed_text || filteredByEmotion[0].content || '').substring(0, 50)}...`,
+          color: colors.rose,
           icon: Heart,
         });
       }
 
-      const recent = await memoryEngine.retrieveByType('event', 1);
+      // 3. أحدث ذكرى حدث
+      const recent = await unifiedBrainBridge.getCapabilityMemory('event', 1);
       if (recent.length > 0) {
         ribbonItems.push({
           id: 'recent',
           type: 'memory',
-          text: `قبل أيام: ${recent[0].content.substring(0, 60)}...`,
-          color: '#A855F7',
+          text: `قبل أيام: ${(recent[0].expressed_text || recent[0].content || '').substring(0, 60)}...`,
+          color: colors.accent,
           icon: Sparkles,
         });
       }
@@ -64,7 +69,7 @@ export default function ContextRibbon() {
         setVisible(true);
       }
     } catch (e) {}
-  }, []);
+  }, [colors]);
 
   useEffect(() => {
     const timer = setTimeout(fetchContext, 5000);
@@ -89,7 +94,7 @@ export default function ContextRibbon() {
           return (
             <TouchableOpacity
               key={item.id}
-              style={[styles.chip, { borderColor: item.color + '40' }]}
+              style={[styles.chip, { borderColor: item.color + '40', backgroundColor: colors.card }]}
               activeOpacity={0.8}
             >
               <Icon size={12} stroke={item.color} />
@@ -118,7 +123,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACE.xs + 2,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    backgroundColor: 'rgba(26, 18, 38, 0.8)',
   },
   text: {
     fontSize: 11,

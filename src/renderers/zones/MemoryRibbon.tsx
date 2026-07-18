@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
-// ✅ memoryEngine removed — use stateBus
-import { useTwinState, Emotion } from '../../../engine/core/TwinState';
+import { unifiedBrainBridge } from '../../core/UnifiedBrainBridge';
 import { stateBus } from '../../../src/core/StateBus';
+import { useAppTheme } from '../../../engine/colors';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
-import { MOTION } from '../../../src/design/tokens/motion';
 import { useEmotionalState } from '../../hooks/useEmotionalState';
 import { Calendar, Heart, Sparkles, Clock } from 'lucide-react-native';
 
@@ -40,6 +39,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function MemoryRibbon({ userId, maxCards = 3 }: MemoryRibbonProps) {
+  const { colors } = useAppTheme();
   const [memories, setMemories] = useState<MemoryCardData[]>([]);
   const [visible, setVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -47,23 +47,23 @@ export default function MemoryRibbon({ userId, maxCards = 3 }: MemoryRibbonProps
 
   const fetchMemories = useCallback(async () => {
     try {
-      const context = {
-        currentEmotion: emotion.emotion,
-        currentTopic: '',
-        timeOfDay: new Date().getHours() > 12 ? 'مساء' : 'صباح',
-        recentTopics: [],
-      };
-
-      const results = await memoryEngine.smartRetrieve(context, maxCards);
-
+      const results = await unifiedBrainBridge.getCapabilityMemory('memory', maxCards);
       if (results.length > 0) {
-        setMemories(results as MemoryCardData[]);
+        const mapped: MemoryCardData[] = results.map(m => ({
+          id: m.id,
+          type: 'conversation',
+          content: m.expressed_text || m.content || '',
+          timestamp: m.created_at || m.timestamp || new Date().toISOString(),
+          importance: m.importance || 50,
+          emotion: m.real_emotion || 'neutral',
+        }));
+        setMemories(mapped);
         setCurrentIndex(0);
         setVisible(true);
-        stateBus.emit('memory:ribbon_shown', { count: results.length });
+        stateBus.emit('memory:ribbon_shown', { count: mapped.length });
       }
     } catch (e) {}
-  }, [emotion.emotion, maxCards]);
+  }, [maxCards]);
 
   useEffect(() => {
     const timer = setTimeout(fetchMemories, 2000);
@@ -78,7 +78,7 @@ export default function MemoryRibbon({ userId, maxCards = 3 }: MemoryRibbonProps
 
   const memory = memories[currentIndex];
   const Icon = TYPE_ICONS[memory.type] || Sparkles;
-  const color = TYPE_COLORS[memory.type] || '#A855F7';
+  const color = TYPE_COLORS[memory.type] || colors.accent;
   const date = new Date(memory.timestamp);
   const timeAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -89,7 +89,7 @@ export default function MemoryRibbon({ userId, maxCards = 3 }: MemoryRibbonProps
       style={styles.container}
     >
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.accent + '30' }]}
         onPress={() => {
           if (currentIndex < memories.length - 1) {
             setCurrentIndex(currentIndex + 1);
@@ -103,10 +103,10 @@ export default function MemoryRibbon({ userId, maxCards = 3 }: MemoryRibbonProps
           <Icon size={16} stroke={color} />
         </View>
         <View style={styles.textWrap}>
-          <Text style={styles.content} numberOfLines={2}>
+          <Text style={[styles.content, { color: colors.text }]} numberOfLines={2}>
             {memory.content}
           </Text>
-          <Text style={styles.meta}>
+          <Text style={[styles.meta, { color: colors.textSecondary }]}>
             {timeAgo === 0 ? 'اليوم' : `قبل ${timeAgo} يوم`}
           </Text>
         </View>
@@ -134,10 +134,8 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 18, 38, 0.9)',
     borderRadius: RADIUS.card,
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.2)',
     padding: SPACE.md,
     gap: SPACE.sm,
   },
@@ -152,13 +150,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    color: '#E8E0F0',
     fontSize: 13,
     fontWeight: '500',
     lineHeight: 18,
   },
   meta: {
-    color: '#6B5B8A',
     fontSize: 11,
     marginTop: 4,
   },

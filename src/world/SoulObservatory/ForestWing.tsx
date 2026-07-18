@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { memoryEngine, MemoryEntry } from '../../../engine/memory/MemoryEngine';
+import { unifiedBrainBridge } from '../../core/UnifiedBrainBridge';
+import { useAppTheme } from '../../../engine/colors';
 import { useRTL } from '../../../lib/useRTL';
 import { SPACE, RADIUS } from '../../../src/design/tokens/spacing';
 import { Heart, Star, Cloud, Zap, BookOpen } from 'lucide-react-native';
+
+interface MemoryEntry {
+  id: string;
+  type: string;
+  content: string;
+  age: 'fresh' | 'recent' | 'stable' | 'core' | 'legacy';
+  importance: number;
+  confidence: number;
+  created_at: string;
+}
 
 const MEMORY_ICONS: Record<string, typeof BookOpen> = {
   study: BookOpen, emotion: Heart, achievement: Star, dream: Cloud, general: Zap,
@@ -23,33 +34,73 @@ const AGE_LABELS: Record<string, { ar: string; en: string }> = {
 
 export default function ForestWing() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, core: 0, life: 0 });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const core = memoryEngine.getCoreMemories();
-    setMemories(core);
-    
-    const ecology = memoryEngine.getEcologyStats();
-    setStats({ total: ecology.total, core: ecology.coreCount, life: ecology.lifeCount });
+    const loadForest = async () => {
+      try {
+        const totalCount = await unifiedBrainBridge.getMemoryCount();
+        const coreMemories = await unifiedBrainBridge.getCoreMemories(30);
+        
+        const mapped: MemoryEntry[] = coreMemories.map(m => {
+          const importance = m.importance || 50;
+          let age: MemoryEntry['age'] = 'recent';
+          if (importance >= 90) age = 'legacy';
+          else if (importance >= 80) age = 'core';
+          else if (importance >= 50) age = 'stable';
+          
+          let type = 'general';
+          const content = (m.expressed_text || m.content || '').toLowerCase();
+          if (content.includes('درس') || content.includes('ذاكر')) type = 'study';
+          else if (m.real_emotion === 'joy' || m.real_emotion === 'love') type = 'emotion';
+          else if (content.includes('حلم') || content.includes('dream')) type = 'dream';
+          else if (importance >= 80) type = 'achievement';
+
+          return {
+            id: m.id,
+            type,
+            content: m.expressed_text || m.content || '',
+            age,
+            importance,
+            confidence: m.confidence || 0.7,
+            created_at: m.created_at || m.timestamp || new Date().toISOString(),
+          };
+        });
+
+        setMemories(mapped);
+        setStats({
+          total: totalCount,
+          core: mapped.filter(m => m.importance >= 80).length,
+          life: mapped.filter(m => m.importance >= 90).length,
+        });
+      } catch (e) {
+        setStats({ total: 0, core: 0, life: 0 });
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadForest();
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Stats */}
       <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: '#A855F720' }]}>
-          <Text style={styles.statValue}>{stats.total}</Text>
-          <Text style={styles.statLabel}>{rtl.isRTL ? 'ذكريات' : 'Memories'}</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.accent + '20' }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>{stats.total}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{rtl.isRTL ? 'ذكريات' : 'Memories'}</Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: '#EC489920' }]}>
-          <Text style={styles.statValue}>{stats.core}</Text>
-          <Text style={styles.statLabel}>{rtl.isRTL ? 'أساسية' : 'Core'}</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.rose + '20' }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>{stats.core}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{rtl.isRTL ? 'أساسية' : 'Core'}</Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: '#F59E0B20' }]}>
-          <Text style={styles.statValue}>{stats.life}</Text>
-          <Text style={styles.statLabel}>{rtl.isRTL ? 'حياة' : 'Life'}</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.gold + '20' }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>{stats.life}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{rtl.isRTL ? 'حياة' : 'Life'}</Text>
         </View>
       </View>
 
@@ -58,14 +109,14 @@ export default function ForestWing() {
         {memories.length > 0 ? (
           memories.map(memory => {
             const isSelected = selected === memory.id;
-            const ageColor = AGE_COLORS[memory.age] || '#A855F7';
+            const ageColor = AGE_COLORS[memory.age] || colors.accent;
             const MemoryIcon = MEMORY_ICONS[memory.type] || Star;
             const ageLabel = AGE_LABELS[memory.age] || { ar: '', en: '' };
 
             return (
               <TouchableOpacity
                 key={memory.id}
-                style={[styles.tree, isSelected && { borderColor: ageColor, backgroundColor: ageColor + '10' }]}
+                style={[styles.tree, { backgroundColor: colors.card }, isSelected && { borderColor: ageColor, backgroundColor: ageColor + '10' }]}
                 onPress={() => setSelected(isSelected ? null : memory.id)}
               >
                 <View style={[styles.treeCrown, { backgroundColor: ageColor + '20', borderColor: ageColor }]}>
@@ -77,11 +128,11 @@ export default function ForestWing() {
                     <View key={i} style={[styles.treeRoot, { backgroundColor: ageColor + '60' }]} />
                   ))}
                 </View>
-                <Text style={styles.treeAge}>{rtl.isRTL ? ageLabel.ar : ageLabel.en}</Text>
+                <Text style={[styles.treeAge, { color: colors.textSecondary }]}>{rtl.isRTL ? ageLabel.ar : ageLabel.en}</Text>
                 {isSelected && (
                   <View style={styles.treeDetails}>
-                    <Text style={styles.detailText} numberOfLines={3}>{memory.content}</Text>
-                    <Text style={styles.detailConfidence}>
+                    <Text style={[styles.detailText, { color: colors.text }]} numberOfLines={3}>{memory.content}</Text>
+                    <Text style={[styles.detailConfidence, { color: colors.textSecondary }]}>
                       {rtl.isRTL ? 'ثقة:' : 'Confidence:'} {Math.round(memory.confidence * 100)}%
                     </Text>
                   </View>
@@ -90,7 +141,7 @@ export default function ForestWing() {
             );
           })
         ) : (
-          <Text style={styles.emptyText}>{rtl.isRTL ? 'لا توجد ذكريات بعد.' : 'No memories yet.'}</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{rtl.isRTL ? 'لا توجد ذكريات بعد.' : 'No memories yet.'}</Text>
         )}
       </ScrollView>
     </View>
@@ -101,17 +152,17 @@ const styles = StyleSheet.create({
   container: { gap: SPACE.lg },
   statsRow: { flexDirection: 'row', gap: SPACE.sm },
   statCard: { flex: 1, borderRadius: RADIUS.card, padding: SPACE.md, alignItems: 'center', gap: 4 },
-  statValue: { color: '#E8E0F0', fontSize: 24, fontWeight: '800' },
-  statLabel: { color: '#6B5B8A', fontSize: 11 },
+  statValue: { fontSize: 24, fontWeight: '800' },
+  statLabel: { fontSize: 11 },
   forestGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md, justifyContent: 'center' },
-  tree: { alignItems: 'center', gap: 2, width: 90, backgroundColor: 'rgba(26,18,38,0.6)', borderRadius: RADIUS.sm, padding: SPACE.sm, borderWidth: 1, borderColor: 'transparent' },
+  tree: { alignItems: 'center', gap: 2, width: 90, borderRadius: RADIUS.sm, padding: SPACE.sm, borderWidth: 1, borderColor: 'transparent' },
   treeCrown: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5 },
   treeTrunk: { width: 3, height: 20, borderRadius: 2 },
   treeRoots: { flexDirection: 'row', gap: 10, marginTop: -2 },
   treeRoot: { width: 2, height: 10, borderRadius: 1 },
-  treeAge: { color: '#6B5B8A', fontSize: 9, marginTop: 4 },
+  treeAge: { fontSize: 9, marginTop: 4 },
   treeDetails: { marginTop: 6, alignItems: 'center', width: 80 },
-  detailText: { color: '#E8E0F0', fontSize: 10, textAlign: 'center', lineHeight: 14 },
-  detailConfidence: { color: '#6B5B8A', fontSize: 9, marginTop: 4 },
-  emptyText: { color: '#6B5B8A', fontSize: 14, textAlign: 'center', marginTop: SPACE.xl },
+  detailText: { fontSize: 10, textAlign: 'center', lineHeight: 14 },
+  detailConfidence: { fontSize: 9, marginTop: 4 },
+  emptyText: { fontSize: 14, textAlign: 'center', marginTop: SPACE.xl },
 });

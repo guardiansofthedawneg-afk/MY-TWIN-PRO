@@ -1,11 +1,4 @@
-/**
- * COLORS v1.0 – محرك الألوان الثابت
- * ====================================
- * يحتوي على الألوان الأساسية والخطوط والمسافات.
- * هذا هو الأساس الثابت للثيم.
- * لا يحتوي على أي منطق مرتبط بحالة التوأم.
- */
-import { useTwinStore } from '../store/useTwinStore';
+import { useTwinCoreStore } from '../store/useTwinCoreStore';
 
 export interface ThemeColors {
   bg: string;
@@ -29,16 +22,6 @@ export interface ThemeColors {
   white: string;
   glass: string;
 }
-
-export const FONTS = {
-  arabicBold: 'Tajawal_700Bold',
-  arabicMedium: 'Tajawal_500Medium',
-  arabicRegular: 'Tajawal_400Regular',
-  ai: 'Orbitron_700Bold',
-  sizes: { title: 28, subtitle: 18, body: 16, small: 14, tiny: 12 },
-};
-
-export const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 
 export const DARK_THEME: ThemeColors = {
   bg: '#120B1E',
@@ -86,22 +69,30 @@ export const LIGHT_THEME: ThemeColors = {
   glass: 'rgba(255, 255, 255, 0.7)',
 };
 
+/**
+ * هوك الألوان الرئيسي — يقرأ الوضع من المتجر
+ */
 export function useColors(): ThemeColors {
-  const theme = useTwinStore((s) => s.theme);
+  const theme = useTwinCoreStore((s) => s.theme);
   return theme === 'dark' ? DARK_THEME : LIGHT_THEME;
 }
 
-export function getColors(isDark: boolean): ThemeColors {
-  return isDark ? DARK_THEME : LIGHT_THEME;
-}
-
 /**
- * هوك مساعد للتوافق مع الشاشات القديمة
- * يُرجع { colors, isDark } بدلاً من useTheme القديم
+ * هوك موحد يُرجع الألوان + isDark
  */
 export function useAppTheme() {
-  const theme = useTwinStore((s) => s.theme);
+  const theme = useTwinCoreStore((s) => s.theme);
   const isDark = theme === 'dark';
   const colors = isDark ? DARK_THEME : LIGHT_THEME;
   return { colors, isDark };
+}
+
+/**
+ * مزامنة وضع النظام عند البداية (تُستدعى مرة واحدة)
+ */
+export function syncInitialTheme() {
+  const store = useTwinCoreStore.getState();
+  if (!store.themeManuallySet) {
+    store.syncSystemTheme();
+  }
 }

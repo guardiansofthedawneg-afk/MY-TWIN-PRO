@@ -254,5 +254,36 @@ class UnifiedMemoryEngine:
             return []
     
 
+
+    async def get_memory_count(self, user_id: str) -> int:
+        """إجمالي عدد الذكريات"""
+        if not DB_AVAILABLE:
+            return 0
+        try:
+            db = get_db()
+            result = db.table(TABLE_NAME).select("id", count="exact").eq("user_id", user_id).execute()
+            return result.count if hasattr(result, 'count') else len(result.data or [])
+        except:
+            return 0
+    
+
+
+    async def get_most_used_capability(self, user_id: str) -> str:
+        """أكثر قدرة استخداماً بناءً على الذكريات"""
+        if not DB_AVAILABLE:
+            return ""
+        try:
+            db = get_db()
+            result = db.table(TABLE_NAME).select("arabic_category").eq("user_id", user_id).not_.is_("arabic_category", "null").execute()
+            categories = [r.get("arabic_category", "") for r in (result.data or [])]
+            if not categories:
+                return ""
+            from collections import Counter
+            most = Counter(categories).most_common(1)[0][0]
+            return most
+        except:
+            return ""
+    
+
 unified_memory_engine = UnifiedMemoryEngine()
 logger.info("✅ Unified Memory Engine v2.0 ready")

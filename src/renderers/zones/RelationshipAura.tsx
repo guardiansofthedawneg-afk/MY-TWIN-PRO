@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing } from 'react-native-reanimated';
-import { relationshipEngine } from '../../../engine/relationship/RelationshipEngine';
 import { stateBus, STATE_EVENTS } from '../../../src/core/StateBus';
+import { useAppTheme } from '../../../engine/colors';
 
 interface RelationshipAuraProps {
   size?: number;
@@ -16,12 +16,21 @@ const PHASE_AURA: Record<string, { color: string; rings: number; pulseSpeed: num
   soulmate:       { color: '#EC4899', rings: 3, pulseSpeed: 2500, glowIntensity: 0.40 },
 };
 
+function getPhaseFromBond(bondLevel: number): string {
+  if (bondLevel >= 95) return 'soulmate';
+  if (bondLevel >= 80) return 'close_friend';
+  if (bondLevel >= 60) return 'friend';
+  if (bondLevel >= 20) return 'acquaintance';
+  return 'stranger';
+}
+
 export default function RelationshipAura({ size = 200 }: RelationshipAuraProps) {
+  const { colors } = useAppTheme();
   const [phase, setPhase] = useState<string>('stranger');
 
   const updatePhase = () => {
-    const currentPhase = relationshipEngine.getPhase();
-    setPhase(currentPhase);
+    const bondLevel = stateBus.getState().relationship.bondLevel;
+    setPhase(getPhaseFromBond(bondLevel));
   };
 
   useEffect(() => {
@@ -33,7 +42,6 @@ export default function RelationshipAura({ size = 200 }: RelationshipAuraProps) 
 
   const config = PHASE_AURA[phase] || PHASE_AURA.stranger;
 
-  // إصلاح: إنشاء SharedValues داخل useRef لتجنب انتهاك قواعد Hooks
   const ringsRef = useRef(
     Array.from({ length: 3 }, () => ({
       opacity: useSharedValue(0),

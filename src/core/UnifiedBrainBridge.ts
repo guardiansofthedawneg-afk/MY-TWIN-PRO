@@ -227,4 +227,28 @@ class UnifiedBrainBridge {
 
 }
 
+
+  async getMemoryCount(): Promise<number> {
+    try {
+      const response = await apiClient.get(`/api/memories/count`, { params: { user_id: this.userId } });
+      return response.data?.count || 0;
+    } catch (e) { return 0; }
+  }
+
+  async getMostUsedCapability(): Promise<string> {
+    try {
+      const response = await apiClient.get(`/api/memories/most_used_capability`, { params: { user_id: this.userId } });
+      return response.data?.capability || '';
+    } catch (e) { return ''; }
+  }
+
+  async getMostVisitedWorld(): Promise<string> {
+    try {
+      const worlds = await this.getCapabilityMemory('world', 1);
+      return worlds.length > 0 ? worlds[0].content || worlds[0].expressed_text || '' : '';
+    } catch (e) { return ''; }
+  }
+
+}
+
 export const unifiedBrainBridge = new UnifiedBrainBridge();

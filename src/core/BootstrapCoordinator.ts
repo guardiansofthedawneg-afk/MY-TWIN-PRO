@@ -4,6 +4,7 @@ import { stateBus } from './StateBus';
 import { unifiedBrainBridge } from './UnifiedBrainBridge';
 import { audioEngine } from './AudioEngine';
 import { presenceEngine } from '../../engine/presence/PresenceEngine';
+import { syncInitialTheme } from '../../engine/colors';
 
 export type BootstrapPhase =
   | 'void'
@@ -25,6 +26,7 @@ export class BootstrapCoordinator {
   private phase: BootstrapPhase = 'void';
 
   async bootstrap(): Promise<BootstrapResult> {
+    syncInitialTheme();
     this.phase = 'void';
     
     await this.delay(1200);

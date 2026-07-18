@@ -171,6 +171,34 @@ async def get_memory_patterns(
     except Exception as e:
         return {"patterns": {}, "error": str(e)}
 
+
+@router.get("/count")
+async def get_memory_count(
+    user_id: str = Depends(get_current_user_id),
+):
+    """إجمالي عدد الذكريات"""
+    try:
+        from app.memory.unified_memory import unified_memory_engine
+        count = await unified_memory_engine.get_memory_count(user_id)
+        return {"count": count, "source": "tcma_unified"}
+    except Exception as e:
+        return {"count": 0, "error": str(e)}
+
+
+
+@router.get("/most_used_capability")
+async def get_most_used_capability(
+    user_id: str = Depends(get_current_user_id),
+):
+    """أكثر قدرة استخداماً"""
+    try:
+        from app.memory.unified_memory import unified_memory_engine
+        capability = await unified_memory_engine.get_most_used_capability(user_id)
+        return {"capability": capability, "source": "tcma_unified"}
+    except Exception as e:
+        return {"capability": "", "error": str(e)}
+
+
 @router.post("/store")
 async def store_memory(
     payload: dict,

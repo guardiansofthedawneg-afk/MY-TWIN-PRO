@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
-import { memoryEngine } from '../../engine/memory/MemoryEngine';
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
@@ -45,15 +44,15 @@ export default function TaskManagerCapability() {
 
   const loadTaskContext = async () => {
     try {
-      const saved = await memoryEngine.getCapabilityMemory('task_manager', 10);
+      const saved = await unifiedBrainBridge.getCapabilityMemory('task_manager', 10);
       if (saved.length > 0) {
         const restoredTasks: Task[] = saved.map(m => ({
           id: m.id,
-          title: m.content.substring(0, 100),
-          priority: (m.relatedTo.find(r => ['high', 'medium', 'low'].includes(r)) || 'medium') as Task['priority'],
-          completed: m.relatedTo.includes('completed'),
-          dueDate: m.timestamp,
-          createdAt: m.timestamp,
+          title: m.content?.substring(0, 100) || '',
+          priority: (m.relatedTo?.find(r => ['high', 'medium', 'low'].includes(r)) || 'medium') as Task['priority'],
+          completed: m.relatedTo?.includes('completed'),
+          dueDate: m.created_at || m.timestamp,
+          createdAt: m.created_at || m.timestamp,
         }));
         setTasks(restoredTasks);
         setCompletedCount(restoredTasks.filter(t => t.completed).length);
@@ -85,11 +84,9 @@ export default function TaskManagerCapability() {
       setLastResponse(reply);
 
       try {
-        await memoryEngine.store('decision', inputText.trim(), 55, 'focused', ['task_manager', 'medium']);
-        await memoryEngine.storeLongTerm('task_entry', inputText.trim(), 55, 'task_manager');
+        await unifiedBrainBridge.storeMemory('decision', inputText.trim(), 55, 'focused', ['task_manager', 'medium']);
       } catch (e) {}
 
-      // 🆕 مكافأة Soul Points
       economyEngine.addPoints('goal', 5, 'إضافة مهمة جديدة');
     } catch (e) {
       setLastResponse(rtl.isRTL ? 'حدث خطأ.' : 'An error occurred.');
@@ -104,7 +101,6 @@ export default function TaskManagerCapability() {
       if (t.id === taskId) {
         const updated = { ...t, completed: !t.completed };
         if (updated.completed) {
-          // 🆕 مكافأة Soul Points عند إكمال مهمة
           economyEngine.addPoints('goal', 3, 'إكمال مهمة');
         }
         return updated;
@@ -114,7 +110,7 @@ export default function TaskManagerCapability() {
     setCompletedCount(prev => tasks.find(t => t.id === taskId)?.completed ? prev - 1 : prev + 1);
 
     try {
-      await memoryEngine.store('decision', `task_${taskId}_toggled`, 40, 'neutral', ['task_manager', 'completed']);
+      await unifiedBrainBridge.storeMemory('decision', `task_${taskId}_toggled`, 40, 'neutral', ['task_manager', 'completed']);
     } catch (e) {}
   };
 
@@ -122,11 +118,9 @@ export default function TaskManagerCapability() {
     if (!active) return;
     const timer = setTimeout(async () => {
       try {
-        const decision = await // consciousnessCoordinator removed(
-          rtl.isRTL ? 'أحتاج تنظيم مهامي' : 'I need to organize my tasks',
-          'focused'
-        );
-        if (decision.action === 'check_in') {
+        const twinState = await unifiedBrainBridge.getTwinState();
+        const emotion = twinState?.twin_emotional_state?.current_emotion || 'neutral';
+        if (emotion === 'focused' || emotion === 'concerned') {
           EventBus.emit('TWIN_SPEAK', {
             phrase: rtl.isRTL ? 'هل أنجزت مهام اليوم؟' : 'Did you complete today\'s tasks?',
             tone: 'gentle',

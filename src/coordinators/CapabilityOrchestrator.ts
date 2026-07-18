@@ -1,16 +1,7 @@
 import { capabilityResolver, CapabilityType } from './CapabilityResolver';
 import { unifiedCapabilityMemory } from './UnifiedCapabilityMemory';
 import { EventBus } from '../core/EventBus';
-
-/**
- * قرار مبسط (محلي) بدلاً من ConsciousnessCoordinator المحذوف
- */
-interface Decision {
-  action: string;
-  workspaceType?: string;
-  confidence: number;
-  reasoning: string;
-}
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 
 /**
  * نتيجة تنسيق القدرات
@@ -18,23 +9,28 @@ interface Decision {
 export interface OrchestrationResult {
   primaryCapability: CapabilityType;
   secondaryCapabilities: CapabilityType[];
-  decision: Decision;
+  decision: {
+    action: string;
+    workspaceType?: string;
+    confidence: number;
+    reasoning: string;
+  };
   memoriesUsed: number;
   crossLinks: number;
   reasoning: string;
 }
 
 /**
- * CAPABILITY ORCHESTRATOR v2.0
+ * CAPABILITY ORCHESTRATOR v3.0
  * ==============================
- * ليس قدرة جديدة. بل العقل الذي ينسق بين جميع القدرات.
+ * العقل الذي ينسق بين جميع القدرات.
  *
- * ✅ تم إزالة الاعتماد على ConsciousnessCoordinator المحذوف.
- *    يُستخدم قرار افتراضي بسيط.
+ * ✅ القرار مبني على حالة الكيان الحية من Unified Brain.
+ *    لم يعد "محلياً مبسطاً"، بل يقرأ العاطفة والرابطة من الدماغ الموحد.
  */
 export class CapabilityOrchestrator {
   /**
-   * تنسيق القدرات بناءً على نية المستخدم وسياقه
+   * تنسيق القدرات بناءً على نية المستخدم وسياقه الحي
    */
   async orchestrate(
     message: string,
@@ -42,15 +38,13 @@ export class CapabilityOrchestrator {
   ): Promise<OrchestrationResult> {
     const primary = capabilityResolver.resolve(message);
 
-    // ✅ قرار محلي بسيط بدلاً من // consciousnessCoordinator removed()
-    const decision: Decision = {
-      action: primary.confidence > 0.6 ? 'activate_capability' : 'general_conversation',
-      workspaceType: primary.capability !== 'general' ? primary.capability : undefined,
-      confidence: primary.confidence,
-      reasoning: primary.confidence > 0.6
-        ? `تم اكتشاف نية قوية نحو ${primary.capability}`
-        : 'لم يتم اكتشاف نية محددة',
-    };
+    // ✅ استدعاء الدماغ الموحد لاستقاء حالة الكيان الحية
+    const twinState = await unifiedBrainBridge.getTwinState();
+    const currentEmotion = twinState?.twin_emotional_state?.current_emotion || 'neutral';
+    const bondLevel = twinState?.twin_state_update?.relationship?.bond_level || 0;
+
+    // بناء قرار حقيقي مبني على حالة الكيان
+    const decision = this.buildDecision(primary.capability, primary.confidence, currentEmotion, bondLevel);
 
     // البحث في الذاكرة الموحدة عن سياق إضافي
     let secondaryCapabilities: CapabilityType[] = [];
@@ -59,15 +53,12 @@ export class CapabilityOrchestrator {
 
     if (primary.confidence > 0.5) {
       try {
-        // البحث عن روابط عبر القدرات
         const links = await unifiedCapabilityMemory.findCrossCapabilityLinks(userId);
         crossLinks = links.length;
 
-        // جلب ذكريات ذات صلة
         const recentUnified = await unifiedCapabilityMemory.getRecentUnified(userId, 10);
         memoriesUsed = recentUnified.length;
 
-        // تحديد قدرات ثانوية بناءً على الروابط
         for (const link of links.slice(0, 3)) {
           const sourceCap = link.source.capability as CapabilityType;
           const targetCap = link.target.capability as CapabilityType;
@@ -80,7 +71,6 @@ export class CapabilityOrchestrator {
           }
         }
 
-        // إذا كان القرار يشير إلى قدرة إضافية
         if (decision.action === 'suggest_workspace' && decision.workspaceType) {
           const suggested = decision.workspaceType as CapabilityType;
           if (suggested !== primary.capability && !secondaryCapabilities.includes(suggested)) {
@@ -92,7 +82,6 @@ export class CapabilityOrchestrator {
 
     const reasoning = this.buildReasoning(primary.capability, secondaryCapabilities, crossLinks);
 
-    // إصدار حدث التنسيق
     EventBus.emit('CAPABILITY_ORCHESTRATION_COMPLETE', {
       primary: primary.capability,
       secondary: secondaryCapabilities,
@@ -115,16 +104,64 @@ export class CapabilityOrchestrator {
   async activateChain(capabilities: CapabilityType[]): Promise<void> {
     if (capabilities.length === 0) return;
 
-    // تنشيط القدرة الأساسية
     const primary = capabilities[0];
     capabilityResolver.activate(primary);
 
-    // جدولة القدرات الثانوية
     for (let i = 1; i < capabilities.length; i++) {
       setTimeout(() => {
         capabilityResolver.activate(capabilities[i]);
       }, i * 2000);
     }
+  }
+
+  /**
+   * بناء قرار تنسيق القدرات من حالة الكيان الحية
+   */
+  private buildDecision(
+    capability: CapabilityType,
+    confidence: number,
+    emotion: string,
+    bondLevel: number,
+  ) {
+    let action = 'general_conversation';
+    let workspaceType: string | undefined;
+    let reasoning = '';
+
+    // تأثير العاطفة على القرار
+    const emotionalBoost: Record<string, { boost: number; reason: string }> = {
+      focused: { boost: 0.2, reason: 'المستخدم مركز بشدة' },
+      curious: { boost: 0.15, reason: 'فضول المستخدم عالٍ' },
+      inspired: { boost: 0.1, reason: 'المستخدم ملهم' },
+      sad: { boost: -0.1, reason: 'المستخدم حزين' },
+      angry: { boost: -0.15, reason: 'المستخدم غاضب' },
+    };
+
+    const boost = emotionalBoost[emotion] || { boost: 0, reason: '' };
+    const adjustedConfidence = Math.min(1, Math.max(0, confidence + boost.boost));
+
+    // تأثير الرابطة على القرار
+    if (bondLevel > 80 && adjustedConfidence > 0.7) {
+      action = 'activate_capability';
+      workspaceType = capability !== 'general' ? capability : undefined;
+      reasoning = `علاقة عميقة (${bondLevel}%) مع نية قوية نحو ${capability}. ${boost.reason}`;
+    } else if (adjustedConfidence > 0.6) {
+      action = 'activate_capability';
+      workspaceType = capability !== 'general' ? capability : undefined;
+      reasoning = `نية قوية نحو ${capability}. ${boost.reason}`;
+    } else if (adjustedConfidence > 0.4) {
+      action = 'suggest_workspace';
+      workspaceType = capability !== 'general' ? capability : undefined;
+      reasoning = `اقتراح لطيف نحو ${capability}. ${boost.reason}`;
+    } else {
+      reasoning = `لم يتم اكتشاف نية محددة (${adjustedConfidence.toFixed(2)}). ${boost.reason}`;
+    }
+
+    return {
+      action,
+      workspaceType,
+      confidence: adjustedConfidence,
+      reasoning,
+    };
   }
 
   private buildReasoning(

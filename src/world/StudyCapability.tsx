@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
-// ✅ memoryEngine removed
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
@@ -38,10 +37,10 @@ export default function StudyCapability() {
 
   const loadStudyContext = async () => {
     try {
-      const saved = await memoryEngine.getCapabilityMemory('study', 5);
+      const saved = await unifiedBrainBridge.getCapabilityMemory('study', 5);
       if (saved.length > 0) {
-        setTopics(saved.map(m => ({ id: m.id, title: m.content.substring(0, 80), progress: m.importance, lastStudied: m.timestamp })));
-        setLastTopic(saved[0].content.substring(0, 80));
+        setTopics(saved.map(m => ({ id: m.id, title: m.content?.substring(0, 80) || '', progress: m.importance || 50, lastStudied: m.created_at || m.timestamp })));
+        setLastTopic(saved[0].content?.substring(0, 80) || '');
       }
     } catch (e) {}
   };
@@ -51,12 +50,10 @@ export default function StudyCapability() {
     const newTopic: StudyTopic = { id: Date.now().toString(), title: currentTopic.trim(), progress: 0, lastStudied: new Date().toISOString() };
     setTopics(prev => [newTopic, ...prev]);
     try {
-      await memoryEngine.store('learning', currentTopic.trim(), 60, 'focused', ['study']);
-      await memoryEngine.storeLongTerm('study_topic', currentTopic.trim(), 65, 'study');
+      await unifiedBrainBridge.storeMemory('learning', currentTopic.trim(), 60, 'focused', ['study']);
     } catch (e) {}
     setCurrentTopic('');
     
-    // 🆕 مكافأة Soul Points
     economyEngine.rewardStudySession();
     
     EventBus.emit('STUDY_TOPIC_ADDED', { topic: newTopic });
@@ -65,13 +62,13 @@ export default function StudyCapability() {
   useEffect(() => {
     if (!active) return;
     const timer = setTimeout(async () => {
-      const decision = await // consciousnessCoordinator removed(
-        rtl.isRTL ? 'أريد أن أدرس' : 'I want to study',
-        'focused'
-      );
-      if (decision.action === 'check_in') {
-        EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'هل نكمل ما بدأناه؟' : 'Shall we continue where we left off?', tone: 'gentle' });
-      }
+      try {
+        const twinState = await unifiedBrainBridge.getTwinState();
+        const emotion = twinState?.twin_emotional_state?.current_emotion || 'neutral';
+        if (emotion === 'focused' || emotion === 'curious') {
+          EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'هل نكمل ما بدأناه؟' : 'Shall we continue where we left off?', tone: 'gentle' });
+        }
+      } catch (e) {}
     }, 5000);
     return () => clearTimeout(timer);
   }, [active]);

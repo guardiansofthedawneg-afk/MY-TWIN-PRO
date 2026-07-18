@@ -1,9 +1,7 @@
 import { EventBus } from './EventBus';
 import { stateBus } from './StateBus';
+import { unifiedBrainBridge } from './UnifiedBrainBridge';
 
-/**
- * إشعار حي — ليس Push Notification
- */
 interface LivingNotification {
   id: string;
   type: 'memory' | 'reminder' | 'check_in' | 'insight' | 'celebration';
@@ -13,45 +11,22 @@ interface LivingNotification {
   shown: boolean;
 }
 
-/**
- * LIVING NOTIFICATIONS v2.0
- * ==========================
- * ليس Push Notifications. بل حضور.
- *
- * بدلاً من: "لديك مهمة"
- * يقول: "تذكرت شيئاً قد يساعدك."
- *
- * بدلاً من: "Reminder"
- * يقول: "هل يناسبك أن نكمل ما بدأناه أمس؟"
- *
- * ✅ المصادر الجديدة: StateBus (للعاطفة والعلاقة)، UnifiedBrainBridge (للذكريات)
- */
 export class LivingNotifications {
   private queue: LivingNotification[] = [];
   private isShowing: boolean = false;
   private checkInterval: ReturnType<typeof setInterval> | null = null;
 
-  /**
-   * بدء نظام الإشعارات الحية
-   */
   start(): void {
     this.checkInterval = setInterval(() => {
       this.generateNotifications();
-    }, 60000); // كل دقيقة
-
+    }, 60000);
     this.bindEvents();
   }
 
-  /**
-   * إيقاف النظام
-   */
   stop(): void {
     if (this.checkInterval) clearInterval(this.checkInterval);
   }
 
-  /**
-   * الحصول على الإشعار التالي
-   */
   getNext(): LivingNotification | null {
     const pending = this.queue.filter(n => !n.shown).sort((a, b) => {
       const priorityOrder = { high: 0, medium: 1, low: 2 };
@@ -60,30 +35,33 @@ export class LivingNotifications {
     return pending[0] || null;
   }
 
-  /**
-   * تعليم إشعار كمُعروض
-   */
   markAsShown(id: string): void {
     const notification = this.queue.find(n => n.id === id);
     if (notification) notification.shown = true;
   }
 
-  /**
-   * إضافة إشعار من الخارج (مثلاً: من UnifiedResponse بعد كل رد)
-   */
   addExternalNotification(type: LivingNotification['type'], message: string, priority: LivingNotification['priority'] = 'medium'): void {
     this.addToQueue({ type, message, priority });
   }
-
-  // ═══════════════════════════════════════════════════
-  // Private
-  // ═══════════════════════════════════════════════════
 
   private async generateNotifications(): Promise<void> {
     const currentState = stateBus.getState();
     const bond = currentState.relationship.bondLevel;
 
-    // 1. ذكريات اليوم — من StateBus.memory (يُملأ من UnifiedResponse عند وجود ذاكرة سطحت)
+    // 1. ذكريات اليوم — من TCMA الحقيقية
+    try {
+      const todayMemories = await unifiedBrainBridge.getOnThisDay(3);
+      for (const memory of todayMemories) {
+        const content = memory.expressed_text || memory.content || '';
+        this.addToQueue({
+          type: 'memory',
+          message: `في مثل هذا اليوم: ${content.substring(0, 60)}...`,
+          priority: 'medium',
+        });
+      }
+    } catch (e) {}
+
+    // 2. ذاكرة ظهرت مؤخراً من StateBus
     if (currentState.memory.recentContext) {
       this.addToQueue({
         type: 'memory',
@@ -92,7 +70,7 @@ export class LivingNotifications {
       });
     }
 
-    // 2. تحقق من الرابطة
+    // 3. تحقق من الرابطة
     if (bond > 60) {
       this.addToQueue({
         type: 'check_in',
@@ -101,7 +79,7 @@ export class LivingNotifications {
       });
     }
 
-    // 3. تذكير بالعودة — مبني على حالة العلاقة والعاطفة
+    // 4. تذكير بالعودة — مبني على حالة العلاقة والعاطفة
     const checkInMessage = this.generateCheckInMessage(currentState.emotion.primaryEmotion, bond);
     if (checkInMessage) {
       this.addToQueue({
@@ -112,9 +90,6 @@ export class LivingNotifications {
     }
   }
 
-  /**
-   * توليد رسالة تذكير بالعودة بناءً على العاطفة والرابطة
-   */
   private generateCheckInMessage(emotion: string, bond: number): string | null {
     if (bond >= 80) {
       const messages: Record<string, string> = {
@@ -132,11 +107,9 @@ export class LivingNotifications {
   }
 
   private addToQueue(notification: Omit<LivingNotification, 'id' | 'timestamp' | 'shown'>): void {
-    // تجنب التكرار
     const exists = this.queue.find(n => n.message === notification.message && !n.shown);
     if (exists) return;
 
-    // حد أقصى للطابور
     if (this.queue.length > 20) {
       this.queue = this.queue.slice(-15);
     }
@@ -148,7 +121,6 @@ export class LivingNotifications {
       shown: false,
     });
 
-    // إصدار حدث
     EventBus.emit('LIVING_NOTIFICATION_ADDED', {
       message: notification.message,
       type: notification.type,
@@ -157,7 +129,6 @@ export class LivingNotifications {
 
   private bindEvents(): void {
     EventBus.on('USER_SEND_MESSAGE', () => {
-      // عند تفاعل المستخدم، نخفض أولوية الإشعارات المؤقتة
       this.queue = this.queue.filter(n => n.priority !== 'low' || !n.shown);
     });
   }

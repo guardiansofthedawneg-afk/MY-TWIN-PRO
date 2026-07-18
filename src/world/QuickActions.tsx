@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInRight } from 'react-native-reanimated';
-import { memoryEngine } from '../../engine/memory/MemoryEngine';
-import { relationshipEngine } from '../../engine/relationship/RelationshipEngine';
-// ✅ goalCoordinator removed
-import { presenceCoordinator } from '../coordinators/PresenceCoordinator';
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
+import { stateBus } from '../core/StateBus';
 import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Briefcase, Moon, Sparkles, ArrowRight } from 'lucide-react-native';
@@ -28,14 +26,14 @@ export default function QuickActions() {
 
     try {
       // 1. هل هناك جلسة دراسة سابقة؟
-      const studyMemories = await memoryEngine.retrieveByType('learning', 3);
+      const studyMemories = await unifiedBrainBridge.getCapabilityMemory('study', 3);
       if (studyMemories.length > 0) {
         const lastStudy = studyMemories[0];
         generated.push({
           id: 'continue_study',
           text: rtl.isRTL
-            ? `أكمل ${lastStudy.content.substring(0, 30)}...`
-            : `Continue ${lastStudy.content.substring(0, 30)}...`,
+            ? `أكمل ${lastStudy.content?.substring(0, 30) || 'دراستك'}...`
+            : `Continue ${lastStudy.content?.substring(0, 30) || 'your study'}...`,
           icon: BookOpen,
           color: '#3B82F6',
           action: () => {},
@@ -43,40 +41,8 @@ export default function QuickActions() {
         });
       }
 
-      // 2. هل هناك أهداف نشطة؟
-      const activeGoals = goalCoordinator.getActiveGoals();
-      if (activeGoals.length > 0) {
-        const topGoal = activeGoals[0];
-        generated.push({
-          id: 'review_goal',
-          text: rtl.isRTL
-            ? `هدفك: ${topGoal.title.substring(0, 40)}`
-            : `Your goal: ${topGoal.title.substring(0, 40)}`,
-          icon: Sparkles,
-          color: '#10B981',
-          action: () => {},
-          priority: 'medium',
-        });
-      }
-
-      // 3. هل حان وقت check-in؟
-      const bond = relationshipEngine.getBondLevel();
-      if (bond > 50) {
-        generated.push({
-          id: 'check_in',
-          text: rtl.isRTL ? 'كيف تشعر اليوم؟' : 'How are you feeling today?',
-          icon: Sparkles,
-          color: '#A855F7',
-          action: () => {},
-          priority: 'medium',
-        });
-      }
-
-      // 4. هل هناك مشروع قيد العمل؟
-      const projectMemories = await memoryEngine.smartRetrieve(
-        { currentEmotion: 'neutral', currentTopic: 'مشروع', timeOfDay: 'صباح', recentTopics: [] },
-        1,
-      );
+      // 2. هل هناك مشروع قيد العمل؟
+      const projectMemories = await unifiedBrainBridge.getCapabilityMemory('business', 1);
       if (projectMemories.length > 0) {
         generated.push({
           id: 'continue_project',
@@ -88,7 +54,20 @@ export default function QuickActions() {
         });
       }
 
-      // 5. هل الوقت ليلاً؟ اقترح Dream
+      // 3. هل حان وقت check-in؟ (من StateBus: الرابطة)
+      const bond = stateBus.getState().relationship.bondLevel;
+      if (bond > 50) {
+        generated.push({
+          id: 'check_in',
+          text: rtl.isRTL ? 'كيف تشعر اليوم؟' : 'How are you feeling today?',
+          icon: Sparkles,
+          color: '#A855F7',
+          action: () => {},
+          priority: 'medium',
+        });
+      }
+
+      // 4. هل الوقت ليلاً؟ اقترح Dream
       const hour = new Date().getHours();
       if (hour >= 21 || hour < 5) {
         generated.push({

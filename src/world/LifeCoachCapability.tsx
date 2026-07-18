@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
-import { memoryEngine } from '../../engine/memory/MemoryEngine';
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
@@ -84,10 +83,10 @@ export default function LifeCoachCapability() {
 
   const loadCoachContext = async () => {
     try {
-      const saved = await memoryEngine.getCapabilityMemory('life_coach', 5);
+      const saved = await unifiedBrainBridge.getCapabilityMemory('life_coach', 5);
       if (saved.length > 0) {
-        setSessions(saved.map(m => ({ id: m.id, title: m.content.substring(0, 60), type: m.relatedTo[0] || 'session', content: m.content, timestamp: m.timestamp })));
-        setLastTopic(saved[0].content.substring(0, 80));
+        setSessions(saved.map(m => ({ id: m.id, title: m.content?.substring(0, 60) || '', type: m.relatedTo?.[0] || 'session', content: m.content, timestamp: m.created_at || m.timestamp })));
+        setLastTopic(saved[0].content?.substring(0, 80) || '');
       }
     } catch (e) {}
   };
@@ -108,11 +107,9 @@ export default function LifeCoachCapability() {
       setLastResponse(reply);
 
       try {
-        await memoryEngine.store('decision', inputText.trim(), 65, 'concerned', ['life_coach', actionType]);
-        await memoryEngine.storeLongTerm('life_coach_session', inputText.trim(), 65, 'life_coach');
+        await unifiedBrainBridge.storeMemory('decision', inputText.trim(), 65, 'concerned', ['life_coach', actionType]);
       } catch (e) {}
 
-      // 🆕 مكافأة Soul Points
       economyEngine.addPoints('study_session', 15, 'جلسة Life Coach');
     } catch (e) {
       setLastResponse(rtl.isRTL ? 'حدث خطأ. حاول مرة أخرى.' : 'An error occurred. Please try again.');
@@ -126,11 +123,9 @@ export default function LifeCoachCapability() {
     if (!active) return;
     const timer = setTimeout(async () => {
       try {
-        const decision = await // consciousnessCoordinator removed(
-          rtl.isRTL ? 'أحتاج استشارة حياتية' : 'I need life coaching',
-          'concerned'
-        );
-        if (decision.action === 'check_in') {
+        const twinState = await unifiedBrainBridge.getTwinState();
+        const emotion = twinState?.twin_emotional_state?.current_emotion || 'neutral';
+        if (emotion === 'concerned' || emotion === 'sadness') {
           EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'كيف تشعر اليوم؟' : 'How are you feeling today?', tone: 'gentle' });
         }
       } catch (e) {}

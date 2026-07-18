@@ -153,5 +153,106 @@ class UnifiedMemoryEngine:
             return {}
 
 
+
+    async def get_core_memories(self, user_id: str, limit: int = 12) -> List[Dict[str, Any]]:
+        """استرجاع الذكريات الأساسية (عالية الأهمية)"""
+        if not DB_AVAILABLE:
+            return []
+        try:
+            db = get_db()
+            result = (
+                db.table(TABLE_NAME)
+                .select("*")
+                .eq("user_id", user_id)
+                .gte("importance", 70)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            logger.error(f"get_core_memories failed: {e}")
+            return []
+    
+
+
+    async def get_capability_memories(self, user_id: str, capability: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """استرجاع ذكريات مرتبطة بقدرة معينة — يبحث في related_to أولاً ثم النص"""
+        if not DB_AVAILABLE:
+            return []
+        try:
+            db = get_db()
+            from datetime import datetime as dt
+            
+            # 1. البحث الدقيق: حقل cultural_context أو arabic_category يحتوي على capability
+            result = (
+                db.table(TABLE_NAME)
+                .select("*")
+                .eq("user_id", user_id)
+                .or_(f"cultural_context.ilike.%{capability}%,arabic_category.ilike.%{capability}%")
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            memories = result.data or []
+            
+            # 2. إذا لم توجد نتائج كافية، نبحث في النص
+            if len(memories) < limit:
+                result2 = (
+                    db.table(TABLE_NAME)
+                    .select("*")
+                    .eq("user_id", user_id)
+                    .ilike("expressed_text", f"%{capability}%")
+                    .order("created_at", desc=True)
+                    .limit(limit * 2)
+                    .execute()
+                )
+                text_memories = result2.data or []
+                
+                # دمج مع تجنب التكرار
+                existing_ids = {m["id"] for m in memories}
+                for m in text_memories:
+                    if m["id"] not in existing_ids:
+                        memories.append(m)
+                        existing_ids.add(m["id"])
+                    if len(memories) >= limit:
+                        break
+            
+            return memories[:limit]
+        except Exception as e:
+            logger.error(f"get_capability_memories failed: {e}")
+            return []
+    
+
+
+    async def get_on_this_day(self, user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """ذكريات في مثل هذا اليوم من السنوات السابقة"""
+        if not DB_AVAILABLE:
+            return []
+        try:
+            db = get_db()
+            today = datetime.now(timezone.utc)
+            result = (
+                db.table(TABLE_NAME)
+                .select("*")
+                .eq("user_id", user_id)
+                .lt("created_at", today.replace(year=today.year - 1).isoformat())
+                .order("created_at", desc=True)
+                .limit(limit * 10)
+                .execute()
+            )
+            memories = result.data or []
+            filtered = [
+                m for m in memories
+                if m.get("created_at") and
+                datetime.fromisoformat(m["created_at"]).month == today.month and
+                datetime.fromisoformat(m["created_at"]).day == today.day
+            ]
+            return filtered[:limit]
+        except Exception as e:
+            logger.error(f"get_on_this_day failed: {e}")
+            return []
+    
+
 unified_memory_engine = UnifiedMemoryEngine()
 logger.info("✅ Unified Memory Engine v2.0 ready")

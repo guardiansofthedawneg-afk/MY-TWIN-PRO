@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
-import { memoryEngine } from '../../engine/memory/MemoryEngine';
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
@@ -46,10 +45,10 @@ export default function SmartHomeCapability() {
 
   const loadHomeContext = async () => {
     try {
-      const saved = await memoryEngine.getCapabilityMemory('smart_home', 5);
+      const saved = await unifiedBrainBridge.getCapabilityMemory('smart_home', 5);
       if (saved.length > 0) {
-        setSessions(saved.map(m => ({ id: m.id, title: m.content.substring(0, 60), type: m.relatedTo[0] || 'command', content: m.content, timestamp: m.timestamp })));
-        setLastCommand(saved[0].content.substring(0, 80));
+        setSessions(saved.map(m => ({ id: m.id, title: m.content?.substring(0, 60) || '', type: m.relatedTo?.[0] || 'command', content: m.content, timestamp: m.created_at || m.timestamp })));
+        setLastCommand(saved[0].content?.substring(0, 80) || '');
       }
     } catch (e) {}
   };
@@ -70,11 +69,9 @@ export default function SmartHomeCapability() {
       setLastResponse(reply);
 
       try {
-        await memoryEngine.store('decision', inputText.trim(), 50, 'neutral', ['smart_home', actionType]);
-        await memoryEngine.storeLongTerm('smart_home_command', inputText.trim(), 50, 'smart_home');
+        await unifiedBrainBridge.storeMemory('decision', inputText.trim(), 50, 'neutral', ['smart_home', actionType]);
       } catch (e) {}
 
-      // 🆕 مكافأة Soul Points
       economyEngine.addPoints('study_session', 5, 'أمر منزل ذكي');
     } catch (e) {
       setLastResponse(rtl.isRTL ? 'حدث خطأ.' : 'An error occurred.');
@@ -88,11 +85,9 @@ export default function SmartHomeCapability() {
     if (!active) return;
     const timer = setTimeout(async () => {
       try {
-        const decision = await // consciousnessCoordinator removed(
-          rtl.isRTL ? 'أحتاج التحكم بالمنزل' : 'I need to control my home',
-          'neutral'
-        );
-        if (decision.action === 'check_in') {
+        const twinState = await unifiedBrainBridge.getTwinState();
+        const emotion = twinState?.twin_emotional_state?.current_emotion || 'neutral';
+        if (emotion === 'neutral' || emotion === 'focused') {
           EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'هل تحتاج شيئاً في المنزل؟' : 'Do you need anything at home?', tone: 'gentle' });
         }
       } catch (e) {}

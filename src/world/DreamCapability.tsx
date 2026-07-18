@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
-import { memoryEngine } from '../../engine/memory/MemoryEngine';
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
@@ -47,10 +46,10 @@ export default function DreamCapability() {
 
   const loadDreamContext = async () => {
     try {
-      const saved = await memoryEngine.getCapabilityMemory('dream', 5);
+      const saved = await unifiedBrainBridge.getCapabilityMemory('dream', 5);
       if (saved.length > 0) {
-        setSessions(saved.map(m => ({ id: m.id, title: m.content.substring(0, 60), type: 'dream', content: m.content, timestamp: m.timestamp })));
-        setLastDream(saved[0].content.substring(0, 80));
+        setSessions(saved.map(m => ({ id: m.id, title: m.content?.substring(0, 60) || '', type: 'dream', content: m.content, timestamp: m.created_at || m.timestamp })));
+        setLastDream(saved[0].content?.substring(0, 80) || '');
         setDreamCount(saved.length);
       }
     } catch (e) {}
@@ -73,11 +72,9 @@ export default function DreamCapability() {
       setDreamCount(prev => prev + 1);
 
       try {
-        await memoryEngine.store('dream', inputText.trim(), 70, 'curious', ['dream', actionType]);
-        await memoryEngine.storeLongTerm('dream_entry', inputText.trim(), 70, 'dream');
+        await unifiedBrainBridge.storeMemory('dream', inputText.trim(), 70, 'curious', ['dream', actionType]);
       } catch (e) {}
 
-      // 🆕 مكافأة Soul Points
       economyEngine.rewardDream();
     } catch (e) {
       setLastResponse(rtl.isRTL ? 'حدث خطأ. حاول مرة أخرى.' : 'An error occurred. Please try again.');
@@ -91,11 +88,9 @@ export default function DreamCapability() {
     if (!active) return;
     const timer = setTimeout(async () => {
       try {
-        const decision = await // consciousnessCoordinator removed(
-          rtl.isRTL ? 'أريد تفسير حلمي' : 'I want to interpret my dream',
-          'curious'
-        );
-        if (decision.action === 'check_in') {
+        const twinState = await unifiedBrainBridge.getTwinState();
+        const emotion = twinState?.twin_emotional_state?.current_emotion || 'neutral';
+        if (emotion === 'curious' || emotion === 'focused') {
           EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'هل حلمت الليلة؟' : 'Did you dream tonight?', tone: 'gentle' });
         }
       } catch (e) {}

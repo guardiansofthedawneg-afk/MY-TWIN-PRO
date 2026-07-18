@@ -168,4 +168,63 @@ class UnifiedBrainBridge {
 
 }
 
+
+  /**
+   * ✅ TCMA حقيقية: استرجاع الذكريات الأساسية
+   */
+  async getCoreMemories(limit: number = 12): Promise<any[]> {
+    try {
+      const response = await apiClient.get(`/api/memories/core`, { params: { user_id: this.userId, limit } });
+      return response.data?.memories || [];
+    } catch (e) { return []; }
+  }
+
+  /**
+   * ✅ TCMA حقيقية: استرجاع ذكريات قدرة معينة
+   */
+  async getCapabilityMemory(capabilityType: string, limit: number = 10): Promise<any[]> {
+    try {
+      const response = await apiClient.get(`/api/memories/capability`, { params: { user_id: this.userId, capability: capabilityType, limit } });
+      return response.data?.memories || [];
+    } catch (e) { return []; }
+  }
+
+  /**
+   * ✅ TCMA حقيقية: ذكريات في مثل هذا اليوم
+   */
+  async getOnThisDay(limit: number = 5): Promise<any[]> {
+    try {
+      const response = await apiClient.get(`/api/memories/on_this_day`, { params: { user_id: this.userId, limit } });
+      return response.data?.memories || [];
+    } catch (e) { return []; }
+  }
+
+  /**
+   * ✅ TCMA حقيقية: تخزين ذاكرة
+   */
+  async storeMemory(type: string, content: string, importance: number = 50, emotion: string = "neutral", relatedTo: string[] = []): Promise<void> {
+    try {
+      await apiClient.post('/api/memories/store', {
+        user_id: this.userId,
+        type,
+        content,
+        importance,
+        emotion,
+        related_to: relatedTo,
+      });
+    } catch (e) {}
+  }
+
+  /**
+   * ✅ حالة الكيان الحالية من Unified Brain
+   */
+  async getTwinState(): Promise<any> {
+    try {
+      const response = await apiClient.get(`/api/twin/state/${this.userId}`);
+      return response.data || {};
+    } catch (e) { return {}; }
+  }
+
+}
+
 export const unifiedBrainBridge = new UnifiedBrainBridge();

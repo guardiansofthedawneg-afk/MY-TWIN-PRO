@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { EventBus } from '../core/EventBus';
-// ✅ memoryEngine removed
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
-// ✅ consciousnessCoordinator removed — unified backend handles this
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
@@ -124,10 +123,10 @@ export default function BusinessCapability() {
 
   const loadBusinessContext = async () => {
     try {
-      const saved = await memoryEngine.getCapabilityMemory('business', 5);
+      const saved = await unifiedBrainBridge.getCapabilityMemory('business', 5);
       if (saved.length > 0) {
-        setSessions(saved.map(m => ({ id: m.id, title: m.content.substring(0, 60), type: m.relatedTo.find(r => ['business', 'startup', 'project', 'idea'].includes(r)) || 'idea', content: m.content, timestamp: m.timestamp })));
-        setLastSession(saved[0].content.substring(0, 60));
+        setSessions(saved.map(m => ({ id: m.id, title: m.content?.substring(0, 60) || '', type: m.relatedTo?.find(r => ['business', 'startup', 'project', 'idea'].includes(r)) || 'idea', content: m.content, timestamp: m.created_at || m.timestamp })));
+        setLastSession(saved[0].content?.substring(0, 60) || '');
       }
     } catch (e) {}
   };
@@ -148,11 +147,9 @@ export default function BusinessCapability() {
       setLastResponse(reply);
 
       try {
-        await memoryEngine.store('learning', inputText.trim(), 60, 'focused', ['business', action.type]);
-        await memoryEngine.storeLongTerm('business_session', inputText.trim(), 65, 'business');
+        await unifiedBrainBridge.storeMemory('learning', inputText.trim(), 60, 'focused', ['business', action.type]);
       } catch (e) {}
 
-      // 🆕 مكافأة Soul Points
       economyEngine.addPoints('study_session', 15, 'جلسة Business World');
     } catch (e) {
       setLastResponse(rtl.isRTL ? 'حدث خطأ. حاول مرة أخرى.' : 'An error occurred. Please try again.');
@@ -166,11 +163,9 @@ export default function BusinessCapability() {
     if (!active) return;
     const timer = setTimeout(async () => {
       try {
-        const decision = await // consciousnessCoordinator removed(
-          rtl.isRTL ? 'أريد بناء مشروع' : 'I want to build a project',
-          'focused'
-        );
-        if (decision.action === 'check_in') {
+        const twinState = await unifiedBrainBridge.getTwinState();
+        const emotion = twinState?.twin_emotional_state?.current_emotion || 'neutral';
+        if (emotion === 'focused' || emotion === 'inspired') {
           EventBus.emit('TWIN_SPEAK', { phrase: rtl.isRTL ? 'هل لديك فكرة مشروع جديدة؟' : 'Do you have a new project idea?', tone: 'gentle' });
         }
       } catch (e) {}

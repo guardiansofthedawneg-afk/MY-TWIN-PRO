@@ -1,13 +1,17 @@
 """
-Memories Routes v3.0 – متكاملة مع TCMA + Episodic Memory
+Memories Routes v4.0 – متكاملة مع TCMA + Unified Memory
 ============================================================
-تستدعي جميع طبقات الذاكرة الجديدة، بما فيها القصص (Episodic).
+تستدعي جميع طبقات الذاكرة، بما فيها القصص (Episodic) ونقاط TCMA الجديدة.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 from app.api.dependencies.auth import get_current_user_id
 
 router = APIRouter(prefix="/api/memories", tags=["memories"])
+
+# ═══════════════════════════════════════
+# نقاط النهاية الأصلية
+# ═══════════════════════════════════════
 
 @router.get("/")
 async def get_memories(
@@ -17,9 +21,7 @@ async def get_memories(
     memory_type: Optional[str] = None,
 ):
     try:
-        from app.infrastructure.database.supabase_client import get_db
         from app.memory.archive.raw_archive import get_conversation_archive
-        db = get_db()
         memories = await get_conversation_archive(user_id, limit, offset)
         return {"memories": memories, "total": len(memories), "limit": limit, "offset": offset, "source": "raw_archive"}
     except Exception as e:
@@ -109,5 +111,81 @@ async def get_stories(
         from app.memory.episodic.episodic_memory import episodic_memory
         stories = await episodic_memory.get_all_stories(user_id, lang)
         return {"stories": stories, "count": len(stories), "source": "episodic_memory"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+# ═══════════════════════════════════════
+# ✅ نقاط نهاية TCMA الجديدة (Unified Memory)
+# ═══════════════════════════════════════
+
+@router.get("/core")
+async def get_core_memories(
+    user_id: str = Depends(get_current_user_id),
+    limit: int = Query(12, ge=1, le=50),
+):
+    """استرجاع الذكريات الأساسية (عالية الأهمية) من TCMA"""
+    try:
+        from app.memory.unified_memory import unified_memory_engine
+        memories = await unified_memory_engine.get_core_memories(user_id, limit)
+        return {"memories": memories, "source": "tcma_unified"}
+    except Exception as e:
+        return {"memories": [], "error": str(e)}
+
+@router.get("/capability")
+async def get_capability_memories(
+    user_id: str = Depends(get_current_user_id),
+    capability: str = Query(..., min_length=1),
+    limit: int = Query(10, ge=1, le=50),
+):
+    """استرجاع ذكريات مرتبطة بقدرة معينة"""
+    try:
+        from app.memory.unified_memory import unified_memory_engine
+        memories = await unified_memory_engine.get_capability_memories(user_id, capability, limit)
+        return {"memories": memories, "source": "tcma_unified"}
+    except Exception as e:
+        return {"memories": [], "error": str(e)}
+
+@router.get("/on_this_day")
+async def get_on_this_day(
+    user_id: str = Depends(get_current_user_id),
+    limit: int = Query(5, ge=1, le=20),
+):
+    """ذكريات في مثل هذا اليوم من السنوات السابقة"""
+    try:
+        from app.memory.unified_memory import unified_memory_engine
+        memories = await unified_memory_engine.get_on_this_day(user_id, limit)
+        return {"memories": memories, "source": "tcma_unified"}
+    except Exception as e:
+        return {"memories": [], "error": str(e)}
+
+@router.get("/patterns")
+async def get_memory_patterns(
+    user_id: str = Depends(get_current_user_id),
+    days: int = Query(14, ge=1, le=365),
+):
+    """أنماط الذاكرة من TCMA"""
+    try:
+        from app.memory.unified_memory import unified_memory_engine
+        patterns = await unified_memory_engine.get_patterns(user_id, days)
+        return {"patterns": patterns, "source": "tcma_unified"}
+    except Exception as e:
+        return {"patterns": {}, "error": str(e)}
+
+@router.post("/store")
+async def store_memory(
+    payload: dict,
+    user_id: str = Depends(get_current_user_id),
+):
+    """تخزين ذاكرة جديدة عبر TCMA"""
+    try:
+        from app.memory.unified_memory import unified_memory_engine
+        memory_id = await unified_memory_engine.store(
+            user_id=user_id,
+            content=payload.get("content", ""),
+            reply="",
+            emotion=payload.get("emotion", "neutral"),
+            importance=payload.get("importance", 50),
+        )
+        return {"id": memory_id, "status": "stored"}
     except Exception as e:
         raise HTTPException(500, str(e))

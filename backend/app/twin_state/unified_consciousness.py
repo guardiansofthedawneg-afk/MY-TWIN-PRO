@@ -1,10 +1,11 @@
 """
-Unified Consciousness v1.0 – قائد جميع محركات الوعي
+Unified Consciousness v2.0 – قائد جميع محركات الوعي
 =============================================================
-- يجمع مخرجات: Curiosity, Decision, Prediction, Self-Reflection,
+- يجمع مخرجات: Unified Curiosity, Decision, Prediction, Self-Reflection,
   Consciousness, Belief System, Knowledge Engine في سياق واحد.
 - ينتج "لحظة وعي" واحدة تُخزن في TCMA وتُعرض للمستخدم.
 - يُستدعى من Brain Scheduler في الدورة المتوسطة (كل ساعة).
+- ✅ تم تحديث جميع الاستيرادات إلى المحركات الموحدة.
 """
 import logging, asyncio
 from typing import Dict, Any, Optional, List
@@ -32,10 +33,10 @@ class UnifiedConsciousness:
             "unified_summary": "",
         }
 
-        # 1. فضول – سؤال جديد
+        # 1. فضول – سؤال جديد (✅ Unified Curiosity Engine)
         try:
-            from app.twin_state.curiosity_engine import curiosity_engine
-            q = await curiosity_engine.generate_question(user_id)
+            from app.twin_state.unified_curiosity import unified_curiosity_engine
+            q = await unified_curiosity_engine.generate(user_id)
             if q:
                 moment["questions"].append(q)
                 moment["thoughts"].append(f"أتساءل: {q}")
@@ -97,11 +98,11 @@ class UnifiedConsciousness:
         except Exception as e:
             logger.debug(f"Knowledge in unified failed: {e}")
 
-        # 8. مزاج حالي
+        # 8. مزاج حالي (✅ Unified Emotion)
         try:
-            from app.twin_state.internal_state import twin_internal_state
-            state = await twin_internal_state.get_state(user_id)
-            moment["mood"] = state.get("mood", "calm")
+            from app.twin_state.unified_emotion import unified_emotion_engine
+            emotion_state = await unified_emotion_engine.analyze(user_id=user_id, text="")
+            moment["mood"] = emotion_state.get("primary_emotion", "calm")
         except Exception as e:
             logger.debug(f"Mood in unified failed: {e}")
 
@@ -138,4 +139,4 @@ class UnifiedConsciousness:
         return moment
 
 unified_consciousness = UnifiedConsciousness()
-logger.info("✅ Unified Consciousness v1.0 ready – all engines united")
+logger.info("✅ Unified Consciousness v2.0 ready – all engines unified")

@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeOut, SlideInRight } from 'react-native-reanimated
 import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { stateBus } from '../core/StateBus';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Briefcase, Moon, Sparkles, ArrowRight } from 'lucide-react-native';
 
@@ -18,6 +19,7 @@ interface QuickAction {
 
 export default function QuickActions() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [actions, setActions] = useState<QuickAction[]>([]);
   const [visible, setVisible] = useState(false);
 
@@ -129,7 +131,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACE.sm,
-    backgroundColor: 'rgba(26, 18, 38, 0.8)',
+    backgroundColor: colors.card,
     borderRadius: RADIUS.card,
     borderWidth: 1,
     paddingHorizontal: SPACE.md,
@@ -144,7 +146,7 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-    color: '#E8E0F0',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },

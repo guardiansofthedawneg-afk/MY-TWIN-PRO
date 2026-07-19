@@ -7,6 +7,7 @@ import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Code, Terminal, Bug, GitBranch, Rocket, ChevronRight, Brain, Clock } from 'lucide-react-native';
 
@@ -22,8 +23,8 @@ const TYPE_CONFIG: Record<string, { icon: typeof Code; color: string; label_ar: 
   idea:       { icon: Rocket,    color: '#00BCD4', label_ar: 'فكرة',       label_en: 'Idea' },
   code_review:{ icon: Code,      color: '#3B82F6', label_ar: 'مراجعة كود', label_en: 'Code Review' },
   project:    { icon: GitBranch, color: '#10B981', label_ar: 'مشروع',      label_en: 'Project' },
-  debug:      { icon: Bug,       color: '#F59E0B', label_ar: 'تصحيح',      label_en: 'Debug' },
-  devops:     { icon: Terminal,  color: '#8B5CF6', label_ar: 'DevOps',     label_en: 'DevOps' },
+  debug:      { icon: Bug,       color: colors.gold, label_ar: 'تصحيح',      label_en: 'Debug' },
+  devops:     { icon: Terminal,  color: colors.accent, label_ar: 'DevOps',     label_en: 'DevOps' },
 };
 
 const QUICK_ACTIONS: Array<{ type: CodeSession['type']; label_ar: string; label_en: string; placeholder_ar: string; placeholder_en: string }> = [
@@ -36,6 +37,7 @@ const QUICK_ACTIONS: Array<{ type: CodeSession['type']; label_ar: string; label_
 
 export default function DeveloperLabCapability() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
   const [activeAction, setActiveAction] = useState<CodeSession['type'] | null>(null);
@@ -237,32 +239,32 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE.md },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   iconWrapLarge: { width: 48, height: 48, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-  headerSubtitle: { color: '#6B5B8A', fontSize: 12 },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: 12 },
   closeBtn: { padding: 8, borderRadius: RADIUS.sm, backgroundColor: 'rgba(255,255,255,0.05)' },
-  closeText: { color: '#6B5B8A', fontSize: 16, fontWeight: '700' },
+  closeText: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
   lastSessionCard: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(0,188,212,0.08)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: SPACE.md },
   lastSessionText: { color: '#00BCD4', fontSize: 13, flex: 1 },
-  canvasCard: { backgroundColor: 'rgba(26, 18, 38, 0.95)', borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(0, 188, 212, 0.25)', padding: SPACE.md },
+  canvasCard: { backgroundColor: colors.card, borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(0, 188, 212, 0.25)', padding: SPACE.md },
   canvasHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
   canvasLabel: { color: '#00BCD4', fontSize: 14, fontWeight: '600' },
-  canvasInput: { backgroundColor: '#0D1117', borderRadius: RADIUS.sm, padding: 14, fontSize: 15, color: '#E6EDF3', borderWidth: 1, borderColor: '#30363D', minHeight: 100, fontFamily: 'monospace' },
+  canvasInput: { backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: 14, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.border, minHeight: 100, fontFamily: 'monospace' },
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: RADIUS.sm, borderWidth: 1.5 },
   actionLabel: { fontSize: 13, fontWeight: '600' },
-  processingText: { color: '#F59E0B', fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
-  responseCard: { backgroundColor: '#0D1117', borderRadius: RADIUS.sm, padding: SPACE.md, marginTop: SPACE.md, borderWidth: 1, borderColor: '#30363D' },
-  responseText: { color: '#E6EDF3', fontSize: 14, lineHeight: 22, fontFamily: 'monospace' },
+  processingText: { color: colors.gold, fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
+  responseCard: { backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: SPACE.md, marginTop: SPACE.md, borderWidth: 1, borderColor: colors.border },
+  responseText: { color: colors.text, fontSize: 14, lineHeight: 22, fontFamily: 'monospace' },
   sessionsSection: { marginTop: SPACE.md },
-  sectionTitle: { color: '#A78BFA', fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
-  sessionItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(26, 18, 38, 0.7)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: 6 },
+  sectionTitle: { color: colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
+  sessionItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: colors.card, borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: 6 },
   sessionIcon: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   sessionInfo: { flex: 1 },
-  sessionTitle: { color: '#E8E0F0', fontSize: 13, fontWeight: '500' },
+  sessionTitle: { color: colors.text, fontSize: 13, fontWeight: '500' },
   sessionMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  sessionTime: { color: '#6B5B8A', fontSize: 10 },
+  sessionTime: { color: colors.textSecondary, fontSize: 10 },
   memoriesCard: { backgroundColor: 'rgba(139, 92, 246, 0.06)', borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.2)', padding: SPACE.md, marginTop: SPACE.md },
   memoriesHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
-  memoriesTitle: { color: '#8B5CF6', fontSize: 13, fontWeight: '600' },
-  memoryText: { color: '#A78BFA', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  memoriesTitle: { color: colors.accent, fontSize: 13, fontWeight: '600' },
+  memoryText: { color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 4 },
 });

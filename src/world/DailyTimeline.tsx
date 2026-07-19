@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { stateBus } from '../core/StateBus';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Clock, MessageCircle, Heart, Target } from 'lucide-react-native';
 
@@ -18,6 +19,7 @@ interface TimelineEntry {
 
 export default function DailyTimeline() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [visible, setVisible] = useState(false);
 
@@ -109,17 +111,17 @@ export default function DailyTimeline() {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: SPACE.lg, paddingVertical: SPACE.sm },
-  title: { color: '#A78BFA', fontSize: 13, fontWeight: '600', marginBottom: SPACE.sm },
+  title: { color: colors.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: SPACE.sm },
   scroll: { gap: SPACE.sm },
   entry: {
     width: 160,
-    backgroundColor: 'rgba(26, 18, 38, 0.8)',
+    backgroundColor: colors.card,
     borderRadius: RADIUS.card,
     borderWidth: 1,
     padding: SPACE.sm,
     gap: 6,
   },
   entryIcon: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  entryText: { color: '#E8E0F0', fontSize: 12, lineHeight: 16 },
-  entryTime: { color: '#6B5B8A', fontSize: 10 },
+  entryText: { color: colors.text, fontSize: 12, lineHeight: 16 },
+  entryTime: { color: colors.textSecondary, fontSize: 10 },
 });

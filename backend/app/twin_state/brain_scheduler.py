@@ -1,10 +1,11 @@
 """
-Brain Scheduler v2.2 – العقل المجدول (آمن، ذكي، مع Debounce)
-=============================================================
+Brain Scheduler v3.0 – Unified Engine Integration
+==================================================
 - Lazy Loading لجميع المحركات (لا يفشل إذا كان ملف واحد مفقوداً)
 - Debounce: لا يعالج نفس المستخدم مرتين في نفس الدورة
 - Error Isolation: فشل محرك لا يؤثر على المحركات الأخرى
 - 3 دورات: خفيفة (10 دقائق)، متوسطة (ساعة)، عميقة (يومياً)
+- ✅ تم التحديث إلى Unified Curiosity و Unified Emotion
 """
 import logging, asyncio, time
 from datetime import datetime, timezone, timedelta
@@ -30,7 +31,7 @@ class BrainScheduler:
         self._tasks.append(asyncio.create_task(self._run_loop("light", 600, self._light_cycle)))
         self._tasks.append(asyncio.create_task(self._run_loop("hourly", 3600, self._hourly_cycle)))
         self._tasks.append(asyncio.create_task(self._run_loop("daily", 86400, self._daily_cycle)))
-        logger.info("🧠 Brain Scheduler v2.2 started – 3 cycles (with debounce)")
+        logger.info("🧠 Brain Scheduler v3.0 started – 3 cycles (unified engines)")
 
     async def stop(self):
         self._running = False
@@ -62,7 +63,6 @@ class BrainScheduler:
             return []
 
     def _reset_debounce_if_needed(self, cycle: str):
-        """إعادة تعيين قائمة المعالجين إذا مر وقت كافٍ"""
         now = datetime.now(timezone.utc)
         if cycle == "light" and (now - self._last_light_reset).seconds > 600:
             self._processed_light.clear()
@@ -92,6 +92,7 @@ class BrainScheduler:
             except Exception as e:
                 logger.debug(f"Light/energy {uid}: {e}")
             try:
+                # ✅ Unified Curiosity Engine
                 from app.twin_state.unified_curiosity import unified_curiosity_engine
                 q = await unified_curiosity_engine.generate(uid)
                 if q:
@@ -132,14 +133,6 @@ class BrainScheduler:
                         await twin_internal_state.add_pending_question(uid, q)
             except Exception as e:
                 logger.debug(f"Hourly/unified {uid}: {e}")
-            try:
-                from app.twin_state.self_monitor import self_monitor
-                observation = await self_monitor.check_quality(uid)
-                if observation:
-                    from app.twin_state.internal_state import twin_internal_state
-                    await twin_internal_state.add_pending_question(uid, f"🔍 {observation}")
-            except Exception as e:
-                logger.debug(f"Hourly/monitor {uid}: {e}")
             try:
                 from app.twin_state.self_monitor import self_monitor
                 observation = await self_monitor.check_quality(uid)
@@ -251,4 +244,4 @@ class BrainScheduler:
                 logger.debug(f"Daily/goal {uid}: {e}")
 
 brain_scheduler = BrainScheduler()
-logger.info("✅ Brain Scheduler v2.2 ready (lazy imports + debounce)")
+logger.info("✅ Brain Scheduler v3.0 ready (Unified Engines + debounce)")

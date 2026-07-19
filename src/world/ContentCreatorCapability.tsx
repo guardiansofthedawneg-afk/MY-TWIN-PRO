@@ -7,6 +7,7 @@ import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { 
   PenTool, Edit3, Search, TrendingUp, 
@@ -24,7 +25,7 @@ interface CreatorSession {
 
 const CREATOR_CATEGORIES = [
   {
-    id: 'writing', icon: PenTool, color: '#8B5CF6',
+    id: 'writing', icon: PenTool, color: colors.accent,
     label_ar: 'كتابة', label_en: 'Writing',
     actions: [
       { type: 'outline', label_ar: 'مخطط', label_en: 'Outline', placeholder_ar: 'عنوان المقال...', placeholder_en: 'Article title...', icon: BookOpen },
@@ -52,7 +53,7 @@ const CREATOR_CATEGORIES = [
     ]
   },
   {
-    id: 'ads', icon: TrendingUp, color: '#F59E0B',
+    id: 'ads', icon: TrendingUp, color: colors.gold,
     label_ar: 'إعلانات', label_en: 'Ads',
     actions: [
       { type: 'ad_copy', label_ar: 'نص إعلاني', label_en: 'Ad Copy', placeholder_ar: 'المنتج + الميزات + الجمهور...', placeholder_en: 'Product + features + audience...', icon: TrendingUp },
@@ -84,6 +85,7 @@ const QUICK_ACTIONS = [
 
 export default function ContentCreatorCapability() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -333,29 +335,29 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE.md },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   iconWrapLarge: { width: 48, height: 48, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-  headerSubtitle: { color: '#6B5B8A', fontSize: 12 },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: 12 },
   closeBtn: { padding: 8, borderRadius: RADIUS.sm, backgroundColor: 'rgba(255,255,255,0.05)' },
-  closeText: { color: '#6B5B8A', fontSize: 16, fontWeight: '700' },
+  closeText: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
   lastSessionCard: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(139,92,246,0.08)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: SPACE.md },
-  lastSessionText: { color: '#8B5CF6', fontSize: 13, flex: 1 },
+  lastSessionText: { color: colors.accent, fontSize: 13, flex: 1 },
   canvasCard: { 
-    backgroundColor: 'rgba(26, 18, 38, 0.95)', 
+    backgroundColor: colors.card, 
     borderRadius: RADIUS.card, 
     borderWidth: 1, 
     borderColor: 'rgba(139, 92, 246, 0.25)', 
     padding: SPACE.md 
   },
   canvasHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
-  canvasLabel: { color: '#8B5CF6', fontSize: 14, fontWeight: '600' },
+  canvasLabel: { color: colors.accent, fontSize: 14, fontWeight: '600' },
   canvasInput: { 
-    backgroundColor: '#161122', 
+    backgroundColor: colors.inputBg, 
     borderRadius: RADIUS.sm, 
     padding: 14, 
     fontSize: 15, 
-    color: '#FFFFFF', 
+    color: colors.text, 
     borderWidth: 1, 
-    borderColor: '#2D1B4D', 
+    borderColor: colors.border, 
     minHeight: 100,
   },
   categoriesRow: { 
@@ -407,41 +409,41 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   quickActionLabel: { fontSize: 13, fontWeight: '600', flex: 1 },
-  processingText: { color: '#8B5CF6', fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
+  processingText: { color: colors.accent, fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
   responseCard: { 
-    backgroundColor: '#161122', 
+    backgroundColor: colors.inputBg, 
     borderRadius: RADIUS.sm, 
     padding: SPACE.md, 
     marginTop: SPACE.md, 
     borderWidth: 1, 
-    borderColor: '#2D1B4D' 
+    borderColor: colors.border 
   },
-  responseText: { color: '#E8E0F0', fontSize: 14, lineHeight: 22 },
+  responseText: { color: colors.text, fontSize: 14, lineHeight: 22 },
   sessionsSection: { marginTop: SPACE.md },
-  sectionTitle: { color: '#A78BFA', fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
+  sectionTitle: { color: colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
   sessionItem: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: SPACE.sm, 
-    backgroundColor: 'rgba(26, 18, 38, 0.7)', 
+    backgroundColor: colors.card, 
     borderRadius: RADIUS.sm, 
     padding: SPACE.sm, 
     marginBottom: 6 
   },
   sessionIcon: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   sessionInfo: { flex: 1 },
-  sessionTitle: { color: '#E8E0F0', fontSize: 13, fontWeight: '500' },
+  sessionTitle: { color: colors.text, fontSize: 13, fontWeight: '500' },
   sessionMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  sessionTime: { color: '#6B5B8A', fontSize: 10 },
+  sessionTime: { color: colors.textSecondary, fontSize: 10 },
   memoriesCard: { 
-    backgroundColor: 'rgba(139, 92, 246, 0.06)', 
+    backgroundColor: colors.accent + '10', 
     borderRadius: RADIUS.card, 
     borderWidth: 1, 
-    borderColor: 'rgba(139, 92, 246, 0.2)', 
+    borderColor: colors.accent + '30', 
     padding: SPACE.md, 
     marginTop: SPACE.md 
   },
   memoriesHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
-  memoriesTitle: { color: '#8B5CF6', fontSize: 13, fontWeight: '600' },
-  memoryText: { color: '#A78BFA', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  memoriesTitle: { color: colors.accent, fontSize: 13, fontWeight: '600' },
+  memoryText: { color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 4 },
 });

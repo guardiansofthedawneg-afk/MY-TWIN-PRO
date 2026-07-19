@@ -7,6 +7,7 @@ import { perceptionEngine } from '../../engine/perception/PerceptionEngine';
 import { presenceEngine } from '../../engine/presence/PresenceEngine';
 import { getGreeting } from '../utils/languageDetector';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { capabilityOrchestrator } from '../coordinators/CapabilityOrchestrator';
 import BirthSequence from '../renderers/zones/BirthSequence';
 import GreetingWord from '../renderers/zones/GreetingWord';
@@ -44,6 +45,7 @@ import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 export default function LivingWorld() {
   const userId = useTwinStore(s => s.userId) || '';
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const greeting = getGreeting();
 
   const [birthComplete, setBirthComplete] = useState(false);
@@ -294,7 +296,7 @@ export default function LivingWorld() {
                 onSubmitEditing={handleSend}
                 editable={!isThinking}
                 placeholder={rtl.isRTL ? 'اكتب رسالتك...' : 'Write your message...'}
-                placeholderTextColor="#6B5B8A"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
           )}
@@ -307,7 +309,7 @@ export default function LivingWorld() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#050510' },
+  container: { flex: 1, backgroundColor: colors.bg },
   capabilityContainer: {
     position: 'absolute', top: 100, left: 0, right: 0, zIndex: 15,
   },
@@ -321,12 +323,12 @@ const styles = StyleSheet.create({
   memoryContainer: {
     position: 'absolute', bottom: 100, left: 0, right: 0, zIndex: 11,
   },
-  userMessage: { color: '#B8B0C8', fontSize: 18, alignSelf: 'flex-end', marginVertical: SPACE.xs },
-  twinMessage: { color: '#E8E0F0', fontSize: 20, alignSelf: 'flex-start', marginVertical: SPACE.xs },
+  userMessage: { color: colors.textSecondary, fontSize: 18, alignSelf: 'flex-end', marginVertical: SPACE.xs },
+  twinMessage: { color: colors.text, fontSize: 20, alignSelf: 'flex-start', marginVertical: SPACE.xs },
   inputContainer: {
     position: 'absolute', bottom: 30, left: SPACE.lg, right: SPACE.lg,
-    padding: SPACE.md, backgroundColor: 'rgba(30,20,50,0.9)',
+    padding: SPACE.md, backgroundColor: colors.card,
     borderRadius: RADIUS.input, zIndex: 20,
   },
-  input: { color: '#E8E0F0', fontSize: 18 },
+  input: { color: colors.text, fontSize: 18 },
 });

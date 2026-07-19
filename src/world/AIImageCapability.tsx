@@ -7,6 +7,7 @@ import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Image as ImageIcon, Palette, Wand2, Search, Camera, Clock, Sparkles, ChevronRight, Brain } from 'lucide-react-native';
 
@@ -19,7 +20,7 @@ interface ImageSession {
 }
 
 const IMAGE_ACTIONS = [
-  { type: 'generate', icon: Wand2, color: '#EC4899', label_ar: 'توليد صورة', label_en: 'Generate Image', placeholder_ar: 'صف الصورة التي تريدها...', placeholder_en: 'Describe the image you want...' },
+  { type: 'generate', icon: Wand2, color: colors.rose, label_ar: 'توليد صورة', label_en: 'Generate Image', placeholder_ar: 'صف الصورة التي تريدها...', placeholder_en: 'Describe the image you want...' },
   { type: 'enhance_prompt', icon: Palette, color: '#A855F7', label_ar: 'تحسين الوصف', label_en: 'Enhance Prompt', placeholder_ar: 'ما موضوع الصورة؟', placeholder_en: 'What is the image topic?' },
   { type: 'analyze', icon: Search, color: '#3B82F6', label_ar: 'تحليل صورة', label_en: 'Analyze Image', placeholder_ar: 'الصق الصورة أو وصفها...', placeholder_en: 'Paste the image or describe it...' },
   { type: 'edit', icon: Camera, color: '#F59E0B', label_ar: 'تعديل صورة', label_en: 'Edit Image', placeholder_ar: 'ما التعديل المطلوب؟', placeholder_en: 'What edit do you want?' },
@@ -27,6 +28,7 @@ const IMAGE_ACTIONS = [
 
 export default function AIImageCapability() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -195,27 +197,27 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE.md },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   iconWrapLarge: { width: 48, height: 48, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-  headerSubtitle: { color: '#6B5B8A', fontSize: 12 },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: 12 },
   closeBtn: { padding: 8, borderRadius: RADIUS.sm, backgroundColor: 'rgba(255,255,255,0.05)' },
-  closeText: { color: '#6B5B8A', fontSize: 16, fontWeight: '700' },
+  closeText: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
   lastPromptCard: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(236,72,153,0.08)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: SPACE.md },
-  lastPromptText: { color: '#EC4899', fontSize: 13, flex: 1 },
-  canvasCard: { backgroundColor: 'rgba(26, 18, 38, 0.95)', borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(236, 72, 153, 0.25)', padding: SPACE.md },
+  lastPromptText: { color: colors.rose, fontSize: 13, flex: 1 },
+  canvasCard: { backgroundColor: colors.card, borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(236, 72, 153, 0.25)', padding: SPACE.md },
   canvasHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
-  canvasLabel: { color: '#EC4899', fontSize: 14, fontWeight: '600' },
-  canvasInput: { backgroundColor: '#161122', borderRadius: RADIUS.sm, padding: 14, fontSize: 15, color: '#FFFFFF', borderWidth: 1, borderColor: '#2D1B4D', minHeight: 100 },
+  canvasLabel: { color: colors.rose, fontSize: 14, fontWeight: '600' },
+  canvasInput: { backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: 14, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.border, minHeight: 100 },
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: RADIUS.sm, borderWidth: 1.5 },
   actionLabel: { fontSize: 13, fontWeight: '600' },
-  processingText: { color: '#EC4899', fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
-  responseCard: { backgroundColor: '#161122', borderRadius: RADIUS.sm, padding: SPACE.md, marginTop: SPACE.md, borderWidth: 1, borderColor: '#2D1B4D' },
-  responseText: { color: '#E8E0F0', fontSize: 14, lineHeight: 22 },
+  processingText: { color: colors.rose, fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
+  responseCard: { backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: SPACE.md, marginTop: SPACE.md, borderWidth: 1, borderColor: colors.border },
+  responseText: { color: colors.text, fontSize: 14, lineHeight: 22 },
   sessionsSection: { marginTop: SPACE.md },
-  sectionTitle: { color: '#A78BFA', fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
-  sessionItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(26, 18, 38, 0.7)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: 6 },
+  sectionTitle: { color: colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
+  sessionItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: colors.card, borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: 6 },
   sessionIcon: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   sessionInfo: { flex: 1 },
-  sessionTitle: { color: '#E8E0F0', fontSize: 13, fontWeight: '500' },
-  sessionTime: { color: '#6B5B8A', fontSize: 10 },
+  sessionTitle: { color: colors.text, fontSize: 13, fontWeight: '500' },
+  sessionTime: { color: colors.textSecondary, fontSize: 10 },
 });

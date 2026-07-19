@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Canvas, Circle, Paint, BlurMask, RadialGradient, SweepGradient, Group, vec } from "@shopify/react-native-skia";
 import { useSharedValue, withTiming, useDerivedValue } from "react-native-reanimated";
 import { presenceEngine } from '../../../engine/presence/PresenceEngine';
+import { useAppTheme } from '../../../engine/colors';
 import type { PresenceState } from '../../../engine/presence/PresenceEngine';
 import { stateBus } from '../../../src/core/StateBus';
 
@@ -21,6 +22,7 @@ export default function LivingLightEntity({
   isRemembering = false,
   onLongPress,
 }: LivingLightEntityProps) {
+  const { colors } = useAppTheme();
   const initialState = presenceEngine.getLiveState();
 
   const breathRate = useSharedValue(initialState.breathRate);

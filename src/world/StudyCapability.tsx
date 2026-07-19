@@ -6,6 +6,7 @@ import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { economyEngine } from '../services/EconomyEngine';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Target, Brain, ChevronRight, Clock } from 'lucide-react-native';
 
@@ -18,6 +19,7 @@ interface StudyTopic {
 
 export default function StudyCapability() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [currentTopic, setCurrentTopic] = useState('');
   const [topics, setTopics] = useState<StudyTopic[]>([]);
@@ -139,22 +141,22 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE.md },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   iconWrapLarge: { width: 48, height: 48, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-  headerSubtitle: { color: '#6B5B8A', fontSize: 12 },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: 12 },
   closeBtn: { padding: 8, borderRadius: RADIUS.sm, backgroundColor: 'rgba(255,255,255,0.05)' },
-  closeText: { color: '#6B5B8A', fontSize: 16, fontWeight: '700' },
+  closeText: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
   lastTopicCard: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(59,130,246,0.08)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: SPACE.md },
-  lastTopicText: { color: '#3B82F6', fontSize: 13, flex: 1 },
-  toolCard: { backgroundColor: 'rgba(26,18,38,0.9)', borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(59,130,246,0.2)', padding: SPACE.md },
+  lastTopicText: { color: colors.accent, fontSize: 13, flex: 1 },
+  toolCard: { backgroundColor: colors.card, borderRadius: RADIUS.card, borderWidth: 1, borderColor: colors.border, padding: SPACE.md },
   toolHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
-  toolLabel: { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
+  toolLabel: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
   addRow: { flexDirection: 'row', gap: SPACE.sm },
-  addInput: { flex: 1, backgroundColor: '#161122', borderRadius: RADIUS.sm, padding: 12, fontSize: 15, color: '#FFFFFF', borderWidth: 1, borderColor: '#2D1B4D' },
-  addBtn: { width: 44, height: 44, borderRadius: RADIUS.sm, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' },
+  addInput: { flex: 1, backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: 12, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.border },
+  addBtn: { width: 44, height: 44, borderRadius: RADIUS.sm, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
   topicsList: { gap: SPACE.sm, marginTop: SPACE.md },
   topicItem: { backgroundColor: 'rgba(26,18,38,0.8)', borderRadius: RADIUS.sm, padding: SPACE.md },
   topicInfo: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: 8 },
-  topicTitle: { color: '#E8E0F0', fontSize: 14, fontWeight: '500' },
+  topicTitle: { color: colors.text, fontSize: 14, fontWeight: '500' },
   progressTrack: { height: 3, backgroundColor: '#2D1B4D', borderRadius: 2 },
-  progressFill: { height: 3, backgroundColor: '#3B82F6', borderRadius: 2 },
+  progressFill: { height: 3, backgroundColor: colors.accent, borderRadius: 2 },
 });

@@ -1,4 +1,4 @@
-import { memoryEngine, MemoryEntry } from '../../engine/memory/MemoryEngine';
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 
 /**
  * أنواع القدرات المدعومة
@@ -7,6 +7,21 @@ const ALL_CAPABILITIES = [
   'study', 'code_lab', 'business', 'content_creator',
   'dream', 'life_coach', 'task_manager', 'ai_image', 'smart_home',
 ];
+
+/**
+ * هيكل الذاكرة الموحد (متوافق مع TCMA)
+ */
+interface MemoryEntry {
+  id: string;
+  type: string;
+  content: string;
+  expressed_text?: string;
+  real_emotion?: string;
+  importance: number;
+  confidence: number;
+  timestamp: string;
+  created_at?: string;
+}
 
 export interface UnifiedMemoryResult {
   capability: string;
@@ -21,26 +36,34 @@ export interface CrossCapabilityLink {
 }
 
 /**
- * UNIFIED CAPABILITY MEMORY
- * ==========================
+ * UNIFIED CAPABILITY MEMORY v2.0
+ * ===============================
  * طبقة توحد ذاكرة جميع القدرات.
- * بدلاً من أن يكون لكل قدرة ذاكرتها المنفصلة،
- * هذا الملف يجعل كل القدرات تقرأ من نفس الذاكرة وتكتشف روابط بينها.
- *
- * 0 محركات جديدة. طبقة توحيد فقط.
+ * ✅ تستخدم unifiedBrainBridge للاتصال بـ TCMA الحقيقية.
  */
 export class UnifiedCapabilityMemory {
   /**
    * جلب ذكريات موحدة من جميع القدرات
    */
-  async getAllCapabilitiesMemory(userId: string, limit: number = 5): Promise<UnifiedMemoryResult[]> {
+  async getAllCapabilitiesMemory(limit: number = 5): Promise<UnifiedMemoryResult[]> {
     const results: UnifiedMemoryResult[] = [];
 
     for (const capability of ALL_CAPABILITIES) {
       try {
-        const memories = await memoryEngine.getCapabilityMemory(capability, limit);
+        const memories = await unifiedBrainBridge.getCapabilityMemory(capability, limit);
         if (memories.length > 0) {
-          results.push({ capability, memories });
+          const mapped: MemoryEntry[] = memories.map(m => ({
+            id: m.id,
+            type: capability,
+            content: m.expressed_text || m.content || '',
+            expressed_text: m.expressed_text,
+            real_emotion: m.real_emotion,
+            importance: m.importance || 50,
+            confidence: m.confidence || 0.7,
+            timestamp: m.created_at || m.timestamp || new Date().toISOString(),
+            created_at: m.created_at,
+          }));
+          results.push({ capability, memories: mapped });
         }
       } catch (e) {}
     }
@@ -51,13 +74,24 @@ export class UnifiedCapabilityMemory {
   /**
    * جلب أحدث الذكريات عبر جميع القدرات
    */
-  async getRecentUnified(userId: string, limit: number = 10): Promise<MemoryEntry[]> {
+  async getRecentUnified(limit: number = 10): Promise<MemoryEntry[]> {
     const allMemories: MemoryEntry[] = [];
 
     for (const capability of ALL_CAPABILITIES) {
       try {
-        const memories = await memoryEngine.getCapabilityMemory(capability, 3);
-        allMemories.push(...memories);
+        const memories = await unifiedBrainBridge.getCapabilityMemory(capability, 3);
+        const mapped = memories.map(m => ({
+          id: m.id,
+          type: capability,
+          content: m.expressed_text || m.content || '',
+          expressed_text: m.expressed_text,
+          real_emotion: m.real_emotion,
+          importance: m.importance || 50,
+          confidence: m.confidence || 0.7,
+          timestamp: m.created_at || m.timestamp || new Date().toISOString(),
+          created_at: m.created_at,
+        }));
+        allMemories.push(...mapped);
       } catch (e) {}
     }
 
@@ -69,9 +103,9 @@ export class UnifiedCapabilityMemory {
   /**
    * اكتشاف روابط بين قدرات مختلفة
    */
-  async findCrossCapabilityLinks(userId: string): Promise<CrossCapabilityLink[]> {
+  async findCrossCapabilityLinks(): Promise<CrossCapabilityLink[]> {
     const links: CrossCapabilityLink[] = [];
-    const allMemories = await this.getAllCapabilitiesMemory(userId, 10);
+    const allMemories = await this.getAllCapabilitiesMemory(10);
 
     for (let i = 0; i < allMemories.length; i++) {
       for (let j = i + 1; j < allMemories.length; j++) {
@@ -100,13 +134,27 @@ export class UnifiedCapabilityMemory {
   /**
    * البحث عبر جميع الذكريات الموحدة
    */
-  async searchUnified(userId: string, query: string, limit: number = 10): Promise<MemoryEntry[]> {
+  async searchUnified(query: string, limit: number = 10): Promise<MemoryEntry[]> {
     const allMemories: MemoryEntry[] = [];
 
     for (const capability of ALL_CAPABILITIES) {
       try {
-        const memories = await memoryEngine.retrieve(query, 5);
-        allMemories.push(...memories);
+        const memories = await unifiedBrainBridge.getCapabilityMemory(capability, limit * 2);
+        const filtered = memories.filter(
+          m => (m.expressed_text || m.content || '').toLowerCase().includes(query.toLowerCase())
+        );
+        const mapped = filtered.map(m => ({
+          id: m.id,
+          type: capability,
+          content: m.expressed_text || m.content || '',
+          expressed_text: m.expressed_text,
+          real_emotion: m.real_emotion,
+          importance: m.importance || 50,
+          confidence: m.confidence || 0.7,
+          timestamp: m.created_at || m.timestamp || new Date().toISOString(),
+          created_at: m.created_at,
+        }));
+        allMemories.push(...mapped);
       } catch (e) {}
     }
 
@@ -131,11 +179,13 @@ export class UnifiedCapabilityMemory {
       return `رابط موضوعي: ${commonWords.slice(0, 2).join('، ')}`;
     }
 
-    if (memA.emotion === memB.emotion && memA.emotion !== 'neutral') {
-      return `نفس العاطفة: ${memA.emotion}`;
+    if (memA.real_emotion && memB.real_emotion && memA.real_emotion === memB.real_emotion && memA.real_emotion !== 'neutral') {
+      return `نفس العاطفة: ${memA.real_emotion}`;
     }
 
-    const timeDiff = Math.abs(new Date(memA.timestamp).getTime() - new Date(memB.timestamp).getTime());
+    const timeDiff = Math.abs(
+      new Date(memA.timestamp).getTime() - new Date(memB.timestamp).getTime()
+    );
     if (timeDiff < 3600000) {
       return 'قريبان زمنياً';
     }

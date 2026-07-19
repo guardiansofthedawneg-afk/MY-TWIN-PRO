@@ -7,6 +7,7 @@ import { capabilityResolver } from '../coordinators/CapabilityResolver';
 import { economyEngine } from '../services/EconomyEngine';
 import { sendMessage } from '../services/twinApi';
 import { useRTL } from '../../lib/useRTL';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Home, Lightbulb, Thermometer, Music, Wifi, Power, Sparkles, Brain, Clock } from 'lucide-react-native';
 
@@ -19,7 +20,7 @@ interface SmartHomeSession {
 }
 
 const HOME_ACTIONS = [
-  { type: 'command', icon: Power, color: '#10B981', label_ar: 'أمر', label_en: 'Command', placeholder_ar: 'ماذا تريد أن تفعل؟', placeholder_en: 'What do you want to do?' },
+  { type: 'command', icon: Power, color: colors.success, label_ar: 'أمر', label_en: 'Command', placeholder_ar: 'ماذا تريد أن تفعل؟', placeholder_en: 'What do you want to do?' },
   { type: 'status', icon: Home, color: '#3B82F6', label_ar: 'الحالة', label_en: 'Status', placeholder_ar: 'ما الذي تريد معرفته؟', placeholder_en: 'What do you want to know?' },
   { type: 'environment', icon: Thermometer, color: '#F59E0B', label_ar: 'البيئة', label_en: 'Environment', placeholder_ar: 'ما البيئة التي تريدها؟', placeholder_en: 'What environment do you want?' },
   { type: 'automation', icon: Sparkles, color: '#A855F7', label_ar: 'أتمتة', label_en: 'Automation', placeholder_ar: 'ما الذي تريد أتمتته؟', placeholder_en: 'What do you want to automate?' },
@@ -28,6 +29,7 @@ const HOME_ACTIONS = [
 
 export default function SmartHomeCapability() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -196,27 +198,27 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE.md },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   iconWrapLarge: { width: 48, height: 48, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-  headerSubtitle: { color: '#6B5B8A', fontSize: 12 },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: 12 },
   closeBtn: { padding: 8, borderRadius: RADIUS.sm, backgroundColor: 'rgba(255,255,255,0.05)' },
-  closeText: { color: '#6B5B8A', fontSize: 16, fontWeight: '700' },
+  closeText: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
   lastCommandCard: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: SPACE.md },
-  lastCommandText: { color: '#10B981', fontSize: 13, flex: 1 },
-  canvasCard: { backgroundColor: 'rgba(26, 18, 38, 0.95)', borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.25)', padding: SPACE.md },
+  lastCommandText: { color: colors.success, fontSize: 13, flex: 1 },
+  canvasCard: { backgroundColor: colors.card, borderRadius: RADIUS.card, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.25)', padding: SPACE.md },
   canvasHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
-  canvasLabel: { color: '#10B981', fontSize: 14, fontWeight: '600' },
-  canvasInput: { backgroundColor: '#161122', borderRadius: RADIUS.sm, padding: 14, fontSize: 15, color: '#FFFFFF', borderWidth: 1, borderColor: '#2D1B4D', minHeight: 80 },
+  canvasLabel: { color: colors.success, fontSize: 14, fontWeight: '600' },
+  canvasInput: { backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: 14, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.border, minHeight: 80 },
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: RADIUS.sm, borderWidth: 1.5 },
   actionLabel: { fontSize: 13, fontWeight: '600' },
-  processingText: { color: '#10B981', fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
-  responseCard: { backgroundColor: '#161122', borderRadius: RADIUS.sm, padding: SPACE.md, marginTop: SPACE.md, borderWidth: 1, borderColor: '#2D1B4D' },
-  responseText: { color: '#E8E0F0', fontSize: 14, lineHeight: 22 },
+  processingText: { color: colors.success, fontSize: 13, marginTop: SPACE.sm, fontStyle: 'italic' },
+  responseCard: { backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: SPACE.md, marginTop: SPACE.md, borderWidth: 1, borderColor: colors.border },
+  responseText: { color: colors.text, fontSize: 14, lineHeight: 22 },
   sessionsSection: { marginTop: SPACE.md },
-  sectionTitle: { color: '#A78BFA', fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
-  sessionItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: 'rgba(26, 18, 38, 0.7)', borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: 6 },
+  sectionTitle: { color: colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
+  sessionItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: colors.card, borderRadius: RADIUS.sm, padding: SPACE.sm, marginBottom: 6 },
   sessionIcon: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   sessionInfo: { flex: 1 },
-  sessionTitle: { color: '#E8E0F0', fontSize: 13, fontWeight: '500' },
-  sessionTime: { color: '#6B5B8A', fontSize: 10 },
+  sessionTitle: { color: colors.text, fontSize: 13, fontWeight: '500' },
+  sessionTime: { color: colors.textSecondary, fontSize: 10 },
 });

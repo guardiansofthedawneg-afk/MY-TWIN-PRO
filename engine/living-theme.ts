@@ -1,19 +1,13 @@
 /**
- * LIVING THEME ENGINE v1.0 – محرك الثيم الحي
+ * LIVING THEME ENGINE v2.0 — محرك الثيم الحي
  * ==============================================
  * يولد ثيم متكامل بناءً على حالة التوأم الحية.
- * 
- * يقرأ من TwinState: consciousnessMode, emotion, energy, awarenessLevel, presenceLevel
- * يضيف: motion, radius, shadow, glass, living, glow
- * 
- * هذا هو المصدر الوحيد للثيم في جميع المكونات الحية.
+ * ✅ يستخدم useAppTheme() من engine/colors كمصدر وحيد للألوان.
  */
-import { useTwinState } from './core/TwinState';
-import type { ConsciousnessMode, Emotion, AwarenessLevel, PresenceLevel } from './core/TwinState';
-import { useColors } from './colors';
+import { useAppTheme } from './colors';
+import { stateBus } from '../src/core/StateBus';
 import type { ThemeColors } from './colors';
 
-// ── إعدادات الحركة لكل حالة وعي ──
 export interface MotionConfig {
   breathDuration: number;
   pulseDuration: number;
@@ -22,7 +16,6 @@ export interface MotionConfig {
   transitionDuration: number;
 }
 
-// ── إعدادات التوهج لكل حالة ──
 export interface GlowConfig {
   color: string;
   intensity: number;
@@ -30,14 +23,12 @@ export interface GlowConfig {
   size: number;
 }
 
-// ── إعدادات الزجاج لكل حالة ──
 export interface GlassConfig {
   opacity: number;
   blur: number;
   borderOpacity: number;
 }
 
-// ── ألوان حية مرتبطة بالحالة ──
 export interface LivingColors {
   breathingGlow: string;
   neuron: string;
@@ -49,7 +40,6 @@ export interface LivingColors {
   bond: string;
 }
 
-// ── الثيم الحي الكامل ──
 export interface LivingTheme {
   colors: ThemeColors;
   motion: MotionConfig;
@@ -61,22 +51,15 @@ export interface LivingTheme {
   status: string;
 }
 
-// ── إعدادات الحركة حسب وضع الوعي ──
-const MOTION_CONFIGS: Record<ConsciousnessMode, MotionConfig> = {
-  sleeping:    { breathDuration: 6000, pulseDuration: 4000, thinkingDuration: 3000, waveDuration: 5000, transitionDuration: 1000 },
+const MOTION_CONFIGS: Record<string, MotionConfig> = {
   listening:   { breathDuration: 3500, pulseDuration: 1800, thinkingDuration: 900,  waveDuration: 1200, transitionDuration: 400 },
   thinking:    { breathDuration: 2500, pulseDuration: 1200, thinkingDuration: 600,  waveDuration: 900,  transitionDuration: 300 },
-  analyzing:   { breathDuration: 4000, pulseDuration: 2000, thinkingDuration: 1200, waveDuration: 1500, transitionDuration: 600 },
-  learning:    { breathDuration: 2000, pulseDuration: 1000, thinkingDuration: 500,  waveDuration: 800,  transitionDuration: 300 },
   speaking:    { breathDuration: 1500, pulseDuration: 800,  thinkingDuration: 400,  waveDuration: 600,  transitionDuration: 200 },
-  dreaming:    { breathDuration: 7000, pulseDuration: 5000, thinkingDuration: 4000, waveDuration: 6000, transitionDuration: 1500 },
-  emotional:   { breathDuration: 3500, pulseDuration: 2000, thinkingDuration: 1000, waveDuration: 1400, transitionDuration: 500 },
-  deep_thinking: { breathDuration: 5000, pulseDuration: 3000, thinkingDuration: 1500, waveDuration: 2000, transitionDuration: 800 },
-  searching_memory: { breathDuration: 4000, pulseDuration: 2500, thinkingDuration: 1000, waveDuration: 1600, transitionDuration: 500 },
+  dormant:     { breathDuration: 6000, pulseDuration: 4000, thinkingDuration: 3000, waveDuration: 5000, transitionDuration: 1000 },
+  default:     { breathDuration: 3500, pulseDuration: 1800, thinkingDuration: 900,  waveDuration: 1200, transitionDuration: 400 },
 };
 
-// ── ألوان حية حسب العاطفة ──
-const EMOTION_LIVING_COLORS: Record<Emotion, Partial<LivingColors>> = {
+const EMOTION_LIVING_COLORS: Record<string, Partial<LivingColors>> = {
   joy:       { emotion: '#F59E0B', breathingGlow: '#FBBF24' },
   sadness:   { emotion: '#4A90E2', breathingGlow: '#60A5FA' },
   calm:      { emotion: '#14B8A6', breathingGlow: '#5EEAD4' },
@@ -91,25 +74,30 @@ const EMOTION_LIVING_COLORS: Record<Emotion, Partial<LivingColors>> = {
   happy:     { emotion: '#FBBF24', breathingGlow: '#FDE68A' },
 };
 
-/**
- * هوك الثيم الحي – يستخدم في جميع المكونات الحية
- */
 export function useLivingTheme(): LivingTheme {
-  const colors = useColors();
-  const mode = useTwinState(s => s.consciousnessMode);
-  const emotion = useTwinState(s => s.emotion);
-  const energy = useTwinState(s => s.energy);
-  const awareness = useTwinState(s => s.awarenessLevel);
-  const bond = useTwinState(s => s.bondLevel);
+  const { colors } = useAppTheme();
+  
+  // ✅ من StateBus: العاطفة والطاقة والوعي والرابطة
+  const currentState = stateBus.getState();
+  const emotion = currentState.emotion.primaryEmotion;
+  const energy = Math.round(currentState.emotion.intensity * 100);
+  const awareness = currentState.interfaceState;
+  const bond = currentState.relationship.bondLevel;
+  const mode = currentState.interfaceState;
 
-  const motion = MOTION_CONFIGS[mode] || MOTION_CONFIGS.listening;
+  const motion = MOTION_CONFIGS[mode] || MOTION_CONFIGS.default;
   const emotionColors = EMOTION_LIVING_COLORS[emotion] || EMOTION_LIVING_COLORS.neutral;
 
-  // التوهج يعتمد على الطاقة والوعي
-  const awarenessMultiplier = { Dormant: 0.3, Aware: 0.5, Focused: 0.7, DeepThinking: 0.85, Flow: 1.0, Conscious: 1.2 }[awareness] || 0.7;
+  const awarenessMultiplier = 
+    mode === 'dormant' ? 0.3 :
+    mode === 'aware' ? 0.5 :
+    mode === 'attentive' ? 0.7 :
+    mode === 'thinking' ? 0.85 :
+    mode === 'speaking' ? 1.0 :
+    0.7;
 
   const glow: GlowConfig = {
-    color: emotionColors.breathingGlow || '#A855F7',
+    color: emotionColors.breathingGlow || colors.accent,
     intensity: 0.2 + (energy / 100) * 0.3 * awarenessMultiplier,
     speed: motion.breathDuration,
     size: 200 + energy * 1.5,
@@ -122,14 +110,14 @@ export function useLivingTheme(): LivingTheme {
   };
 
   const living: LivingColors = {
-    breathingGlow: emotionColors.breathingGlow || '#A855F7',
+    breathingGlow: emotionColors.breathingGlow || colors.accent,
     neuron: '#7C3AED',
     memory: '#8B5CF6',
     dream: '#6366F1',
-    emotion: emotionColors.emotion || '#EC4899',
+    emotion: emotionColors.emotion || colors.rose,
     awareness: '#14B8A6',
-    energy: energy > 70 ? '#10B981' : energy > 40 ? '#F59E0B' : '#EF4444',
-    bond: bond > 70 ? '#EC4899' : bond > 40 ? '#F59E0B' : '#60A5FA',
+    energy: energy > 70 ? colors.success : energy > 40 ? colors.gold : colors.danger,
+    bond: bond > 70 ? colors.rose : bond > 40 ? colors.gold : '#60A5FA',
   };
 
   return {

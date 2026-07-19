@@ -1,4 +1,3 @@
-export { default as LivingWorld } from '../world/LivingWorld';
 export { default as BirthSequence } from './zones/BirthSequence';
 export { default as GreetingWord } from './zones/GreetingWord';
 export { default as CosmicBackground } from './zones/CosmicBackground';

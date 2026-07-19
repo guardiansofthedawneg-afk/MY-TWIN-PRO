@@ -1,43 +1,38 @@
 /**
- * COLOR TOKENS v1.0 — مرجع الألوان الموحد
- * ==========================================
- * يصدر كل الألوان من engine/colors.ts + engine/theme.ts + engine/living-theme.ts
- * في واجهة واحدة. لا يعيد تعريف أي لون — فقط يجمعه.
- *
- * التكامل:
- *   - engine/colors.ts — الألوان الأساسية
- *   - engine/theme.ts — ألوان العاطفة والرابطة والطاقة
- *   - engine/living-theme.ts — ألوان حية مرتبطة بحالة التوأم
+ * Design Tokens Colors v2.0 — متوافق مع engine/colors.ts
+ * ========================================================
+ * نفس ألوان engine/colors.ts لضمان التوافق.
+ * يُفضل استخدام useAppTheme() من engine/colors مباشرة.
  */
+import { useAppTheme as useEngineTheme } from '../../engine/colors';
+import type { ThemeColors } from '../../engine/colors';
 
-// ── إعادة تصدير الألوان الأساسية ──────────────────────
-export {
-  DARK_THEME,
-  LIGHT_THEME,
-  FONTS,
-  SPACING,
-  useColors,
-  getColors,
-  useAppTheme,
-} from '../../../engine/colors';
-export type { ThemeColors } from '../../../engine/colors';
+// إعادة تصدير النوع
+export type { ThemeColors };
 
-// ── ألوان العاطفة والرابطة والطاقة ──────────────────
-export {
-  getBondColor,
-  getEnergyColor,
-  getEmotionColor,
-} from '../../../engine/theme';
+// إعادة تصدير useAppTheme من engine/colors (مصدر واحد للحقيقة)
+export const useTheme = useEngineTheme;
 
-// ── ألوان حية مرتبطة بحالة التوأم ──────────────────
-export { useLivingTheme } from '../../../engine/living-theme';
-export type {
-  LivingTheme,
-  MotionConfig,
-  GlassConfig,
-  GlowConfig,
-  LivingColors,
-} from '../../../engine/living-theme';
+// دوال مساعدة للتوافق مع الملفات القديمة
+export function getBondColor(bondLevel: number, colors: ThemeColors): string {
+  if (bondLevel >= 70) return colors.rose;
+  if (bondLevel >= 40) return colors.accent;
+  return colors.primary;
+}
 
-// ── ألوان متحركة من LivingTheme ─────────────────────
-// (تُحسب مباشرة من useLivingTheme عند الاستخدام)
+export function getEnergyColor(energy: number, colors: ThemeColors): string {
+  if (energy >= 70) return colors.success;
+  if (energy >= 30) return colors.gold;
+  return colors.danger;
+}
+
+export function getEmotionColor(emotion: string, colors: ThemeColors): string {
+  const map: Record<string, string> = {
+    joy: colors.gold,
+    sadness: '#3B82F6',
+    fear: colors.accent,
+    love: colors.rose,
+    anger: colors.danger,
+  };
+  return map[emotion] || colors.textSecondary;
+}

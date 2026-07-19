@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { stateBus, STATE_EVENTS } from '../core/StateBus';
+import { useAppTheme } from '../../engine/colors';
 
 interface EmotionalInfo {
   emotion: string;

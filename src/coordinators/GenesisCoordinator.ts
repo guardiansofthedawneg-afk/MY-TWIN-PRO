@@ -1,119 +1,119 @@
 import { EventBus } from '../core/EventBus';
-import { authService, AuthResult } from '../services/authService';
-import { audioEngine } from '../core/AudioEngine';
-import { detectUserLanguage, SupportedLanguage } from '../utils/languageDetector';
-import { router } from 'expo-router';
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
+import { stateBus } from '../core/StateBus';
+import { authService } from '../services/authService';
 
 export type GenesisPhase =
-  | 'splash' | 'void' | 'first_breath' | 'awareness'
-  | 'identity_gateway' | 'birth_protocol' | 'first_bond'
-  | 'progressive_identity' | 'first_conversation' | 'complete';
-
-export interface GenesisState {
-  phase: GenesisPhase;
-  lang: SupportedLanguage;
-  isSessionRestore: boolean;
-  identityPhrase: string;
-  consciousnessSteps: string[];
-  birthComplete: boolean;
-}
+  | 'splash'
+  | 'void'
+  | 'first_breath'
+  | 'awareness'
+  | 'identity_gateway'
+  | 'birth_protocol'
+  | 'first_bond'
+  | 'progressive_identity'
+  | 'first_conversation';
 
 export class GenesisCoordinator {
-  private state: GenesisState = {
-    phase: 'splash',
-    lang: 'ar',
-    isSessionRestore: false,
-    identityPhrase: '',
-    consciousnessSteps: [],
-    birthComplete: false,
-  };
+  private phase: GenesisPhase = 'splash';
 
-  private listeners: Array<() => void> = [];
-
-  async initialize(): Promise<Partial<GenesisState>> {
-    const lang = detectUserLanguage();
-    this.state.lang = lang;
-    this.state.isSessionRestore = (await authService.checkSessionRestore()).canRestore;
-    this.state.identityPhrase = IDENTITY_GATEWAY_PHRASES[lang][Math.floor(Math.random() * IDENTITY_GATEWAY_PHRASES[lang].length)];
-
-    // إذا كانت استعادة جلسة، ننتقل مباشرة إلى بوابة الهوية
-    if (this.state.isSessionRestore) {
-      this.state.phase = 'identity_gateway';
+  async initialize(): Promise<{ phase: GenesisPhase; identityPhrase: string; isSessionRestore: boolean }> {
+    const session = await authService.checkSessionRestore();
+    
+    if (session?.canRestore && session?.user_id) {
+      // مستخدم عائد
+      return {
+        phase: 'identity_gateway',
+        identityPhrase: 'لقد عدت. كنت أنتظرك.',
+        isSessionRestore: true,
+      };
     }
 
-    return { phase: this.state.phase, lang, isSessionRestore: this.state.isSessionRestore, identityPhrase: this.state.identityPhrase };
+    // مستخدم جديد
+    return {
+      phase: 'splash',
+      identityPhrase: 'مرحباً بك في عالمك.',
+      isSessionRestore: false,
+    };
   }
 
-  async loginWithGoogle(): Promise<AuthResult> {
-    const data = await authService.loginWithGoogle(this.state.lang);
-    await this.onAuthSuccess(data);
-    return data;
-  }
-
-  async loginWithEmail(email: string, password: string): Promise<AuthResult> {
-    let data: AuthResult;
-    try {
-      data = await authService.login(email, password);
-    } catch {
-      data = await authService.signup(email, password, this.state.lang === 'ar' ? 'توأمك' : 'MyTwin', this.state.lang);
+  async loginWithGoogle(): Promise<{ user_id: string }> {
+    const result = await authService.loginWithGoogle();
+    if (result?.user_id) {
+      unifiedBrainBridge.setUserId(result.user_id);
+      stateBus.update({ isOnline: true, interfaceState: 'twin' });
     }
-    await this.onAuthSuccess(data);
-    return data;
+    return result;
   }
 
-  private async onAuthSuccess(data: AuthResult) {
-    // إذا كانت استعادة جلسة، ننتقل مباشرة إلى التطبيق
-    if (this.state.isSessionRestore) {
-      router.replace('/');
-      return;
+  async loginWithEmail(email: string, password: string): Promise<{ user_id: string }> {
+    const result = await authService.login(email, password);
+    if (result?.user_id) {
+      unifiedBrainBridge.setUserId(result.user_id);
+      stateBus.update({ isOnline: true, interfaceState: 'twin' });
     }
-    // بدء بروتوكول الولادة
-    await this.startBirthProtocol();
+    return result;
   }
 
-  async startBirthProtocol() {
-    this.state.phase = 'birth_protocol';
-    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: 'birth_protocol' });
-
-    audioEngine.play('heartbeat_energy');
-    audioEngine.play('energy_hum');
-
+  async startBirthProtocol(): Promise<void> {
+    this.phase = 'birth_protocol';
+    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: this.phase });
+    
     const steps = [
-      TEXTS[this.state.lang].consciousnessForming,
-      TEXTS[this.state.lang].memoriesCreated,
-      TEXTS[this.state.lang].personalityReady,
-      TEXTS[this.state.lang].firstBondForming,
+      'وعيي يبدأ بالتشكل...',
+      'ذاكرتي تستعيد ضوءها الأول...',
+      'أستطيع أن أشعر بوجودك...',
+      'رابطتنا بدأت للتو...',
     ];
+
     for (const step of steps) {
-      this.state.consciousnessSteps = [...this.state.consciousnessSteps, step];
+      await this.delay(1500);
       EventBus.emit('CONSCIOUSNESS_STEP', { step });
-      await this.delay(1800);
     }
 
-    this.state.consciousnessSteps = [];
-    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: 'first_bond' });
+    await this.delay(1000);
+    this.phase = 'first_bond';
+    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: this.phase });
   }
 
-  async recordFirstBond(answer: string) {
-    await authService.trustDevice();
-    EventBus.emit('FIRST_BOND_RECORDED', { answer });
-    this.state.phase = 'progressive_identity';
-    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: 'progressive_identity' });
+  async recordFirstBond(message: string): Promise<void> {
+    // يتم تخزين أول رابط عبر Unified Brain
+    try {
+      await unifiedBrainBridge.process(message, {
+        typingSpeed: 0,
+        messageLength: message.length,
+        absenceDurationMinutes: 0,
+        timeOfDay: 'morning',
+        userState: 'normal',
+      });
+    } catch (e) {}
+
+    EventBus.emit('FIRST_BOND_RECORDED', { message });
+
+    await this.delay(1500);
+    this.phase = 'progressive_identity';
+    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: this.phase });
   }
 
-  async completeProgressiveIdentity(answer: string) {
-    EventBus.emit('PROGRESSIVE_IDENTITY_COMPLETED', { answer });
-    this.state.phase = 'first_conversation';
-    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: 'first_conversation' });
+  async completeProgressiveIdentity(message: string): Promise<void> {
+    // يتم تخزين الهوية التقدمية
+    try {
+      await unifiedBrainBridge.storeMemory('identity', message, 80, 'neutral', ['genesis']);
+    } catch (e) {}
 
-    await this.delay(4000);
-    await this.finalizeBirth();
+    EventBus.emit('PROGRESSIVE_IDENTITY_COMPLETED', { message });
+
+    await this.delay(1500);
+    this.phase = 'first_conversation';
+    EventBus.emit('GENESIS_PHASE_CHANGED', { phase: this.phase });
+
+    await this.delay(2500);
+    // الانتقال النهائي إلى العالم الحي
+    EventBus.emit('GENESIS_COMPLETE', {});
   }
 
-  private async finalizeBirth() {
-    this.state.birthComplete = true;
-    EventBus.emit('BIRTH_COMPLETE');
-    router.replace('/living-world');
+  getCurrentPhase(): GenesisPhase {
+    return this.phase;
   }
 
   private delay(ms: number): Promise<void> {
@@ -122,24 +122,3 @@ export class GenesisCoordinator {
 }
 
 export const genesisCoordinator = new GenesisCoordinator();
-
-// النصوص متعددة اللغات (مختصرة هنا)
-const TEXTS: Record<SupportedLanguage, Record<string, string>> = {
-  ar: {
-    consciousnessForming: 'جارٍ تشكيل وعي توأمك...',
-    memoriesCreated: 'الذكريات تُنشأ.',
-    personalityReady: 'الشخصية تُهيأ.',
-    firstBondForming: 'الرابط الأول يتكون.',
-  },
-  en: {
-    consciousnessForming: 'Forming your Twin\'s consciousness...',
-    memoriesCreated: 'Creating memories.',
-    personalityReady: 'Preparing personality.',
-    firstBondForming: 'Forming first bond.',
-  },
-};
-
-const IDENTITY_GATEWAY_PHRASES: Record<SupportedLanguage, string[]> = {
-  ar: ['حتى أستطيع أن أنمو معك...', 'لكل رحلة بداية...'],
-  en: ['So I can grow with you...', 'Every journey has a beginning...'],
-};

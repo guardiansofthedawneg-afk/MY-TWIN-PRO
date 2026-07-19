@@ -251,4 +251,14 @@ class UnifiedBrainBridge {
 
 }
 
+
+  async getRecentEmotions(limit: number = 5): Promise<string[]> {
+    try {
+      const response = await apiClient.get(`/api/memories/recent_emotions`, { params: { user_id: this.userId, limit } });
+      return response.data?.emotions || [];
+    } catch (e) { return []; }
+  }
+
+}
+
 export const unifiedBrainBridge = new UnifiedBrainBridge();

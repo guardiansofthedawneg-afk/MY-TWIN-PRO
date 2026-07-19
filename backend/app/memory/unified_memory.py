@@ -285,5 +285,24 @@ class UnifiedMemoryEngine:
             return ""
     
 
+
+    async def get_core_memory_count(self, user_id: str) -> int:
+        """عدد الذكريات الأساسية (أهمية > 80)"""
+        if not DB_AVAILABLE:
+            return 0
+        try:
+            db = get_db()
+            result = (
+                db.table(TABLE_NAME)
+                .select("id", count="exact")
+                .eq("user_id", user_id)
+                .gte("importance", 80)
+                .execute()
+            )
+            return result.count if hasattr(result, 'count') else len(result.data or [])
+        except:
+            return 0
+    
+
 unified_memory_engine = UnifiedMemoryEngine()
 logger.info("✅ Unified Memory Engine v2.0 ready")

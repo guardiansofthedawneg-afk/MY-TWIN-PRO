@@ -199,6 +199,22 @@ async def get_most_used_capability(
         return {"capability": "", "error": str(e)}
 
 
+
+@router.get("/recent_emotions")
+async def get_recent_emotions(
+    user_id: str = Depends(get_current_user_id),
+    limit: int = Query(5, ge=1, le=20),
+):
+    """آخر المشاعر المسجلة"""
+    try:
+        from app.memory.emotional.emotional_memory import get_emotional_patterns
+        patterns = await get_emotional_patterns(user_id, days=7)
+        recent = patterns.get("recent_emotions", [])
+        return {"emotions": recent[:limit], "source": "emotional_memory"}
+    except Exception as e:
+        return {"emotions": [], "error": str(e)}
+
+
 @router.post("/store")
 async def store_memory(
     payload: dict,

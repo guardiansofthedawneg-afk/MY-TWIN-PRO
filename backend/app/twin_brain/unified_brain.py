@@ -26,7 +26,7 @@ from app.twin_state.personality_engine import (
 )
 from app.twin_brain.identity_service import get_identity_context
 from app.twin_brain.response_builder import build_response
-from app.twin_state.unified_soul import unified_soul_engine
+from app.soul import get_soul_state, evolve_soul
 from app.twin_state.unified_evolution import unified_evolution_engine
 
 from app.twin_state.relationship_service import load as load_relationship
@@ -213,10 +213,31 @@ class UnifiedTwinBrain:
         # ═══════════════════════════════
         interaction_count = await unified_evolution_engine._get_interaction_count(user_id)
         soul_state = {}
-        if interaction_count % 10 == 0:
-            soul_state = await unified_soul_engine.evolve(user_id, real_emotion, evolved_dna)
-        else:
-            soul_state = await unified_soul_engine.get_soul_state(user_id, lang)
+        # استدعاء نظام الروح الجديد مع بيانات حقيقية من TCMA
+        from app.memory.unified_memory import unified_memory_engine
+        memory_count = await unified_memory_engine.get_memory_count(user_id)
+        core_memory_count = await unified_memory_engine.get_core_memory_count(user_id)
+        memory_patterns_dict = await unified_memory_engine.get_patterns(user_id, days=14)
+        memory_patterns_data = memory_patterns_dict.get("distribution", {}) if memory_patterns_dict else {}
+        
+        from app.memory.emotional.emotional_memory import get_emotional_patterns
+        emotional_data = await get_emotional_patterns(user_id, days=7)
+        recent_emotions_list = emotional_data.get("recent_emotions", []) if emotional_data else []
+        
+        soul_state = await get_soul_state(
+            user_id=user_id,
+            relationship_stage=phase,
+            bond_level=bond_level,
+            interaction_count=interaction_count,
+            personality_dna=evolved_dna,
+            dominant_emotion=real_emotion,
+            recent_emotions=recent_emotions_list,
+            memory_count=memory_count,
+            core_memory_count=core_memory_count,
+            memory_patterns=memory_patterns_data,
+            evolution_count=interaction_count // 10,
+            lang=lang,
+        )
         
         # ═══════════════════════════════
         # 13.6 التطور طويل المدى

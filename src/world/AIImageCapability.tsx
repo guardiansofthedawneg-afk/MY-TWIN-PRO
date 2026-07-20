@@ -21,13 +21,16 @@ interface ImageSession {
 
 const IMAGE_ACTIONS = [
   { type: 'generate', icon: Wand2, color: colors.rose, label_ar: 'توليد صورة', label_en: 'Generate Image', placeholder_ar: 'صف الصورة التي تريدها...', placeholder_en: 'Describe the image you want...' },
-  { type: 'enhance_prompt', icon: Palette, color: '#A855F7', label_ar: 'تحسين الوصف', label_en: 'Enhance Prompt', placeholder_ar: 'ما موضوع الصورة؟', placeholder_en: 'What is the image topic?' },
-  { type: 'analyze', icon: Search, color: '#3B82F6', label_ar: 'تحليل صورة', label_en: 'Analyze Image', placeholder_ar: 'الصق الصورة أو وصفها...', placeholder_en: 'Paste the image or describe it...' },
-  { type: 'edit', icon: Camera, color: '#F59E0B', label_ar: 'تعديل صورة', label_en: 'Edit Image', placeholder_ar: 'ما التعديل المطلوب؟', placeholder_en: 'What edit do you want?' },
+  { type: 'enhance_prompt', icon: Palette, color: colors.accent, label_ar: 'تحسين الوصف', label_en: 'Enhance Prompt', placeholder_ar: 'ما موضوع الصورة؟', placeholder_en: 'What is the image topic?' },
+  { type: 'analyze', icon: Search, color: colors.accent, label_ar: 'تحليل صورة', label_en: 'Analyze Image', placeholder_ar: 'الصق الصورة أو وصفها...', placeholder_en: 'Paste the image or describe it...' },
+  { type: 'edit', icon: Camera, color: colors.gold, label_ar: 'تعديل صورة', label_en: 'Edit Image', placeholder_ar: 'ما التعديل المطلوب؟', placeholder_en: 'What edit do you want?' },
 ];
 
 export default function AIImageCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -108,7 +111,7 @@ export default function AIImageCapability() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrapLarge, { backgroundColor: '#EC489920' }]}>
-            <ImageIcon size={24} stroke="#EC4899" />
+            <ImageIcon size={24} stroke=colors.rose />
           </View>
           <View>
             <Text style={styles.headerTitle}>AI Image Lab</Text>
@@ -123,14 +126,14 @@ export default function AIImageCapability() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {lastPrompt && (
           <View style={styles.lastPromptCard}>
-            <Brain size={16} stroke="#EC4899" />
+            <Brain size={16} stroke=colors.rose />
             <Text style={styles.lastPromptText}>{rtl.isRTL ? 'آخر وصف:' : 'Last prompt:'} {lastPrompt}</Text>
           </View>
         )}
 
         <View style={styles.canvasCard}>
           <View style={styles.canvasHeader}>
-            <Wand2 size={16} stroke="#EC4899" />
+            <Wand2 size={16} stroke=colors.rose />
             <Text style={styles.canvasLabel}>{rtl.isRTL ? 'ماذا تريد أن تصنع؟' : 'What do you want to create?'}</Text>
           </View>
           <TextInput
@@ -176,7 +179,7 @@ export default function AIImageCapability() {
             {sessions.slice(0, 5).map(session => (
               <View key={session.id} style={styles.sessionItem}>
                 <View style={[styles.sessionIcon, { backgroundColor: '#EC489920' }]}>
-                  <ImageIcon size={14} stroke="#EC4899" />
+                  <ImageIcon size={14} stroke=colors.rose />
                 </View>
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionTitle} numberOfLines={1}>{session.title}</Text>

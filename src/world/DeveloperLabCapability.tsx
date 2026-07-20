@@ -21,8 +21,8 @@ interface CodeSession {
 
 const TYPE_CONFIG: Record<string, { icon: typeof Code; color: string; label_ar: string; label_en: string }> = {
   idea:       { icon: Rocket,    color: '#00BCD4', label_ar: 'فكرة',       label_en: 'Idea' },
-  code_review:{ icon: Code,      color: '#3B82F6', label_ar: 'مراجعة كود', label_en: 'Code Review' },
-  project:    { icon: GitBranch, color: '#10B981', label_ar: 'مشروع',      label_en: 'Project' },
+  code_review:{ icon: Code,      color: colors.accent, label_ar: 'مراجعة كود', label_en: 'Code Review' },
+  project:    { icon: GitBranch, color: colors.success, label_ar: 'مشروع',      label_en: 'Project' },
   debug:      { icon: Bug,       color: colors.gold, label_ar: 'تصحيح',      label_en: 'Debug' },
   devops:     { icon: Terminal,  color: colors.accent, label_ar: 'DevOps',     label_en: 'DevOps' },
 };
@@ -36,7 +36,10 @@ const QUICK_ACTIONS: Array<{ type: CodeSession['type']; label_ar: string; label_
 ];
 
 export default function DeveloperLabCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -207,7 +210,7 @@ export default function DeveloperLabCapability() {
                   <View style={styles.sessionInfo}>
                     <Text style={styles.sessionTitle} numberOfLines={1}>{session.title}</Text>
                     <View style={styles.sessionMeta}>
-                      <Clock size={10} stroke="#6B5B8A" />
+                      <Clock size={10} stroke=colors.textSecondary />
                       <Text style={styles.sessionTime}>{new Date(session.timestamp).toLocaleDateString(rtl.isRTL ? 'ar' : 'en')}</Text>
                     </View>
                   </View>

@@ -29,7 +29,7 @@ export function getEnergyColor(energy: number, colors: ThemeColors): string {
 export function getEmotionColor(emotion: string, colors: ThemeColors): string {
   const map: Record<string, string> = {
     joy: colors.gold,
-    sadness: '#3B82F6',
+    sadness: colors.accent,
     fear: colors.accent,
     love: colors.rose,
     anger: colors.danger,

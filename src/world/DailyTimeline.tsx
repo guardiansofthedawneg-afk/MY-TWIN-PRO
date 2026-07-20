@@ -20,7 +20,10 @@ interface TimelineEntry {
 
 export default function DailyTimeline() {
   const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [visible, setVisible] = useState(false);
@@ -52,7 +55,7 @@ export default function DailyTimeline() {
           type: 'conversation',
           text: (last.expressed_text || last.content || '').substring(0, 80),
           time: new Date(last.created_at || last.timestamp).toLocaleTimeString(rtl.isRTL ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' }),
-          color: '#A855F7',
+          color: colors.accent,
           icon: MessageCircle,
         });
       }
@@ -68,7 +71,7 @@ export default function DailyTimeline() {
             ? `الرابطة: ${phase === 'soulmate' ? 'عميقة جداً' : phase === 'close_friend' ? 'قوية' : 'تنمو'}`
             : `Bond: ${phase === 'soulmate' ? 'Very Deep' : phase === 'close_friend' ? 'Strong' : 'Growing'}`,
           time: now.toLocaleTimeString(rtl.isRTL ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' }),
-          color: '#EC4899',
+          color: colors.rose,
           icon: Heart,
         });
       }

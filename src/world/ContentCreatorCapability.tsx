@@ -33,7 +33,7 @@ const CREATOR_CATEGORIES = [
     ]
   },
   {
-    id: 'editing', icon: Edit3, color: '#3B82F6',
+    id: 'editing', icon: Edit3, color: colors.accent,
     label_ar: 'تحرير', label_en: 'Editing',
     actions: [
       { type: 'rewrite', label_ar: 'إعادة صياغة', label_en: 'Rewrite', placeholder_ar: 'النص + التعليمات...', placeholder_en: 'Text + instructions...', icon: Edit3 },
@@ -44,7 +44,7 @@ const CREATOR_CATEGORIES = [
     ]
   },
   {
-    id: 'seo', icon: Search, color: '#10B981',
+    id: 'seo', icon: Search, color: colors.success,
     label_ar: 'SEO', label_en: 'SEO',
     actions: [
       { type: 'seo_optimize', label_ar: 'تحسين SEO', label_en: 'Optimize', placeholder_ar: 'المحتوى + الكلمات المفتاحية...', placeholder_en: 'Content + keywords...', icon: TrendingUp },
@@ -60,7 +60,7 @@ const CREATOR_CATEGORIES = [
     ]
   },
   {
-    id: 'story', icon: BookOpen, color: '#EC4899',
+    id: 'story', icon: BookOpen, color: colors.rose,
     label_ar: 'قصص', label_en: 'Story',
     actions: [
       { type: 'character', label_ar: 'بناء شخصية', label_en: 'Build Character', placeholder_ar: 'الاسم + الدور + الصفات...', placeholder_en: 'Name + role + traits...', icon: BookOpen },
@@ -80,11 +80,14 @@ const CREATOR_CATEGORIES = [
 const QUICK_ACTIONS = [
   { type: 'calendar', icon: Calendar, color: '#14B8A6', label_ar: 'تقويم محتوى', label_en: 'Calendar', placeholder_ar: 'الموضوع + المنصة...', placeholder_en: 'Topic + platform...' },
   { type: 'critic', icon: Sparkles, color: '#F97316', label_ar: 'مراجعة ناقد', label_en: 'Critic Review', placeholder_ar: 'النص للمراجعة...', placeholder_en: 'Text to review...' },
-  { type: 'repurpose', icon: Filter, color: '#A855F7', label_ar: 'إعادة توظيف', label_en: 'Repurpose', placeholder_ar: 'المحتوى + الصيغة المصدر + الهدف...', placeholder_en: 'Content + source + target format...' },
+  { type: 'repurpose', icon: Filter, color: colors.accent, label_ar: 'إعادة توظيف', label_en: 'Repurpose', placeholder_ar: 'المحتوى + الصيغة المصدر + الهدف...', placeholder_en: 'Content + source + target format...' },
 ];
 
 export default function ContentCreatorCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -298,7 +301,7 @@ export default function ContentCreatorCapability() {
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionTitle} numberOfLines={1}>{session.title}</Text>
                   <View style={styles.sessionMeta}>
-                    <Clock size={10} stroke="#6B5B8A" />
+                    <Clock size={10} stroke=colors.textSecondary />
                     <Text style={styles.sessionTime}>
                       {new Date(session.timestamp).toLocaleDateString(rtl.isRTL ? 'ar' : 'en')}
                     </Text>

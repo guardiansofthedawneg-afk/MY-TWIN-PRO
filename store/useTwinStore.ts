@@ -80,8 +80,7 @@ function useFullState() {
     setHasHydrated: awareness.setHasHydrated,
     resetToDefaults: () => { core.reset(); relationship.reset(); awareness.reset(); },
     logout: () => { core.reset(); relationship.reset(); awareness.reset(); credits.resetDaily(); },
-
-    // ✅ دالة استقبال حالة الكيان من الـ Backend
+    reset: () => { core.reset(); },
     updateFromUnifiedResponse: (response: any) => {
       if (!response) return;
       if (response.twin_state_update?.relationship) {

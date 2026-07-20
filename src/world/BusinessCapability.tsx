@@ -37,13 +37,13 @@ const QUICK_ACTIONS = [
     placeholder_en: 'What is your field or budget?'
   },
   { 
-    type: 'analyze_market',    icon: BarChart3,   color: '#3B82F6',
+    type: 'analyze_market',    icon: BarChart3,   color: colors.accent,
     label_ar: 'تحليل السوق',     label_en: 'Market Analysis',
     placeholder_ar: 'ما الفكرة التي تريد تحليل سوقها؟',
     placeholder_en: 'What idea do you want to analyze?'
   },
   { 
-    type: 'feasibility',       icon: Shield,      color: '#10B981',
+    type: 'feasibility',       icon: Shield,      color: colors.success,
     label_ar: 'دراسة جدوى',      label_en: 'Feasibility Study',
     placeholder_ar: 'ما الفكرة والميزانية؟',
     placeholder_en: 'What is the idea and budget?'
@@ -55,7 +55,7 @@ const QUICK_ACTIONS = [
     placeholder_en: 'Describe the project idea...'
   },
   { 
-    type: 'marketing_plan',    icon: TrendingUp,  color: '#EC4899',
+    type: 'marketing_plan',    icon: TrendingUp,  color: colors.rose,
     label_ar: 'خطة تسويق',       label_en: 'Marketing Plan',
     placeholder_ar: 'ما المنتج والميزانية؟',
     placeholder_en: 'What is the product and budget?'
@@ -79,7 +79,7 @@ const QUICK_ACTIONS = [
     placeholder_en: 'What is your idea and industry?'
   },
   { 
-    type: 'assess_risks',      icon: Shield,      color: '#EF4444',
+    type: 'assess_risks',      icon: Shield,      color: colors.danger,
     label_ar: 'تقييم المخاطر',    label_en: 'Risk Assessment',
     placeholder_ar: 'ما فكرتك وصناعتك؟',
     placeholder_en: 'What is your idea and industry?'
@@ -93,7 +93,10 @@ const QUICK_ACTIONS = [
 ];
 
 export default function BusinessCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -187,7 +190,7 @@ export default function BusinessCapability() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrapLarge, { backgroundColor: '#F59E0B20' }]}>
-            <Briefcase size={24} stroke="#F59E0B" />
+            <Briefcase size={24} stroke=colors.gold />
           </View>
           <View>
             <Text style={styles.headerTitle}>Business World</Text>
@@ -204,14 +207,14 @@ export default function BusinessCapability() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {lastSession && (
           <View style={styles.lastSessionCard}>
-            <Brain size={16} stroke="#F59E0B" />
+            <Brain size={16} stroke=colors.gold />
             <Text style={styles.lastSessionText}>{rtl.isRTL ? 'آخر جلسة:' : 'Last session:'} {lastSession}</Text>
           </View>
         )}
 
         <View style={styles.canvasCard}>
           <View style={styles.canvasHeader}>
-            <Lightbulb size={16} stroke="#F59E0B" />
+            <Lightbulb size={16} stroke=colors.gold />
             <Text style={styles.canvasLabel}>
               {rtl.isRTL ? 'ما الذي تريد بناءه اليوم؟' : 'What do you want to build today?'}
             </Text>
@@ -280,7 +283,7 @@ export default function BusinessCapability() {
                   <View style={styles.sessionInfo}>
                     <Text style={styles.sessionTitle} numberOfLines={1}>{session.title}</Text>
                     <View style={styles.sessionMeta}>
-                      <Clock size={10} stroke="#6B5B8A" />
+                      <Clock size={10} stroke=colors.textSecondary />
                       <Text style={styles.sessionTime}>
                         {new Date(session.timestamp).toLocaleDateString(rtl.isRTL ? 'ar' : 'en')}
                       </Text>

@@ -5,7 +5,6 @@ import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { stateBus } from '../core/StateBus';
 import { useRTL } from '../../lib/useRTL';
 import { useAppTheme } from '../../engine/colors';
-import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Briefcase, Moon, Sparkles, ArrowRight } from 'lucide-react-native';
 
@@ -19,6 +18,8 @@ interface QuickAction {
 }
 
 export default function QuickActions() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const rtl = useRTL();
   const { colors } = useAppTheme();
@@ -39,7 +40,7 @@ export default function QuickActions() {
             ? `أكمل ${lastStudy.content?.substring(0, 30) || 'دراستك'}...`
             : `Continue ${lastStudy.content?.substring(0, 30) || 'your study'}...`,
           icon: BookOpen,
-          color: '#3B82F6',
+          color: colors.accent,
           action: () => {},
           priority: 'high',
         });
@@ -52,7 +53,7 @@ export default function QuickActions() {
           id: 'continue_project',
           text: rtl.isRTL ? 'نكمل مشروعنا؟' : 'Continue our project?',
           icon: Briefcase,
-          color: '#F59E0B',
+          color: colors.gold,
           action: () => {},
           priority: 'high',
         });
@@ -65,7 +66,7 @@ export default function QuickActions() {
           id: 'check_in',
           text: rtl.isRTL ? 'كيف تشعر اليوم؟' : 'How are you feeling today?',
           icon: Sparkles,
-          color: '#A855F7',
+          color: colors.accent,
           action: () => {},
           priority: 'medium',
         });

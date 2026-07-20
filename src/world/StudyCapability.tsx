@@ -18,7 +18,10 @@ interface StudyTopic {
 }
 
 export default function StudyCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [currentTopic, setCurrentTopic] = useState('');
@@ -87,7 +90,7 @@ export default function StudyCapability() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrapLarge, { backgroundColor: '#3B82F620' }]}>
-            <BookOpen size={24} stroke="#3B82F6" />
+            <BookOpen size={24} stroke=colors.accent />
           </View>
           <View>
             <Text style={styles.headerTitle}>Study World</Text>
@@ -101,18 +104,18 @@ export default function StudyCapability() {
 
       {lastTopic && (
         <View style={styles.lastTopicCard}>
-          <Brain size={16} stroke="#3B82F6" />
+          <Brain size={16} stroke=colors.accent />
           <Text style={styles.lastTopicText}>{rtl.isRTL ? 'آخر مرة:' : 'Last time:'} {lastTopic}</Text>
         </View>
       )}
 
       <View style={styles.toolCard}>
         <View style={styles.toolHeader}>
-          <Target size={16} stroke="#3B82F6" />
+          <Target size={16} stroke=colors.accent />
           <Text style={styles.toolLabel}>{rtl.isRTL ? 'ماذا تريد أن تدرس؟' : 'What do you want to study?'}</Text>
         </View>
         <View style={styles.addRow}>
-          <TextInput style={[styles.addInput, { textAlign: rtl.textAlign }]} value={currentTopic} onChangeText={setCurrentTopic} placeholder={rtl.isRTL ? 'مثلاً: فيزياء الكم' : 'e.g., Quantum Physics'} placeholderTextColor="#6B5B8A" onSubmitEditing={addTopic} />
+          <TextInput style={[styles.addInput, { textAlign: rtl.textAlign }]} value={currentTopic} onChangeText={setCurrentTopic} placeholder={rtl.isRTL ? 'مثلاً: فيزياء الكم' : 'e.g., Quantum Physics'} placeholderTextColor=colors.textSecondary onSubmitEditing={addTopic} />
           <TouchableOpacity style={styles.addBtn} onPress={addTopic}>
             <ChevronRight size={18} stroke="#FFF" />
           </TouchableOpacity>
@@ -124,7 +127,7 @@ export default function StudyCapability() {
           {topics.map(topic => (
             <View key={topic.id} style={styles.topicItem}>
               <View style={styles.topicInfo}>
-                <Clock size={14} stroke="#6B5B8A" />
+                <Clock size={14} stroke=colors.textSecondary />
                 <Text style={styles.topicTitle}>{topic.title}</Text>
               </View>
               <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${topic.progress}%` }]} /></View>
@@ -157,6 +160,6 @@ const styles = StyleSheet.create({
   topicItem: { backgroundColor: 'rgba(26,18,38,0.8)', borderRadius: RADIUS.sm, padding: SPACE.md },
   topicInfo: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: 8 },
   topicTitle: { color: colors.text, fontSize: 14, fontWeight: '500' },
-  progressTrack: { height: 3, backgroundColor: '#2D1B4D', borderRadius: 2 },
+  progressTrack: { height: 3, backgroundColor: colors.border, borderRadius: 2 },
   progressFill: { height: 3, backgroundColor: colors.accent, borderRadius: 2 },
 });

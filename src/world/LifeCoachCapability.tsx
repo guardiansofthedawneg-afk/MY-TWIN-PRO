@@ -31,14 +31,14 @@ const COACH_CATEGORIES = [
     ]
   },
   {
-    id: 'goals', icon: Crosshair, color: '#10B981',
+    id: 'goals', icon: Crosshair, color: colors.success,
     label_ar: 'أهداف', label_en: 'Goals',
     actions: [
       { type: 'assess_goal', label_ar: 'تقييم هدف', label_en: 'Assess Goal', placeholder_ar: 'ما هدفك؟', placeholder_en: 'What is your goal?' },
     ]
   },
   {
-    id: 'body', icon: Brain, color: '#3B82F6',
+    id: 'body', icon: Brain, color: colors.accent,
     label_ar: 'جسد', label_en: 'Body',
     actions: [
       { type: 'nutrition', label_ar: 'تغذية', label_en: 'Nutrition', placeholder_ar: 'ما هدفك الغذائي؟', placeholder_en: 'What is your nutrition goal?' },
@@ -47,14 +47,14 @@ const COACH_CATEGORIES = [
     ]
   },
   {
-    id: 'mind', icon: Sparkles, color: '#A855F7',
+    id: 'mind', icon: Sparkles, color: colors.accent,
     label_ar: 'عقل', label_en: 'Mind',
     actions: [
       { type: 'decision', label_ar: 'اتخاذ قرار', label_en: 'Make Decision', placeholder_ar: 'ما القرار الذي تواجهه؟', placeholder_en: 'What decision are you facing?' },
     ]
   },
   {
-    id: 'life', icon: TrendingUp, color: '#F59E0B',
+    id: 'life', icon: TrendingUp, color: colors.gold,
     label_ar: 'حياة', label_en: 'Life',
     actions: [
       { type: 'financial', label_ar: 'تحليل مالي', label_en: 'Financial', placeholder_ar: 'ما دخلك ومصاريفك؟', placeholder_en: 'What are your income and expenses?' },
@@ -65,7 +65,10 @@ const COACH_CATEGORIES = [
 ];
 
 export default function LifeCoachCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -149,7 +152,7 @@ export default function LifeCoachCapability() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrapLarge, { backgroundColor: '#EC489920' }]}>
-            <Heart size={24} stroke="#EC4899" />
+            <Heart size={24} stroke=colors.rose />
           </View>
           <View>
             <Text style={styles.headerTitle}>Life Coach</Text>
@@ -164,14 +167,14 @@ export default function LifeCoachCapability() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {lastTopic && (
           <View style={styles.lastTopicCard}>
-            <Brain size={16} stroke="#EC4899" />
+            <Brain size={16} stroke=colors.rose />
             <Text style={styles.lastTopicText}>{rtl.isRTL ? 'آخر مرة:' : 'Last time:'} {lastTopic}</Text>
           </View>
         )}
 
         <View style={styles.canvasCard}>
           <View style={styles.canvasHeader}>
-            <Sparkles size={16} stroke="#EC4899" />
+            <Sparkles size={16} stroke=colors.rose />
             <Text style={styles.canvasLabel}>{rtl.isRTL ? 'ما الذي يشغل بالك؟' : 'What is on your mind?'}</Text>
           </View>
           <TextInput
@@ -233,7 +236,7 @@ export default function LifeCoachCapability() {
             {sessions.slice(0, 5).map(session => (
               <View key={session.id} style={styles.sessionItem}>
                 <View style={[styles.sessionIcon, { backgroundColor: '#EC489920' }]}>
-                  <Heart size={14} stroke="#EC4899" />
+                  <Heart size={14} stroke=colors.rose />
                 </View>
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionTitle} numberOfLines={1}>{session.title}</Text>

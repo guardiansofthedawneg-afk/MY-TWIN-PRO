@@ -21,14 +21,17 @@ interface SmartHomeSession {
 
 const HOME_ACTIONS = [
   { type: 'command', icon: Power, color: colors.success, label_ar: 'أمر', label_en: 'Command', placeholder_ar: 'ماذا تريد أن تفعل؟', placeholder_en: 'What do you want to do?' },
-  { type: 'status', icon: Home, color: '#3B82F6', label_ar: 'الحالة', label_en: 'Status', placeholder_ar: 'ما الذي تريد معرفته؟', placeholder_en: 'What do you want to know?' },
-  { type: 'environment', icon: Thermometer, color: '#F59E0B', label_ar: 'البيئة', label_en: 'Environment', placeholder_ar: 'ما البيئة التي تريدها؟', placeholder_en: 'What environment do you want?' },
-  { type: 'automation', icon: Sparkles, color: '#A855F7', label_ar: 'أتمتة', label_en: 'Automation', placeholder_ar: 'ما الذي تريد أتمتته؟', placeholder_en: 'What do you want to automate?' },
-  { type: 'predictions', icon: Brain, color: '#EC4899', label_ar: 'توقعات', label_en: 'Predictions', placeholder_ar: 'ماذا تتوقع؟', placeholder_en: 'What do you predict?' },
+  { type: 'status', icon: Home, color: colors.accent, label_ar: 'الحالة', label_en: 'Status', placeholder_ar: 'ما الذي تريد معرفته؟', placeholder_en: 'What do you want to know?' },
+  { type: 'environment', icon: Thermometer, color: colors.gold, label_ar: 'البيئة', label_en: 'Environment', placeholder_ar: 'ما البيئة التي تريدها؟', placeholder_en: 'What environment do you want?' },
+  { type: 'automation', icon: Sparkles, color: colors.accent, label_ar: 'أتمتة', label_en: 'Automation', placeholder_ar: 'ما الذي تريد أتمتته؟', placeholder_en: 'What do you want to automate?' },
+  { type: 'predictions', icon: Brain, color: colors.rose, label_ar: 'توقعات', label_en: 'Predictions', placeholder_ar: 'ماذا تتوقع؟', placeholder_en: 'What do you predict?' },
 ];
 
 export default function SmartHomeCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -109,7 +112,7 @@ export default function SmartHomeCapability() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrapLarge, { backgroundColor: '#10B98120' }]}>
-            <Home size={24} stroke="#10B981" />
+            <Home size={24} stroke=colors.success />
           </View>
           <View>
             <Text style={styles.headerTitle}>Smart Home</Text>
@@ -124,14 +127,14 @@ export default function SmartHomeCapability() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {lastCommand && (
           <View style={styles.lastCommandCard}>
-            <Brain size={16} stroke="#10B981" />
+            <Brain size={16} stroke=colors.success />
             <Text style={styles.lastCommandText}>{rtl.isRTL ? 'آخر أمر:' : 'Last command:'} {lastCommand}</Text>
           </View>
         )}
 
         <View style={styles.canvasCard}>
           <View style={styles.canvasHeader}>
-            <Power size={16} stroke="#10B981" />
+            <Power size={16} stroke=colors.success />
             <Text style={styles.canvasLabel}>{rtl.isRTL ? 'ماذا تريد أن تفعل في منزلك؟' : 'What do you want to do at home?'}</Text>
           </View>
           <TextInput
@@ -177,7 +180,7 @@ export default function SmartHomeCapability() {
             {sessions.slice(0, 5).map(session => (
               <View key={session.id} style={styles.sessionItem}>
                 <View style={[styles.sessionIcon, { backgroundColor: '#10B98120' }]}>
-                  <Home size={14} stroke="#10B981" />
+                  <Home size={14} stroke=colors.success />
                 </View>
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionTitle} numberOfLines={1}>{session.title}</Text>

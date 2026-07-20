@@ -22,13 +22,16 @@ interface DreamSession {
 const DREAM_ACTIONS = [
   { type: 'interpret', icon: Moon, color: colors.accent, label_ar: 'فسر حلمي', label_en: 'Interpret Dream', placeholder_ar: 'احكِ لي حلمك...', placeholder_en: 'Tell me your dream...' },
   { type: 'dna', icon: Compass, color: '#6366F1', label_ar: 'بصمتي الحلمية', label_en: 'Dream DNA', placeholder_ar: 'ما نمط أحلامي؟', placeholder_en: 'What is my dream pattern?' },
-  { type: 'patterns', icon: TrendingUp, color: '#A855F7', label_ar: 'أنماط متكررة', label_en: 'Recurring Patterns', placeholder_ar: 'ما الذي يتكرر في أحلامي؟', placeholder_en: 'What repeats in my dreams?' },
-  { type: 'symbols', icon: Search, color: '#EC4899', label_ar: 'بحث عن رمز', label_en: 'Search Symbol', placeholder_ar: 'ما معنى هذا الرمز؟', placeholder_en: 'What does this symbol mean?' },
-  { type: 'forecast', icon: Sparkles, color: '#F59E0B', label_ar: 'توقعات', label_en: 'Forecast', placeholder_ar: 'ما الذي تخبرني به أحلامي؟', placeholder_en: 'What are my dreams telling me?' },
+  { type: 'patterns', icon: TrendingUp, color: colors.accent, label_ar: 'أنماط متكررة', label_en: 'Recurring Patterns', placeholder_ar: 'ما الذي يتكرر في أحلامي؟', placeholder_en: 'What repeats in my dreams?' },
+  { type: 'symbols', icon: Search, color: colors.rose, label_ar: 'بحث عن رمز', label_en: 'Search Symbol', placeholder_ar: 'ما معنى هذا الرمز؟', placeholder_en: 'What does this symbol mean?' },
+  { type: 'forecast', icon: Sparkles, color: colors.gold, label_ar: 'توقعات', label_en: 'Forecast', placeholder_ar: 'ما الذي تخبرني به أحلامي؟', placeholder_en: 'What are my dreams telling me?' },
 ];
 
 export default function DreamCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');

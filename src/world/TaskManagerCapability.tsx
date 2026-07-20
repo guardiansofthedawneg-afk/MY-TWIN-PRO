@@ -21,13 +21,16 @@ interface Task {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  high: '#EF4444',
-  medium: '#F59E0B',
-  low: '#10B981',
+  high: colors.danger,
+  medium: colors.gold,
+  low: colors.success,
 };
 
 export default function TaskManagerCapability() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const { colors } = useAppTheme();
   const [active, setActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -151,7 +154,7 @@ export default function TaskManagerCapability() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrapLarge, { backgroundColor: '#F59E0B20' }]}>
-            <CheckSquare size={24} stroke="#F59E0B" />
+            <CheckSquare size={24} stroke=colors.gold />
           </View>
           <View>
             <Text style={styles.headerTitle}>Task Manager</Text>
@@ -166,17 +169,17 @@ export default function TaskManagerCapability() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <ListChecks size={16} stroke="#F59E0B" />
+            <ListChecks size={16} stroke=colors.gold />
             <Text style={styles.statValue}>{tasks.length}</Text>
             <Text style={styles.statLabel}>{rtl.isRTL ? 'مهام' : 'Tasks'}</Text>
           </View>
           <View style={styles.statCard}>
-            <TrendingUp size={16} stroke="#10B981" />
+            <TrendingUp size={16} stroke=colors.success />
             <Text style={styles.statValue}>{completedCount}</Text>
             <Text style={styles.statLabel}>{rtl.isRTL ? 'مكتملة' : 'Done'}</Text>
           </View>
           <View style={styles.statCard}>
-            <Target size={16} stroke="#3B82F6" />
+            <Target size={16} stroke=colors.accent />
             <Text style={styles.statValue}>{tasks.length - completedCount}</Text>
             <Text style={styles.statLabel}>{rtl.isRTL ? 'متبقية' : 'Left'}</Text>
           </View>
@@ -184,7 +187,7 @@ export default function TaskManagerCapability() {
 
         <View style={styles.canvasCard}>
           <View style={styles.canvasHeader}>
-            <Plus size={16} stroke="#F59E0B" />
+            <Plus size={16} stroke=colors.gold />
             <Text style={styles.canvasLabel}>{rtl.isRTL ? 'مهمة جديدة' : 'New Task'}</Text>
           </View>
           <View style={styles.addRow}>
@@ -193,7 +196,7 @@ export default function TaskManagerCapability() {
               value={inputText}
               onChangeText={setInputText}
               placeholder={rtl.isRTL ? 'ما الذي تريد إنجازه؟' : 'What do you want to accomplish?'}
-              placeholderTextColor="#6B5B8A"
+              placeholderTextColor=colors.textSecondary
               onSubmitEditing={addTask}
             />
             <TouchableOpacity style={styles.addBtn} onPress={addTask} disabled={isProcessing}>
@@ -206,7 +209,7 @@ export default function TaskManagerCapability() {
           {(['all', 'active', 'completed'] as const).map(filter => (
             <TouchableOpacity
               key={filter}
-              style={[styles.filterChip, activeFilter === filter && { backgroundColor: '#F59E0B20', borderColor: '#F59E0B' }]}
+              style={[styles.filterChip, activeFilter === filter && { backgroundColor: '#F59E0B20', borderColor: colors.gold }]}
               onPress={() => setActiveFilter(filter)}
             >
               <Text style={[styles.filterText, activeFilter === filter && { color: colors.gold }]}>
@@ -224,7 +227,7 @@ export default function TaskManagerCapability() {
                 style={[styles.taskItem, task.completed && styles.taskCompleted]}
                 onPress={() => toggleTask(task.id)}
               >
-                <View style={[styles.checkbox, task.completed && { backgroundColor: '#10B981', borderColor: '#10B981' }]}>
+                <View style={[styles.checkbox, task.completed && { backgroundColor: colors.success, borderColor: colors.success }]}>
                   {task.completed && <CheckSquare size={14} stroke="#FFF" />}
                 </View>
                 <View style={styles.taskInfo}>
@@ -270,14 +273,14 @@ const styles = StyleSheet.create({
   canvasLabel: { color: colors.gold, fontSize: 14, fontWeight: '600' },
   addRow: { flexDirection: 'row', gap: SPACE.sm },
   addInput: { flex: 1, backgroundColor: colors.inputBg, borderRadius: RADIUS.sm, padding: 12, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.border },
-  addBtn: { width: 44, height: 44, borderRadius: RADIUS.sm, backgroundColor: '#F59E0B', justifyContent: 'center', alignItems: 'center' },
+  addBtn: { width: 44, height: 44, borderRadius: RADIUS.sm, backgroundColor: colors.gold, justifyContent: 'center', alignItems: 'center' },
   filterRow: { flexDirection: 'row', gap: SPACE.sm },
   filterChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: colors.border },
   filterText: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
   tasksList: { gap: SPACE.sm },
   taskItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, backgroundColor: colors.card, borderRadius: RADIUS.sm, padding: SPACE.sm },
   taskCompleted: { opacity: 0.6 },
-  checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#F59E0B', justifyContent: 'center', alignItems: 'center' },
+  checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.gold, justifyContent: 'center', alignItems: 'center' },
   taskInfo: { flex: 1 },
   taskTitle: { color: colors.text, fontSize: 14, fontWeight: '500' },
   taskTitleDone: { textDecorationLine: 'line-through', color: colors.textSecondary },

@@ -43,6 +43,8 @@ import { audioMixer } from '../core/AudioMixer';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 
 export default function LivingWorld() {
+  const { colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const userId = useTwinStore(s => s.userId) || '';
   const rtl = useRTL();
   const { colors } = useAppTheme();
@@ -59,7 +61,7 @@ export default function LivingWorld() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [streamedText, setStreamedText] = useState('');
   const [memoryEchoVisible, setMemoryEchoVisible] = useState(false);
-  const [echoColor, setEchoColor] = useState('#A855F7');
+  const [echoColor, setEchoColor] = useState(colors.accent);
   const [isWriting, setIsWriting] = useState(false);
   const messagesEndRef = useRef<View>(null);
 
@@ -88,7 +90,7 @@ export default function LivingWorld() {
   // استماع لـ MEMORY_SURFACED من EventBus (قد يأتي من UnifiedBrainBridge)
   useEffect(() => {
     const unsub = EventBus.on('MEMORY_SURFACED', (payload: any) => {
-      setEchoColor(payload?.color || '#A855F7');
+      setEchoColor(payload?.color || colors.accent);
       setMemoryEchoVisible(true);
       setTimeout(() => setMemoryEchoVisible(false), 1200);
     });
@@ -158,7 +160,7 @@ export default function LivingWorld() {
         typingSpeed: perception.typingSpeed,
         messageLength: perception.messageLength,
         absenceDurationMinutes: perception.absenceDuration,
-        timeOfDay: perception.timeOfDay,
+        timeOfDay: (perception.timeOfDay as 'morning' | 'afternoon' | 'evening' | 'night') || 'morning',
         userState: perception.userState,
       });
 
@@ -171,7 +173,7 @@ export default function LivingWorld() {
           memoryId: response.memory_surfaced.id,
           relevance: 0.8,
           emotionalWeight: 0.7,
-          color: '#A855F7',
+          color: colors.accent,
         });
       }
 
@@ -197,7 +199,7 @@ export default function LivingWorld() {
       }
 
       // تحديث Zustand stores
-      const store = useTwinStore.getState();
+      const store = useTwinStore.getState?.() || {};
       if (response.twin_state_update) {
         store.updateFromUnifiedResponse?.(response);
       }
@@ -271,7 +273,7 @@ export default function LivingWorld() {
                   {msg.text}
                 </Text>
               ))}
-              {isThinking && thinkingPhase && <ThinkingIndicator phase={thinkingPhase} />}
+              {isThinking && thinkingPhase && <ThinkingIndicator phase={thinkingPhase} lang={rtl.isRTL ? 'ar' : 'en'} />}
               <SilencePresence />
             </ConversationSpace>
           </View>

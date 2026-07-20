@@ -1,13 +1,25 @@
 import { useState, useCallback, useRef } from 'react';
-import { twinBrain, ThinkingPhase, BrainResponse } from '../core/TwinBrain';
+import { unifiedBrainBridge, UnifiedResponse, PerceptionData } from '../core/UnifiedBrainBridge';
 import { EventBus } from '../core/EventBus';
+
+export interface ThinkingPhase {
+  phase: string;
+  label_ar: string;
+  label_en: string;
+}
+
+export interface BrainResponse {
+  reply: string;
+  provider: string;
+  consciousnessTrace: ThinkingPhase[];
+  trustModel: any;
+}
 
 interface UseTwinBrainReturn {
   isThinking: boolean;
   thinkingPhase: ThinkingPhase | null;
   streamedText: string;
   sendMessage: (message: string) => Promise<BrainResponse>;
-  streamMessage: (message: string) => Promise<void>;
   setUserId: (userId: string) => void;
   setLang: (lang: string) => void;
 }
@@ -16,30 +28,41 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingPhase, setThinkingPhase] = useState<ThinkingPhase | null>(null);
   const [streamedText, setStreamedText] = useState('');
-  const brainRef = useRef(twinBrain);
+  const bridgeRef = useRef(unifiedBrainBridge);
 
-  brainRef.current.setUserId(initialUserId);
-  brainRef.current.setLang(initialLang);
-
-  brainRef.current.onThinking((phase: ThinkingPhase) => {
-    setThinkingPhase(phase);
-    EventBus.emit('AI_COGNITIVE_PHASE', { phase: phase.phase, progress: phase.progress });
-  });
+  bridgeRef.current.setUserId(initialUserId);
+  bridgeRef.current.setLang(initialLang);
 
   const send = useCallback(async (message: string): Promise<BrainResponse> => {
     setIsThinking(true);
-    setThinkingPhase({ phase: 'observe', progress: 0, label: 'يراقب...' });
-    EventBus.emit('AI_START_THINKING', { intent: message, confidence: 0.8 });
+    EventBus.emit('AI_START_THINKING', { intent: message });
 
     try {
-      const result = await brainRef.current.process(message);
-      EventBus.emit('AI_FINISH_THINKING', { response: result.reply, confidence: 0.9 });
-      if (result.memoryStored) {
-        EventBus.emit('MEMORY_CREATED', { memoryId: Date.now().toString(), layer: 'context' });
+      const perception: PerceptionData = {
+        typingSpeed: 0,
+        messageLength: message.length,
+        absenceDurationMinutes: 0,
+        timeOfDay: 'morning',
+        userState: 'normal',
+      };
+      const response: UnifiedResponse = await bridgeRef.current.process(message, perception);
+      
+      // استخراج مسار الوعي من الاستجابة
+      const trace = response.consciousness_trace || [];
+      if (trace.length > 0) {
+        setThinkingPhase(trace[trace.length - 1]); // آخر مرحلة
       }
-      return result;
+
+      EventBus.emit('AI_FINISH_THINKING', { response: response.reply });
+      
+      return {
+        reply: response.reply,
+        provider: 'unified_brain',
+        consciousnessTrace: trace,
+        trustModel: response.trust_model || {},
+      };
     } catch (error) {
-      EventBus.emit('AI_FINISH_THINKING', { response: '', confidence: 0 });
+      EventBus.emit('AI_FINISH_THINKING', { response: '' });
       throw error;
     } finally {
       setIsThinking(false);
@@ -47,35 +70,8 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
     }
   }, []);
 
-  const stream = useCallback(async (message: string): Promise<void> => {
-    setIsThinking(true);
-    setStreamedText('');
-    setThinkingPhase({ phase: 'observe', progress: 0, label: 'يراقب...' });
-    EventBus.emit('AI_START_THINKING', { intent: message, confidence: 0.8 });
+  const setUserId = useCallback((userId: string) => { bridgeRef.current.setUserId(userId); }, []);
+  const setLang = useCallback((lang: string) => { bridgeRef.current.setLang(lang); }, []);
 
-    let fullText = '';
-
-    await brainRef.current.streamProcess(
-      message,
-      (token: string) => {
-        fullText += token;
-        setStreamedText(fullText);
-      },
-      () => {
-        EventBus.emit('AI_FINISH_THINKING', { response: fullText, confidence: 0.9 });
-        setThinkingPhase(null);
-        setIsThinking(false);
-      },
-      (err: string) => {
-        EventBus.emit('AI_FINISH_THINKING', { response: '', confidence: 0 });
-        setThinkingPhase(null);
-        setIsThinking(false);
-      },
-    );
-  }, []);
-
-  const setUserId = useCallback((userId: string) => { brainRef.current.setUserId(userId); }, []);
-  const setLang = useCallback((lang: string) => { brainRef.current.setLang(lang); }, []);
-
-  return { isThinking, thinkingPhase, streamedText, sendMessage: send, streamMessage: stream, setUserId, setLang };
+  return { isThinking, thinkingPhase, streamedText, sendMessage: send, streamMessage: async () => {}, setUserId, setLang };
 }

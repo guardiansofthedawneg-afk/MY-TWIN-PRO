@@ -131,7 +131,14 @@ export default function LivingWorld() {
     const text = inputText.trim();
 
     // جمع بيانات الإدراك
-    const perception = perceptionEngine.analyze(text);
+    const perceptionResult = perceptionEngine.analyze(text);
+    const perception = {
+      typingSpeed: perceptionResult.typingSpeed || 0,
+      messageLength: text.length,
+      absenceDurationMinutes: 0,
+      timeOfDay: 'morning',
+      userState: perceptionResult.userState,
+    };
 
     // إضافة رسالة المستخدم للعرض
     setInputText('');

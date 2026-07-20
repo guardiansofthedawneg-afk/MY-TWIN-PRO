@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { timelineCoordinator } from '../coordinators/TimelineCoordinator';
-// ✅ identityEngine removed
+import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
+import { stateBus } from '../core/StateBus';
+import { useAppTheme } from '../../engine/colors';
 import { useRTL } from '../../lib/useRTL';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
-import { Clock, MapPin, TrendingUp, Heart } from 'lucide-react-native';
+import { Clock, MapPin, TrendingUp, Heart, Star } from 'lucide-react-native';
 
 interface TimelineEntry {
   id: string;
@@ -26,6 +27,7 @@ const TYPE_CONFIG: Record<string, { icon: typeof Clock; color: string }> = {
 
 export default function LivingTimeline() {
   const rtl = useRTL();
+  const { colors } = useAppTheme();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
 
   useEffect(() => {
@@ -34,32 +36,50 @@ export default function LivingTimeline() {
 
   const buildTimeline = async () => {
     const allEntries: TimelineEntry[] = [];
-    const timeline = await timelineCoordinator.buildTimeline();
-    const heatmap = identityEngine.getPresenceHeatmap();
-    const mostVisited = identityEngine.getMostVisitedWorld();
 
-    for (const event of timeline.slice(0, 8)) {
-      const config = TYPE_CONFIG[event.type] || TYPE_CONFIG.memory;
-      allEntries.push({
-        id: event.id,
-        period: new Date(event.date).toLocaleDateString(rtl.isRTL ? 'ar' : 'en'),
-        title: event.title,
-        type: event.type as TimelineEntry['type'],
-        icon: config.icon,
-        color: config.color,
-      });
-    }
+    try {
+      // 1. جلب الذكريات الأساسية من TCMA (تمثل لحظات الحياة)
+      const coreMemories = await unifiedBrainBridge.getCoreMemories(8);
+      for (const memory of coreMemories) {
+        const config = TYPE_CONFIG['memory'];
+        allEntries.push({
+          id: memory.id,
+          period: new Date(memory.created_at || memory.timestamp || Date.now()).toLocaleDateString(rtl.isRTL ? 'ar' : 'en'),
+          title: (memory.expressed_text || memory.content || '').substring(0, 80),
+          type: 'memory',
+          icon: config.icon,
+          color: config.color,
+        });
+      }
 
-    if (mostVisited !== 'living_world') {
-      allEntries.push({
-        id: 'most_visited',
-        period: rtl.isRTL ? 'الأكثر زيارة' : 'Most visited',
-        title: mostVisited,
-        type: 'place',
-        icon: MapPin,
-        color: '#3B82F6',
-      });
-    }
+      // 2. العالم الأكثر زيارة (من الذاكرة)
+      try {
+        const mostVisited = await unifiedBrainBridge.getMostVisitedWorld();
+        if (mostVisited && mostVisited !== 'living_world') {
+          allEntries.push({
+            id: 'most_visited',
+            period: rtl.isRTL ? 'الأكثر زيارة' : 'Most visited',
+            title: mostVisited,
+            type: 'place',
+            icon: MapPin,
+            color: '#3B82F6',
+          });
+        }
+      } catch (e) {}
+
+      // 3. إنجاز الرابطة (إن وجد)
+      const bondLevel = stateBus.getState().relationship.bondLevel;
+      if (bondLevel >= 50) {
+        allEntries.push({
+          id: 'bond_milestone',
+          period: rtl.isRTL ? 'إنجاز' : 'Milestone',
+          title: rtl.isRTL ? `الرابطة وصلت إلى ${bondLevel}%` : `Bond reached ${bondLevel}%`,
+          type: 'milestone',
+          icon: TrendingUp,
+          color: '#EC4899',
+        });
+      }
+    } catch (e) {}
 
     setEntries(allEntries);
   };
@@ -67,18 +87,18 @@ export default function LivingTimeline() {
   if (entries.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeIn.duration(500)} style={styles.container}>
-      <Text style={styles.title}>{rtl.isRTL ? 'رحلة الحياة' : 'Life Journey'}</Text>
+    <Animated.View entering={FadeIn.duration(500)} style={[styles.container, { backgroundColor: colors.bg }]}>
+      <Text style={[styles.title, { color: colors.textSecondary }]}>{rtl.isRTL ? 'رحلة الحياة' : 'Life Journey'}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {entries.map(entry => {
           const Icon = entry.icon;
           return (
-            <View key={entry.id} style={[styles.entry, { borderColor: entry.color + '30' }]}>
+            <View key={entry.id} style={[styles.entry, { backgroundColor: colors.card, borderColor: entry.color + '30' }]}>
               <View style={[styles.entryIcon, { backgroundColor: entry.color + '15' }]}>
                 <Icon size={14} stroke={entry.color} />
               </View>
-              <Text style={styles.entryPeriod}>{entry.period}</Text>
-              <Text style={styles.entryText} numberOfLines={2}>{entry.title}</Text>
+              <Text style={[styles.entryPeriod, { color: colors.textSecondary }]}>{entry.period}</Text>
+              <Text style={[styles.entryText, { color: colors.text }]} numberOfLines={2}>{entry.title}</Text>
             </View>
           );
         })}
@@ -89,10 +109,10 @@ export default function LivingTimeline() {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: SPACE.lg, paddingVertical: SPACE.sm },
-  title: { color: '#A78BFA', fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
+  title: { fontSize: 14, fontWeight: '600', marginBottom: SPACE.sm },
   scroll: { gap: SPACE.sm },
-  entry: { width: 140, backgroundColor: 'rgba(26,18,38,0.8)', borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.sm, gap: 6 },
+  entry: { width: 140, borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.sm, gap: 6 },
   entryIcon: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  entryPeriod: { color: '#6B5B8A', fontSize: 10 },
-  entryText: { color: '#E8E0F0', fontSize: 12, lineHeight: 16 },
+  entryPeriod: { fontSize: 10 },
+  entryText: { fontSize: 12, lineHeight: 16 },
 });

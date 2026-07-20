@@ -249,11 +249,17 @@ class UnifiedTwinBrain:
         # ═══════════════════════════════
         latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         
+        # بناء مسار الوعي ونموذج الثقة
+        consciousness_trace = self._build_consciousness_trace(perception, real_emotion, relevant_memories, intent, behavior)
+        trust_model = await self._build_trust_model(user_id, bond_level, evolved_dna, None)
+
         return {
             "reply": reply,
             "presence_state": presence_state,
             "soul_state": soul_state,
             "evolution_updates": evolution_updates,
+            "consciousness_trace": consciousness_trace,
+            "trust_model": trust_model,
             "twin_emotional_state": {
                 "current_emotion": current_emotion,
                 "real_emotion": real_emotion,
@@ -461,6 +467,95 @@ class UnifiedTwinBrain:
             "calmness": min(1.0, dna.get("calmness", 0.85) + (-0.02 if interaction_quality == "negative" else 0.01)),
         }
         return evolved
+    
+    
+    def _build_consciousness_trace(self, perception, real_emotion, relevant_memories, intent, behavior):
+        """يبني مسار الوعي الذي يُعرض في الواجهة"""
+        trace = []
+        # مرحلة الإدراك
+        if perception.get("user_state") == "tired":
+            trace.append({"phase": "perception", "label_ar": "أشعر بتعبك...", "label_en": "I sense your tiredness..."})
+        elif perception.get("user_state") == "excited":
+            trace.append({"phase": "perception", "label_ar": "ألمح حماسك...", "label_en": "I notice your excitement..."})
+        else:
+            trace.append({"phase": "perception", "label_ar": "أقرأ رسالتك...", "label_en": "Reading your message..."})
+
+        # مرحلة العاطفة
+        emotion_labels = {
+            "joy": {"ar": "أشاركك الفرحة...", "en": "Sharing your joy..."},
+            "sadness": {"ar": "أتفهم حزنك...", "en": "Understanding your sadness..."},
+            "anger": {"ar": "أستمع بهدوء...", "en": "Listening calmly..."},
+            "fear": {"ar": "أشعر بقلقك...", "en": "I feel your worry..."},
+            "love": {"ar": "قلبي يمتلئ...", "en": "My heart is full..."},
+        }
+        label = emotion_labels.get(real_emotion, {"ar": "أفهم مشاعرك...", "en": "Understanding your feelings..."})
+        trace.append({"phase": "emotion", "label_ar": label["ar"], "label_en": label["en"]})
+
+        # مرحلة الذاكرة
+        if relevant_memories:
+            mem = relevant_memories[0]
+            snippet = (mem.get("content") or "")[:40]
+            trace.append({"phase": "memory", "label_ar": f"أتذكر: {snippet}...", "label_en": f"Remembering: {snippet}..."})
+        else:
+            trace.append({"phase": "memory", "label_ar": "أسترجع ذكرياتنا...", "label_en": "Recalling our memories..."})
+
+        # مرحلة القرار
+        decision_labels = {
+            "comfort": {"ar": "سأواسيك...", "en": "I'll comfort you..."},
+            "encourage": {"ar": "سأشجعك...", "en": "I'll encourage you..."},
+            "celebrate": {"ar": "سأحتفل معك...", "en": "Celebrating with you..."},
+            "inform": {"ar": "سأجيبك بدقة...", "en": "Answering precisely..."},
+        }
+        dec_label = decision_labels.get(behavior.get("intent"), {"ar": "أختار ردي...", "en": "Choosing my response..."})
+        trace.append({"phase": "decision", "label_ar": dec_label["ar"], "label_en": dec_label["en"]})
+
+        # مرحلة البناء
+        trace.append({"phase": "response", "label_ar": "أصوغ الرد...", "label_en": "Crafting reply..."})
+
+        return trace
+    
+    
+    async def _build_trust_model(self, user_id, bond_level, dna, resonance):
+        """يبني نموذج الثقة من عناصر متعددة"""
+        # محاولة استدعاء نظام الروح للحصول على بيانات أعمق
+        try:
+            from app.soul import get_soul_state
+            soul = await get_soul_state(
+                user_id=user_id,
+                relationship_stage="friend",
+                bond_level=bond_level,
+                interaction_count=0,
+                personality_dna=dna,
+                dominant_emotion="neutral",
+                recent_emotions=[],
+                memory_count=0,
+                core_memory_count=0,
+                memory_patterns={},
+                evolution_count=0,
+            )
+            resonance = soul.get("resonance", {})
+            harmony = resonance.get("harmony", 0.5)
+            understanding = resonance.get("understanding", 0.5)
+        except:
+            harmony = 0.5
+            understanding = 0.5
+
+        return {
+            "overall_trust": round(bond_level * 0.6 + harmony * 40, 1),
+            "components": {
+                "history_weight": round(bond_level / 100, 2),
+                "honesty_index": round(dna.get("empathy", 0.85) * 0.9, 2),
+                "consistency_score": round(dna.get("calmness", 0.85) * 0.8 + harmony * 0.2, 2),
+                "promises_kept": 1.0,
+                "time_invested": round(min(1.0, bond_level / 200), 2),
+                "emotional_safety": round(harmony, 2),
+                "memory_quality": round(understanding, 2),
+                "empathy_level": round(dna.get("empathy", 0.85), 2),
+            },
+            "attachment_style": "secure" if harmony > 0.7 else "building",
+            "comfort_level": round(harmony * 100),
+            "vulnerability_index": round(harmony * 0.8),
+        }
     
     def _build_presence_state(
         self,

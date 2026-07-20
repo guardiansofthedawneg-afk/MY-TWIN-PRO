@@ -16,6 +16,7 @@ interface AwarenessState {
   setConversationStreak: (streak: number) => void;
   incrementUsedMemory: () => void;
   setAwarenessData: (score: number, sent: number, limit: number) => void;
+  setAwarenessScore: (score: number) => void;
   setHasHydrated: (val: boolean) => void;
   reset: () => void;
 }
@@ -40,12 +41,13 @@ export const useAwarenessStore = create<AwarenessState>()(
       setConversationStreak: (streak) => set({ conversationStreak: streak }),
       incrementUsedMemory: () => set((s) => ({ usedMemoryCount: s.usedMemoryCount + 1 })),
       setAwarenessData: (score, sent, limit) => set({ awarenessScore: score, dailyNotificationsSent: sent, dailyNotificationsLimit: limit }),
+      setAwarenessScore: (score) => set({ awarenessScore: Math.min(100, Math.max(0, Math.round(score))) }),
       setHasHydrated: (val) => set({ hasHydrated: val }),
       reset: () => set({ ...initialState }),
     }),
     {
-      name: 'mytwin-awareness-v1',
-      version: 1,
+      name: 'mytwin-awareness-v2',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

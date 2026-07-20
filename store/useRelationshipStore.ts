@@ -10,6 +10,7 @@ interface RelationshipState {
   journeyPhase: string;
   attachmentStyle: string;
 
+  setBondLevel: (level: number) => void;
   setTwinEnergy: (val: number) => void;
   updateBond: (val: number) => void;
   getEnergyPercent: () => number;
@@ -17,6 +18,7 @@ interface RelationshipState {
   getRelationshipHealth: (userId: string) => Promise<void>;
   getMemories: (userId: string, limit?: number) => Promise<void>;
   getWeeklyReport: (userId: string) => Promise<void>;
+  updateFromUnifiedResponse: (data: any) => void;
   reset: () => void;
 }
 
@@ -33,6 +35,7 @@ export const useRelationshipStore = create<RelationshipState>()(
     (set, get) => ({
       ...initialState,
 
+      setBondLevel: (level) => set({ bondLevel: Math.min(100, Math.max(0, Math.round(level))) }),
       setTwinEnergy: (val) => set({ twinEnergy: Math.max(0, Math.min(100, Math.round(val))) }),
       updateBond: (val) => set({ bondLevel: Math.min(100, Math.round(val)) }),
       getEnergyPercent: () => get().twinEnergy,
@@ -49,11 +52,21 @@ export const useRelationshipStore = create<RelationshipState>()(
       getWeeklyReport: async (userId) => {
         try { await apiGet(`/api/reports/weekly?user_id=${userId}`); } catch (e) {}
       },
+
+      // ✅ استقبال تحديثات العلاقة من الـ Backend
+      updateFromUnifiedResponse: (data: any) => {
+        if (!data) return;
+        set((state) => ({
+          bondLevel: data.bond_level ?? data.bondLevel ?? state.bondLevel,
+          journeyPhase: data.stage ?? data.journeyPhase ?? state.journeyPhase,
+        }));
+      },
+
       reset: () => set({ ...initialState }),
     }),
     {
-      name: 'mytwin-relationship-v1',
-      version: 1,
+      name: 'mytwin-relationship-v2',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         bondLevel: state.bondLevel,

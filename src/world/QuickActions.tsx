@@ -5,6 +5,7 @@ import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { stateBus } from '../core/StateBus';
 import { useRTL } from '../../lib/useRTL';
 import { useAppTheme } from '../../engine/colors';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { BookOpen, Briefcase, Moon, Sparkles, ArrowRight } from 'lucide-react-native';
 
@@ -18,6 +19,7 @@ interface QuickAction {
 }
 
 export default function QuickActions() {
+  const { colors } = useAppTheme();
   const rtl = useRTL();
   const { colors } = useAppTheme();
   const [actions, setActions] = useState<QuickAction[]>([]);

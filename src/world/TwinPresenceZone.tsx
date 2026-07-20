@@ -1,4 +1,4 @@
-خimport React from 'react';
+import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { usePresence } from '../hooks/usePresence';
 import { useBreathAnimation } from '../hooks/useBreathAnimation';

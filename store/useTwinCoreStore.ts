@@ -27,6 +27,7 @@ export interface TwinCore {
   voicePersonality: VoicePersonality;
   voiceSpeed: number;
   voicePitch: number;
+  personalityDNA: Record<string, number>;
 
   setAuth: (userId: string) => void;
   setTier: (tier: Tier) => void;
@@ -43,6 +44,7 @@ export interface TwinCore {
   setTwinStyle: (style: TwinStyle) => void;
   setReplyStyle: (style: ReplyStyle) => void;
   setTwinTraits: (traits: string[]) => void;
+  setPersonalityDNA: (dna: Record<string, number>) => void;
   reset: () => void;
 }
 
@@ -54,7 +56,7 @@ const initialState = {
   twinTraits: [] as string[],
   replyStyle: 'medium' as ReplyStyle,
   tier: 'free' as Tier,
-  theme: 'light' as Theme,
+  theme: 'dark' as Theme,
   themeManuallySet: false,
   lang: 'ar' as Lang,
   calmMode: false,
@@ -62,6 +64,16 @@ const initialState = {
   voicePersonality: 'friend' as VoicePersonality,
   voiceSpeed: 1.0,
   voicePitch: 1.0,
+  personalityDNA: {
+    empathy: 0.85,
+    curiosity: 0.80,
+    humor: 0.50,
+    initiative: 0.60,
+    reflection: 0.90,
+    logic: 0.75,
+    creativity: 0.80,
+    calmness: 0.85,
+  },
 };
 
 export const useTwinCoreStore = create<TwinCore>()(
@@ -96,6 +108,7 @@ export const useTwinCoreStore = create<TwinCore>()(
       setTwinStyle: (style) => set({ twinStyle: style }),
       setReplyStyle: (style) => set({ replyStyle: style }),
       setTwinTraits: (traits) => set({ twinTraits: traits }),
+      setPersonalityDNA: (dna) => set((s) => ({ personalityDNA: { ...s.personalityDNA, ...dna } })),
       reset: () => set({ ...initialState }),
     }),
     {

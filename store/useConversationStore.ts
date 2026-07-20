@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { apiPost } from '../lib/httpClient';
 import { useCreditsStore } from './useCreditsStore';
 import { useTwinCoreStore } from './useTwinCoreStore';
+import { unifiedBrainBridge } from '../src/core/UnifiedBrainBridge';
 
 export interface ChatMessage {
   id: string;
@@ -79,19 +79,22 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     state.addMessage({ id: twinMsgId, role: 'twin', content: '', thinkingStage: 'thinking' });
 
     try {
-      const response = await apiPost('/api/chat', {
-        message,
-        history: state.chatHistory.slice(-10).map((m) => ({ role: m.role, content: m.content })),
-        lang: core.lang,
+      // ✅ استخدام Unified Brain Bridge بدلاً من apiPost('/api/chat')
+      const response = await unifiedBrainBridge.process(message, {
+        typingSpeed: 0,
+        messageLength: message.length,
+        absenceDurationMinutes: 0,
+        timeOfDay: 'morning',
+        userState: 'normal',
       });
 
       set((s) => ({
         chatHistory: s.chatHistory.map((m) =>
-          m.id === twinMsgId ? { ...m, content: response.reply, provider: response.provider || 'orchestrator', thinkingStage: 'complete' } : m
+          m.id === twinMsgId ? { ...m, content: response.reply, provider: 'unified_brain', thinkingStage: 'complete' } : m
         ),
         isThinking: false,
         thinkingStage: 'complete',
-        suggestedCapability: response.suggested_capability || null,
+        suggestedCapability: response.behavior ? { type: response.behavior.intent, route: '', label_ar: '', label_en: '' } : null,
       }));
       return { success: true };
     } catch (error) {

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { unifiedBrainBridge } from '../../core/UnifiedBrainBridge';
 import { useTwinStore } from '../../../store/useTwinStore';
 import { useAppTheme } from '../../../engine/colors';
 import { useRTL } from '../../../lib/useRTL';
@@ -40,7 +39,7 @@ export default function HelpWing() {
   const rtl = useRTL();
   const { colors } = useAppTheme();
   const t = CONTENT[rtl.isRTL ? 'ar' : 'en'];
-  const { reset } = useTwinStore();
+  const { reset: resetStore } = useTwinStore();
 
   const handleReset = () => {
     Alert.alert(
@@ -48,11 +47,9 @@ export default function HelpWing() {
       t.resetMsg,
       [
         { text: rtl.isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
-        { text: rtl.isRTL ? 'إعادة ضبط' : 'Reset', style: 'destructive', onPress: async () => {
-          try {
-            await unifiedBrainBridge.resetAllData();
-          } catch (e) {}
-          reset();
+        { text: rtl.isRTL ? 'إعادة ضبط' : 'Reset', style: 'destructive', onPress: () => {
+          // ✅ بدلاً من memoryEngine، نستخدم إعادة التعيين الكامل من المتجر
+          resetStore();
         }},
       ]
     );
@@ -62,7 +59,6 @@ export default function HelpWing() {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
 
-      {/* FAQ */}
       {t.faq.map((item, i) => (
         <View key={i} style={[styles.faqCard, { backgroundColor: colors.card }]}>
           <View style={styles.faqHeader}>
@@ -73,7 +69,6 @@ export default function HelpWing() {
         </View>
       ))}
 
-      {/* Actions */}
       <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <RefreshCw size={18} stroke={colors.accent} />
         <Text style={[styles.actionText, { color: colors.accent }]}>{t.sync}</Text>

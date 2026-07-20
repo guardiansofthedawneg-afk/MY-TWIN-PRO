@@ -5,6 +5,7 @@ import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { stateBus } from '../core/StateBus';
 import { useRTL } from '../../lib/useRTL';
 import { useAppTheme } from '../../engine/colors';
+import { useAppTheme } from '../../engine/colors';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 import { Clock, MessageCircle, Heart, Target } from 'lucide-react-native';
 
@@ -18,6 +19,7 @@ interface TimelineEntry {
 }
 
 export default function DailyTimeline() {
+  const { colors } = useAppTheme();
   const rtl = useRTL();
   const { colors } = useAppTheme();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);

@@ -38,57 +38,49 @@ export default function ForestWing() {
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, core: 0, life: 0 });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadForest = async () => {
+    const load = async () => {
       try {
-        const totalCount = await unifiedBrainBridge.getMemoryCount();
+        const total = await unifiedBrainBridge.getMemoryCount();
         const coreMemories = await unifiedBrainBridge.getCoreMemories(30);
-        
-        const mapped: MemoryEntry[] = coreMemories.map(m => {
-          const importance = m.importance || 50;
+        const mapped: MemoryEntry[] = coreMemories.map((m: any) => {
+          const imp = m.importance || 50;
           let age: MemoryEntry['age'] = 'recent';
-          if (importance >= 90) age = 'legacy';
-          else if (importance >= 80) age = 'core';
-          else if (importance >= 50) age = 'stable';
-          
+          if (imp >= 90) age = 'legacy';
+          else if (imp >= 80) age = 'core';
+          else if (imp >= 50) age = 'stable';
           let type = 'general';
           const content = (m.expressed_text || m.content || '').toLowerCase();
           if (content.includes('درس') || content.includes('ذاكر')) type = 'study';
           else if (m.real_emotion === 'joy' || m.real_emotion === 'love') type = 'emotion';
           else if (content.includes('حلم') || content.includes('dream')) type = 'dream';
-          else if (importance >= 80) type = 'achievement';
-
+          else if (imp >= 80) type = 'achievement';
           return {
             id: m.id,
             type,
             content: m.expressed_text || m.content || '',
             age,
-            importance,
+            importance: imp,
             confidence: m.confidence || 0.7,
             created_at: m.created_at || m.timestamp || new Date().toISOString(),
           };
         });
-
         setMemories(mapped);
         setStats({
-          total: totalCount,
+          total,
           core: mapped.filter(m => m.importance >= 80).length,
           life: mapped.filter(m => m.importance >= 90).length,
         });
       } catch (e) {
         setStats({ total: 0, core: 0, life: 0 });
-      } finally {
-        setLoading(false);
       }
     };
-    loadForest();
+    load();
   }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Stats */}
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: colors.accent + '20' }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{stats.total}</Text>
@@ -104,7 +96,6 @@ export default function ForestWing() {
         </View>
       </View>
 
-      {/* Forest Grid */}
       <ScrollView contentContainerStyle={styles.forestGrid}>
         {memories.length > 0 ? (
           memories.map(memory => {

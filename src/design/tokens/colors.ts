@@ -1,38 +1,61 @@
 /**
- * Design Tokens Colors v2.0 — متوافق مع engine/colors.ts
- * ========================================================
- * نفس ألوان engine/colors.ts لضمان التوافق.
- * يُفضل استخدام useAppTheme() من engine/colors مباشرة.
+ * COLOR TOKENS v2.0 — مرجع الألوان الموحد
+ * ==========================================
+ * يصدر كل الألوان من engine/colors.ts + engine/living-theme.ts
+ * في واجهة واحدة. لا يعيد تعريف أي لون — فقط يجمعه.
+ *
+ * التكامل:
+ *   - engine/colors.ts — الألوان الأساسية
+ *   - engine/living-theme.ts — ألوان حية مرتبطة بحالة التوأم
  */
-import { useAppTheme as useEngineTheme } from '../../engine/colors';
-import type { ThemeColors } from '../../engine/colors';
 
-// إعادة تصدير النوع
-export type { ThemeColors };
+// ── إعادة تصدير الألوان الأساسية ──────────────────────
+export {
+  DARK_THEME,
+  LIGHT_THEME,
+  FONTS,
+  SPACING,
+  useColors,
+  useAppTheme,
+} from '../../../engine/colors';
+export type { ThemeColors } from '../../../engine/colors';
 
-// إعادة تصدير useAppTheme من engine/colors (مصدر واحد للحقيقة)
-export const useTheme = useEngineTheme;
+// ── ألوان حية مرتبطة بحالة التوأم ──────────────────
+export { useLivingTheme } from '../../../engine/living-theme';
+export type {
+  LivingTheme,
+  MotionConfig,
+  GlassConfig,
+  GlowConfig,
+  LivingColors,
+} from '../../../engine/living-theme';
 
-// دوال مساعدة للتوافق مع الملفات القديمة
-export function getBondColor(bondLevel: number, colors: ThemeColors): string {
-  if (bondLevel >= 70) return colors.rose;
-  if (bondLevel >= 40) return colors.accent;
-  return colors.primary;
+// ── دوال مساعدة للألوان (تعتمد على engine/colors) ──
+import type { ThemeColors } from '../../../engine/colors';
+import { useAppTheme } from '../../../engine/colors';
+
+export function getBondColor(bondLevel: number, colors?: ThemeColors): string {
+  const c = colors || useAppTheme().colors;
+  if (bondLevel >= 70) return c.rose;
+  if (bondLevel >= 40) return c.accent;
+  return c.primary;
 }
 
-export function getEnergyColor(energy: number, colors: ThemeColors): string {
-  if (energy >= 70) return colors.success;
-  if (energy >= 30) return colors.gold;
-  return colors.danger;
+export function getEnergyColor(energy: number, colors?: ThemeColors): string {
+  const c = colors || useAppTheme().colors;
+  if (energy >= 70) return c.success;
+  if (energy >= 30) return c.gold;
+  return c.danger;
 }
 
-export function getEmotionColor(emotion: string, colors: ThemeColors): string {
+export function getEmotionColor(emotion: string, colors?: ThemeColors): string {
+  const c = colors || useAppTheme().colors;
   const map: Record<string, string> = {
-    joy: colors.gold,
-    sadness: colors.accent,
-    fear: colors.accent,
-    love: colors.rose,
-    anger: colors.danger,
+    joy: c.gold,
+    sadness: '#3B82F6',
+    fear: c.accent,
+    love: c.rose,
+    anger: c.danger,
   };
-  return map[emotion] || colors.textSecondary;
+  return map[emotion] || c.textSecondary;
 }

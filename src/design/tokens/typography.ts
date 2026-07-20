@@ -1,14 +1,3 @@
-/**
- * TYPOGRAPHY TOKENS v1.0 — مرجع الخطوط الموحد
- * ===============================================
- * يعيد تصدير FONTS من engine/colors.ts
- * ويضيف typography tokens مسماة.
- *
- * الاستخدام:
- *   import { TYPO } from 'src/design/tokens/typography';
- *   <Text style={TYPO.title} />
- */
-
 import { FONTS } from '../../../engine/colors';
 import { TextStyle } from 'react-native';
 
@@ -62,4 +51,4 @@ export const TYPO: Record<string, TextStyle> = {
     fontWeight: '400',
     lineHeight: 24,
   },
-} as const;
+};

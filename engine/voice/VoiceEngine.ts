@@ -1,11 +1,10 @@
 /**
- * VOICE ENGINE v3.0 – محرك الصوت المتكامل (TTS + STT)
+ * VOICE ENGINE v3.1 — محرك الصوت المتكامل (TTS + STT)
  * ========================================================
  * يدير: التحدث، الاستماع، المقاطعات، طابور الصوت، شخصية الصوت.
  */
 import { stateBus, STATE_EVENTS } from '../../src/core/StateBus';
 import { useTwinState, Emotion } from '../core/TwinState';
-import { relationshipEngine } from '../relationship/RelationshipEngine';
 
 type VoicePersonality = 'friend' | 'mentor' | 'romantic' | 'energetic' | 'calm' | 'genz';
 
@@ -31,12 +30,20 @@ export class VoiceEngine {
   }
 
   adaptToRelationship(): void {
+    const bondLevel = stateBus.getState().relationship.bondLevel;
+    let phase = 'friend';
+    if (bondLevel >= 95) phase = 'soulmate';
+    else if (bondLevel >= 80) phase = 'close_friend';
+    else if (bondLevel >= 40) phase = 'friend';
+    else if (bondLevel >= 20) phase = 'acquaintance';
+    else phase = 'stranger';
+
     const map: Record<string, Partial<VoiceConfig>> = {
       stranger: { rate: 0.9, volume: 0.7 }, acquaintance: { rate: 0.95, volume: 0.75 },
       friend: { rate: 1.0, volume: 0.8 }, close_friend: { rate: 1.05, volume: 0.85 },
       soulmate: { rate: 1.1, volume: 0.9 },
     };
-    this.config = { ...this.config, ...(map[relationshipEngine.getPhase()] || map.friend) };
+    this.config = { ...this.config, ...(map[phase] || map.friend) };
   }
 
   async speak(text: string, priority: number = 5): Promise<void> {
@@ -59,7 +66,6 @@ export class VoiceEngine {
     await this.processQueue();
   }
 
-  // ── STT (Speech to Text) ──────────────────────────────
   async startListening(): Promise<void> {
     this.isListening = true;
     useTwinState.getState().setIsListening(true);
@@ -70,11 +76,10 @@ export class VoiceEngine {
     this.isListening = false;
     useTwinState.getState().setIsListening(false);
     stateBus.emit('voice:listening_stopped', {});
-    return ''; // النص الفعلي يأتي من expo-speech في الواجهة الأمامية
+    return '';
   }
 
   async transcribe(audioBase64: string): Promise<string> {
-    // محاولة استخدام HuggingFace Whisper
     try {
       const HF_KEY = process.env.HUGGINGFACE_API_KEY;
       if (HF_KEY) {

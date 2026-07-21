@@ -1,44 +1,84 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing } from 'react-native-reanimated';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { stateBus } from '../../../src/core/StateBus';
 
 export default function SilencePresence() {
   const [isSilent, setIsSilent] = useState(false);
-  const driftX = useSharedValue(0);
-  const driftY = useSharedValue(0);
-  const opacity = useSharedValue(0);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const unsub = stateBus.on('SILENCE_START', () => {
       setIsSilent(true);
-      opacity.value = withTiming(0.6, { duration: 500 });
-      driftX.value = withRepeat(withTiming(15, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
-      driftY.value = withRepeat(withTiming(10, { duration: 4000, easing: Easing.inOut(Easing.sin) }), -1, true);
+      Animated.timing(opacity, {
+        toValue: 0.6,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateX, {
+            toValue: 15,
+            duration: 3000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateX, {
+            toValue: -15,
+            duration: 3000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateY, {
+            toValue: 10,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: -10,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     });
 
     const unsub2 = stateBus.on('SILENCE_END', () => {
       setIsSilent(false);
-      opacity.value = withTiming(0, { duration: 300 });
-      driftX.value = withTiming(0, { duration: 300 });
-      driftY.value = withTiming(0, { duration: 300 });
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(translateX, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
     });
 
     return () => { unsub(); unsub2(); };
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [
-      { translateX: driftX.value },
-      { translateY: driftY.value },
-    ],
-  }));
-
   if (!isSilent) return null;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          opacity: opacity,
+          transform: [
+            { translateX: translateX },
+            { translateY: translateY },
+          ],
+        },
+      ]}
+    >
       <View style={styles.dot} />
     </Animated.View>
   );

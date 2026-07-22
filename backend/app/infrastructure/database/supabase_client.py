@@ -85,3 +85,17 @@ async def get_profile(user_id: str) -> Dict[str, Any]:
         return {}
 
 logger.info("✅ Supabase Client v2.0 initialized")
+
+# ✅ Service Role Client (يتجاوز RLS)
+_service_role_client = None
+
+def get_service_role_db():
+    global _service_role_client
+    if _service_role_client is None:
+        from supabase import create_client
+        import os
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        if url and key:
+            _service_role_client = create_client(url, key)
+    return _service_role_client

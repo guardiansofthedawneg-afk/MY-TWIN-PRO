@@ -1,42 +1,37 @@
-/**
- * PERCEPTION ENGINE v1.0 — حواس الكيان الرقمي
- * ==============================================
- * يحلل سلوك المستخدم ويستنتج حالته:
- * - سرعة الكتابة (بطيء = متردد، سريع = متحمس)
- * - طول الرسائل (طويلة = منفتح، قصيرة = متحفظ)
- * - وقت الغياب (طويل = مشغول، قصير = عادي)
- * - وقت اليوم (ليل = متعب، صباح = نشيط)
- */
 import { stateBus } from '../../src/core/StateBus';
 import { EventBus } from '../../src/core/EventBus';
 
-interface UserBehaviorSnapshot {
-  typingSpeed: number;
+export interface PerceptionResult {
+  eventType: 'message' | 'silence' | 'return' | 'greeting' | 'goodbye' | 'idle' | 'typing' | 'stop_typing';
+  userState: 'hesitant' | 'excited' | 'tired' | 'focused' | 'distant' | 'normal';
   messageLength: number;
-  lastActiveTimestamp: number;
+  typingSpeed: number;
   absenceDuration: number;
   timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
-}
-
-export interface PerceptionResult {
-  userState: 'hesitant' | 'excited' | 'tired' | 'focused' | 'distant' | 'normal';
   confidence: number;
   valence: 'positive' | 'negative' | 'neutral' | 'mixed';
-  suggestion?: string;
+  rawMessage: string;
 }
 
 export class PerceptionEngine {
-  private lastMessageTimestamp: number = Date.now();
+  private lastInteractionTimestamp: number = Date.now();
   private typingStartTime: number = 0;
   private typingCharCount: number = 0;
+  private isUserPresent: boolean = false;
 
   registerTypingStart(): void {
     this.typingStartTime = Date.now();
     this.typingCharCount = 0;
+    this.isUserPresent = true;
+    EventBus.emit('USER_START_TYPING', {});
   }
 
   registerKeystroke(charCount: number): void {
     this.typingCharCount = charCount;
+  }
+
+  registerStopTyping(): void {
+    EventBus.emit('USER_STOP_TYPING', {});
   }
 
   analyze(message: string): PerceptionResult {
@@ -44,59 +39,62 @@ export class PerceptionEngine {
     const typingDuration = (now - this.typingStartTime) / 1000;
     const typingSpeed = typingDuration > 0 ? this.typingCharCount / typingDuration : 0;
     const messageLength = message.length;
-    const absenceDuration = (now - this.lastMessageTimestamp) / 60000;
+    const absenceDuration = (now - this.lastInteractionTimestamp) / 60000;
     const hour = new Date().getHours();
 
-    let timeOfDay: UserBehaviorSnapshot['timeOfDay'] = 'morning';
+    let timeOfDay: PerceptionResult['timeOfDay'] = 'morning';
     if (hour >= 12 && hour < 18) timeOfDay = 'afternoon';
     else if (hour >= 18 && hour < 22) timeOfDay = 'evening';
     else if (hour >= 22 || hour < 5) timeOfDay = 'night';
 
-    this.lastMessageTimestamp = now;
-
+    let eventType: PerceptionResult['eventType'] = 'message';
     let userState: PerceptionResult['userState'] = 'normal';
     let confidence = 0.5;
-    let suggestion: string | undefined;
     let valence: PerceptionResult['valence'] = 'neutral';
 
-    if (typingSpeed < 2 && messageLength < 20) {
+    if (absenceDuration > 10080) {
+      eventType = 'return';
+      userState = 'distant';
+      confidence = 0.85;
+      valence = 'mixed';
+    } else if (message.length === 0 && typingDuration > 0) {
+      eventType = 'typing';
+      userState = 'focused';
+      confidence = 0.6;
+    } else if (typingSpeed < 2 && messageLength < 20) {
       userState = 'hesitant';
       confidence = 0.7;
-      suggestion = 'gentle_encouragement';
       valence = 'negative';
     } else if (typingSpeed > 8 && messageLength > 100) {
       userState = 'excited';
       confidence = 0.8;
-      suggestion = 'match_energy';
       valence = 'positive';
     } else if (timeOfDay === 'night' && absenceDuration > 120) {
       userState = 'tired';
       confidence = 0.75;
-      suggestion = 'calm_presence';
       valence = 'negative';
-    } else if (absenceDuration > 10080) {
-      userState = 'distant';
-      confidence = 0.85;
-      suggestion = 'warm_reconnect';
-      valence = 'mixed';
-    } else if (typingSpeed > 5 && messageLength > 50) {
+    } else if (messageLength > 50 && typingSpeed > 5) {
       userState = 'focused';
       confidence = 0.7;
-      suggestion = 'precise_response';
       valence = 'neutral';
     }
 
-    const result: PerceptionResult = { userState, confidence, valence, suggestion };
+    this.lastInteractionTimestamp = now;
 
+    const result: PerceptionResult = {
+      eventType, userState, messageLength, typingSpeed,
+      absenceDuration, timeOfDay, confidence, valence,
+      rawMessage: message,
+    };
+
+    stateBus.emit('perception:analyzed', result);
     EventBus.emit('PERCEPTION_ANALYZED', result);
-    stateBus.emit('perception:user_state', result);
 
     return result;
   }
 
-  getLastActiveTimestamp(): number {
-    return this.lastMessageTimestamp;
-  }
+  getLastInteractionTime(): number { return this.lastInteractionTimestamp; }
+  getUserPresence(): boolean { return this.isUserPresent; }
 }
 
 export const perceptionEngine = new PerceptionEngine();

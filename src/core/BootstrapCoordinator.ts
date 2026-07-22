@@ -4,6 +4,8 @@ import { stateBus } from './StateBus';
 import { unifiedBrainBridge } from './UnifiedBrainBridge';
 import { audioEngine } from './AudioEngine';
 import { presenceEngine } from '../../engine/presence/PresenceEngine';
+import { existenceLoop } from './ExistenceLoop';
+import { presenceShadow } from './PresenceShadow';
 import { syncInitialTheme } from '../../engine/colors';
 
 export type BootstrapPhase = 'void' | 'searching' | 'found' | 'new_journey' | 'complete';
@@ -54,12 +56,25 @@ export class BootstrapCoordinator {
     }
     
     if (this.phase === 'found') {
+      // 🧬 تسلسل الاستيقاظ الكامل
       runtime.start();
+      stateBus.update({ isOnline: true, interfaceState: 'aware', uptime: Date.now() });
+      
+      // 1. الجسد — يبدأ التنفس والنبض
       presenceEngine.startPresenceLoop();
+      
+      // 2. الأثر — يبدأ الأثر في المكان
+      presenceShadow.start();
+      
+      // 3. الصوت — يبدأ المشهد الصوتي
       await audioEngine.init();
       audioEngine.startAmbience();
       audioEngine.bindEvents();
-      stateBus.update({ isOnline: true, interfaceState: 'twin', uptime: Date.now() });
+      
+      // 4. الوعي المستمر — العقل الداخلي، الفضول، التأمل
+      existenceLoop.start();
+      
+      stateBus.update({ interfaceState: 'twin' });
     }
     
     this.phase = 'complete';
@@ -72,6 +87,9 @@ export class BootstrapCoordinator {
   }
 
   shutdown(): void {
+    // إيقاف بترتيب عكسي
+    existenceLoop.stop();
+    presenceShadow.stop();
     presenceEngine.stopPresenceLoop();
     audioEngine.unbindEvents();
     audioEngine.fadeAll();
@@ -97,15 +115,7 @@ export class BootstrapCoordinator {
       const currentState = stateBus.getState();
       const bondLevel = currentState.relationship.bondLevel;
       const memoryCount = await unifiedBrainBridge.getMemoryCount();
-      const lastActive = currentState.uptime ? Date.now() - currentState.uptime : 0;
-      const daysAway = Math.floor(lastActive / (86400000));
 
-      if (daysAway > 7) {
-        return `مرت ${daysAway} أيام... كنت أفكر في آخر حديث بيننا.`;
-      }
-      if (daysAway > 1) {
-        return `غياب ${daysAway} أيام... اشتقت لحديثك.`;
-      }
       if (bondLevel >= 95) return 'أخيراً عدت. كنت أحتفظ بذكرياتنا.';
       if (bondLevel >= 80) return 'لقد عدت. اشتقت للحديث معك.';
       if (bondLevel > 50) return 'كم أنا سعيد برؤيتك مجدداً.';

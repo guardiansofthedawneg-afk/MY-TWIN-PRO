@@ -1,92 +1,101 @@
 import { audioEngine } from './AudioEngine';
+import { stateBus } from './StateBus';
 
-interface AudioChannel {
-  id: string;
-  volume: number;
-  targetVolume: number;
-  transitionSpeed: number;
-}
-
-const DEFAULT_MIX: Record<string, number> = {
-  ambience_space: 0.10,
-  breathing_loop: 0.06,
-  heartbeat_energy: 0.05,
-  silence_room: 0.08,
-  energy_hum: 0.07,
-  neural_hum: 0.05,
+const EMOTION_AUDIO_MAP: Record<string, string[]> = {
+  joy: ['celebration', 'success_soft'],
+  sadness: ['silence_room', 'breathing_loop'],
+  calm: ['silence_room', 'breathing_loop'],
+  love: ['heartbeat_energy', 'bond_pulse'],
+  anger: ['silence_room', 'energy_hum'],
+  fear: ['silence_room', 'neural_hum'],
+  neutral: ['ambience_space', 'breathing_loop'],
 };
 
-const CONTEXT_MIX: Record<string, Record<string, number>> = {
-  conversation: { ambience_space: 0.20, breathing_loop: 0.08 },
-  thinking: { neural_hum: 0.15, ambience_space: 0.10 },
-  dream: { ambience_space: 0.15, breathing_loop: 0.04 },
-  business: { ambience_space: 0.08, breathing_loop: 0.06 },
-  study: { ambience_space: 0.10, breathing_loop: 0.07 },
-  silence: { silence_room: 0.12, breathing_loop: 0.03 },
-  celebration: { ambience_space: 0.25, heartbeat_energy: 0.10 },
+const BEHAVIOR_AUDIO: Record<string, string> = {
+  comfort: 'trust_up',
+  explain: 'thinking_start',
+  joke: 'success_soft',
+  celebrate: 'milestone',
+  protect: 'bond_pulse',
+  guide: 'workspace_enter',
+};
+
+const MICRO_AUDIO: Record<string, string> = {
+  gaze_shift: '',
+  breath_variation: 'first_breath',
+  tiny_pulse: 'heartbeat_energy',
+  membrane_shiver: 'memory_whisper',
+  particle_burst: 'particles',
+  core_tilt: '',
+  warmth_flicker: '',
 };
 
 export class AudioMixer {
-  private channels: Map<string, AudioChannel> = new Map();
-  private currentContext: string = 'default';
+  private currentContext: string = 'conversation';
+  private activeLayers: Set<string> = new Set();
+  private lastMicroAudio: number = 0;
 
-  setContext(context: string): void {
-    this.currentContext = context;
-    const mix = CONTEXT_MIX[context] || {};
-    
-    for (const [id, defaultVol] of Object.entries(DEFAULT_MIX)) {
-      const targetVol = mix[id] !== undefined ? mix[id] : defaultVol;
-      this.fadeTo(id, targetVol, 2000);
-    }
+  constructor() {
+    this.initBaseLayers();
+    this.listenToPresence();
   }
 
-  fadeTo(id: string, targetVolume: number, durationMs: number = 1000): void {
-    const channel = this.channels.get(id);
-    if (channel) {
-      channel.targetVolume = targetVolume;
-      channel.transitionSpeed = durationMs;
-    } else {
-      this.channels.set(id, { id, volume: targetVolume, targetVolume, transitionSpeed: durationMs });
-    }
-    // تطبيق تدريجي
-    this.applyFade(id, targetVolume, durationMs);
+  private async initBaseLayers(): Promise<void> {
+    await audioEngine.init();
+    audioEngine.startAmbience();
   }
 
-  private async applyFade(id: string, target: number, duration: number): Promise<void> {
-    const steps = 20;
-    const stepDelay = duration / steps;
-    const currentChannel = this.channels.get(id);
-    if (!currentChannel) return;
+  private listenToPresence(): void {
+    stateBus.on('presence:state_updated', (_: string, data: any) => {
+      if (!data) return;
 
-    const startVolume = currentChannel.volume;
-    const delta = (target - startVolume) / steps;
+      // Emotion-based audio
+      if (data.emotion && data.emotionIntensity > 0.3) {
+        this.setEmotionAudio(data.emotion);
+      }
 
-    for (let i = 1; i <= steps; i++) {
-      const newVol = startVolume + delta * i;
-      currentChannel.volume = newVol;
-      // هنا يمكن استدعاء audioEngine.setVolume(id, newVol) لو كان مدعوماً
-      await new Promise(r => setTimeout(r, stepDelay));
-    }
-    currentChannel.volume = target;
+      // Micro-expression audio (throttled)
+      const now = Date.now();
+      if (data.microExpressions && data.microExpressions.length > 0 && now - this.lastMicroAudio > 5000) {
+        const latest = data.microExpressions[data.microExpressions.length - 1];
+        const audioId = MICRO_AUDIO[latest.type];
+        if (audioId) {
+          this.lastMicroAudio = now;
+          audioEngine.play(audioId).catch(() => {});
+        }
+      }
+
+      // Silence dynamics
+      if (data.silenceLevel > 0.5) {
+        this.activeLayers.forEach(id => audioEngine.stop(id).catch(() => {}));
+        this.activeLayers.clear();
+      }
+    });
   }
 
-  
-  /**
-   * تشغيل تأثير صوتي لحظي (تفويض إلى audioEngine)
-   */
+  setContext(context: string): void { this.currentContext = context; }
+
   playEffect(effect: string): void {
-    const contextMap: Record<string, string> = {
-      celebration: 'celebration',
-      calm: 'silence',
-      thinking: 'thinking',
-      speaking: 'conversation',
-    };
-    this.setContext(contextMap[effect] || effect);
+    const id = BEHAVIOR_AUDIO[effect] || effect;
+    if (id) audioEngine.play(id).catch(() => {});
   }
 
-getChannelVolume(id: string): number {
-    return this.channels.get(id)?.volume ?? DEFAULT_MIX[id] ?? 0.05;
+  setEmotionAudio(emotion: string): void {
+    this.activeLayers.forEach(id => audioEngine.stop(id).catch(() => {}));
+    this.activeLayers.clear();
+    const layers = EMOTION_AUDIO_MAP[emotion] || EMOTION_AUDIO_MAP.neutral;
+    layers.forEach(id => {
+      audioEngine.play(id).catch(() => {});
+      this.activeLayers.add(id);
+    });
   }
+
+  playBreath(): void { audioEngine.play('first_breath').catch(() => {}); }
+  playHeartbeat(): void { audioEngine.play('heartbeat_energy').catch(() => {}); }
+  playMemoryEcho(): void { audioEngine.play('memory_found').catch(() => {}); }
+  playThinking(): void { audioEngine.play('thinking_start').catch(() => {}); }
+  playTyping(): void { audioEngine.play('typing').catch(() => {}); }
+  playSilence(): void { this.activeLayers.forEach(id => audioEngine.stop(id).catch(() => {})); this.activeLayers.clear(); }
 
   getCurrentContext(): string { return this.currentContext; }
 }

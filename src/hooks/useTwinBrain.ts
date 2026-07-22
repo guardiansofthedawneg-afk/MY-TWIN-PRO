@@ -1,5 +1,17 @@
 import { useState, useCallback, useRef } from 'react';
 import { unifiedBrainBridge, UnifiedResponse, PerceptionData } from '../core/UnifiedBrainBridge';
+import { perceptionEngine } from '../../engine/perception/PerceptionEngine';
+import { contextEngine } from '../../engine/context/ContextEngine';
+import { memoryContextEngine } from '../../engine/memory/MemoryContextEngine';
+import { relationshipContextEngine } from '../../engine/relationship/RelationshipContextEngine';
+import { identityEngine } from '../../engine/identity/IdentityEngine';
+import { goalEngine } from '../../engine/goal/GoalEngine';
+import { decisionEngine } from '../../engine/decision/DecisionEngine';
+import { livingBehaviorEngine } from '../../engine/behavior/LivingBehaviorEngine';
+import { presenceEngine } from '../../engine/presence/PresenceEngine';
+import { worldAwarenessEngine } from '../../engine/consciousness/WorldAwarenessEngine';
+import { lifeStateEngine } from '../../engine/life/LifeStateEngine';
+import { stateBus } from '../core/StateBus';
 import { EventBus } from '../core/EventBus';
 
 export interface ThinkingPhase {
@@ -28,11 +40,16 @@ interface UseTwinBrainReturn {
 }
 
 const PHASE_LABELS: Record<string, { ar: string; en: string }> = {
-  observe:     { ar: 'يراقب...',    en: 'Observing...' },
-  understand:  { ar: 'يفهم...',     en: 'Understanding...' },
-  recall:      { ar: 'يتذكر...',    en: 'Remembering...' },
-  reason:      { ar: 'يفكر...',     en: 'Reasoning...' },
-  respond:     { ar: 'يستجيب...',   en: 'Responding...' },
+  observe:     { ar: 'ألاحظ...',       en: 'Observing...' },
+  perceive:    { ar: 'أدرك ما حدث...',  en: 'Perceiving...' },
+  context:     { ar: 'أفهم السياق...',  en: 'Understanding context...' },
+  remember:    { ar: 'أتذكر...',        en: 'Remembering...' },
+  relate:      { ar: 'أفهم علاقتنا...', en: 'Understanding our bond...' },
+  identity:    { ar: 'أعرف من أنا...',  en: 'Knowing who I am...' },
+  goal:        { ar: 'أحدد هدفي...',    en: 'Setting my goal...' },
+  decide:      { ar: 'أتخذ قراري...',   en: 'Making my decision...' },
+  behave:      { ar: 'أخطط لسلوكي...',  en: 'Planning my behavior...' },
+  respond:     { ar: 'أستجيب...',       en: 'Responding...' },
 };
 
 export function useTwinBrain(initialUserId: string = '', initialLang: string = 'ar'): UseTwinBrainReturn {
@@ -53,54 +70,127 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
 
   const send = useCallback(async (message: string): Promise<BrainResponse> => {
     setIsThinking(true);
-    emitPhase('observe', 0, initialLang);
+    const lang = initialLang;
+
+    // 1. الإدراك — "ماذا حدث؟"
+    emitPhase('perceive', 0.05, lang);
+    const perception = perceptionEngine.analyze(message);
+    worldAwarenessEngine.recordInteraction();
+    await new Promise(r => setTimeout(r, 150));
+
+    // 2. السياق — "ما الذي أعرفه عن هذا الحدث؟"
+    emitPhase('context', 0.15, lang);
+    const context = contextEngine.build(perception);
+    await new Promise(r => setTimeout(r, 150));
+
+    // 3. الذاكرة — "هل مررت بهذا من قبل؟"
+    emitPhase('remember', 0.25, lang);
+    const memoryCtx = await memoryContextEngine.build(message);
+    if (memoryCtx.hasRelatedContext) {
+      presenceEngine.triggerMemoryEcho(memoryCtx.dominantPastEmotion);
+    }
+    await new Promise(r => setTimeout(r, 200));
+
+    // 4. العلاقة — "من هذا الشخص بالنسبة لي؟"
+    emitPhase('relate', 0.40, lang);
+    const relationship = relationshipContextEngine.evaluate();
+    const bondLevel = stateBus.getState().relationship?.bondLevel || 0;
+    await new Promise(r => setTimeout(r, 150));
+
+    // 5. الهوية — "من أنا الآن بالنسبة له؟"
+    emitPhase('identity', 0.50, lang);
+    const identity = identityEngine.evaluate(bondLevel, 0, memoryCtx.memoryCount);
+    await new Promise(r => setTimeout(r, 150));
+
+    // 6. الهدف — "ماذا أريد أن أحقق؟"
+    emitPhase('goal', 0.60, lang);
+    const currentEmotion = perception.valence === 'negative' ? 'sadness' : perception.valence === 'positive' ? 'joy' : 'neutral';
+    const goal = goalEngine.determineGoal(
+      perception.userState,
+      currentEmotion,
+      bondLevel,
+      relationship.phase,
+      perception.timeOfDay,
+      memoryCtx.recentMemories,
+    );
+    await new Promise(r => setTimeout(r, 150));
+
+    // 7. القرار — "ماذا سأفعل؟"
+    emitPhase('decide', 0.70, lang);
+    const decision = decisionEngine.decide(
+      goal.primaryGoal,
+      identity.role,
+      bondLevel,
+      currentEmotion,
+      perception.valence === 'negative' ? 0.7 : perception.valence === 'positive' ? 0.6 : 0.4,
+      perception.userState,
+      perception.timeOfDay,
+    );
+    await new Promise(r => setTimeout(r, 150));
+
+    // 8. السلوك — "كيف سأفعل؟"
+    emitPhase('behave', 0.80, lang);
+    const behavior = livingBehaviorEngine.decide(
+      goal.primaryGoal,
+      currentEmotion,
+      perception.valence === 'negative' ? 0.7 : perception.valence === 'positive' ? 0.6 : 0.4,
+      bondLevel,
+      memoryCtx.recentMemories,
+    );
+
+    // 9. تحديث حالة الحياة
+    if (decision.shouldAct) {
+      lifeStateEngine.transition('speaking', 'responding to user');
+    } else {
+      lifeStateEngine.transition('observing', 'choosing silence');
+    }
+
+    // 10. إرسال الطلب إلى الخادم
+    emitPhase('respond', 0.90, lang);
     EventBus.emit('AI_START_THINKING', { intent: message, confidence: 0.8 });
 
     try {
-      const perception: PerceptionData = {
-        typingSpeed: 0,
+      const perceptionData: PerceptionData = {
+        typingSpeed: perception.typingSpeed,
         messageLength: message.length,
-        absenceDurationMinutes: 0,
-        timeOfDay: 'morning',
-        userState: 'normal',
+        absenceDurationMinutes: perception.absenceDuration,
+        timeOfDay: perception.timeOfDay,
+        userState: perception.userState,
       };
 
-      const response: UnifiedResponse = await bridgeRef.current.process(message, perception);
+      const response: UnifiedResponse = await bridgeRef.current.process(message, perceptionData);
 
-      // بناء مراحل التفكير من timing في الاستجابة
-      const timing = response.timing || {};
-      const phases: ThinkingPhase[] = [];
-      if (timing.observe_ms) {
-        emitPhase('observe', 0.2, initialLang);
-        phases.push({ phase: 'observe', progress: 0.2, label: PHASE_LABELS.observe[initialLang === 'ar' ? 'ar' : 'en'] });
-      }
-      if (timing.understand_ms) {
-        emitPhase('understand', 0.4, initialLang);
-        phases.push({ phase: 'understand', progress: 0.4, label: PHASE_LABELS.understand[initialLang === 'ar' ? 'ar' : 'en'] });
-      }
-      if (timing.recall_ms) {
-        emitPhase('recall', 0.6, initialLang);
-        phases.push({ phase: 'recall', progress: 0.6, label: PHASE_LABELS.recall[initialLang === 'ar' ? 'ar' : 'en'] });
-      }
-      if (timing.reason_ms) {
-        emitPhase('reason', 0.8, initialLang);
-        phases.push({ phase: 'reason', progress: 0.8, label: PHASE_LABELS.reason[initialLang === 'ar' ? 'ar' : 'en'] });
-      }
-      emitPhase('respond', 1.0, initialLang);
-      phases.push({ phase: 'respond', progress: 1.0, label: PHASE_LABELS.respond[initialLang === 'ar' ? 'ar' : 'en'] });
+      if (response.reply) {
+        const phases: ThinkingPhase[] = [
+          { phase: 'observe', progress: 0.1, label: PHASE_LABELS.perceive[lang === 'ar' ? 'ar' : 'en'] },
+          { phase: 'understand', progress: 0.4, label: PHASE_LABELS.context[lang === 'ar' ? 'ar' : 'en'] },
+          { phase: 'recall', progress: 0.6, label: PHASE_LABELS.remember[lang === 'ar' ? 'ar' : 'en'] },
+          { phase: 'reason', progress: 0.8, label: PHASE_LABELS.decide[lang === 'ar' ? 'ar' : 'en'] },
+          { phase: 'respond', progress: 1.0, label: PHASE_LABELS.respond[lang === 'ar' ? 'ar' : 'en'] },
+        ];
 
-      EventBus.emit('AI_FINISH_THINKING', { response: response.reply, confidence: 0.9 });
-      if (response.memory_surfaced) {
-        EventBus.emit('MEMORY_CREATED', { memoryId: response.memory_surfaced.id, layer: 'context' });
+        EventBus.emit('AI_FINISH_THINKING', { response: response.reply, confidence: 0.9 });
+        if (response.memory_surfaced) {
+          EventBus.emit('MEMORY_CREATED', { memoryId: response.memory_surfaced.id, layer: 'context' });
+        }
+
+        return {
+          reply: response.reply,
+          provider: 'unified_brain',
+          emotion: response.twin_emotional_state?.current_emotion || 'neutral',
+          thinkingPhases: phases,
+          memoryStored: !!response.memory_surfaced,
+          relationshipDelta: response.twin_state_update?.bond_delta || 0,
+        };
       }
 
       return {
-        reply: response.reply,
-        provider: 'unified_brain',
-        emotion: response.twin_emotional_state?.current_emotion || 'neutral',
-        thinkingPhases: phases,
-        memoryStored: !!response.memory_surfaced,
-        relationshipDelta: response.twin_state_update?.bond_delta || 0,
+        reply: '',
+        provider: 'consciousness',
+        emotion: 'neutral',
+        thinkingPhases: [],
+        memoryStored: false,
+        relationshipDelta: 0,
       };
     } catch (error) {
       EventBus.emit('AI_FINISH_THINKING', { response: '', confidence: 0 });
@@ -108,41 +198,22 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
     } finally {
       setIsThinking(false);
       setThinkingPhase(null);
+      lifeStateEngine.transition('observing', 'finished responding');
     }
   }, [initialLang]);
 
   const stream = useCallback(async (message: string): Promise<void> => {
     setIsThinking(true);
     setStreamedText('');
-    emitPhase('observe', 0, initialLang);
-    EventBus.emit('AI_START_THINKING', { intent: message, confidence: 0.8 });
-
-    try {
-      const perception: PerceptionData = {
-        typingSpeed: 0,
-        messageLength: message.length,
-        absenceDurationMinutes: 0,
-        timeOfDay: 'morning',
-        userState: 'normal',
-      };
-
-      const response: UnifiedResponse = await bridgeRef.current.process(message, perception);
-      const reply = response.reply || '';
-      
-      // محاكاة التدفق حرفاً بحرف
-      for (let i = 0; i < reply.length; i++) {
-        setStreamedText(reply.substring(0, i + 1));
-        await new Promise(resolve => setTimeout(resolve, 15));
+    const response = await send(message);
+    if (response.reply) {
+      for (let i = 0; i < response.reply.length; i++) {
+        setStreamedText(response.reply.substring(0, i + 1));
+        await new Promise(r => setTimeout(r, 15));
       }
-
-      EventBus.emit('AI_FINISH_THINKING', { response: reply, confidence: 0.9 });    
-    } catch (error) {
-      EventBus.emit('AI_FINISH_THINKING', { response: '', confidence: 0 });
-    } finally {
-      setThinkingPhase(null);
-      setIsThinking(false);
     }
-  }, [initialLang]);
+    setIsThinking(false);
+  }, [send]);
 
   const setUserId = useCallback((userId: string) => { bridgeRef.current.setUserId(userId); }, []);
   const setLang = useCallback((lang: string) => { bridgeRef.current.setLang(lang); }, []);

@@ -8,6 +8,7 @@ import { useTwinBrain } from '../hooks/useTwinBrain';
 import { EventBus } from '../core/EventBus';
 import { stateBus } from '../core/StateBus';
 import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
+import { existenceLoop } from '../core/ExistenceLoop';
 import { getGreeting } from '../utils/languageDetector';
 import { useRTL } from '../../lib/useRTL';
 import { capabilityOrchestrator } from '../coordinators/CapabilityOrchestrator';
@@ -71,17 +72,10 @@ export default function LivingWorld() {
   const greeting = getGreeting();
 
   useEffect(() => {
-    const unsubscribe = stateBus.on('presence:state_updated', (event: string, data: any) => {
-      // ✅ ربط المؤثرات الصوتية بحالة الكيان الحي
+    const unsubscribe = stateBus.on('presence:state_updated', (_event: string, data: any) => {
       if (data.emotion === 'joy') audioMixer.setContext('celebration');
       else if (data.emotion === 'sadness') audioMixer.setContext('silence');
-      else if (data.isThinking) audioMixer.setContext('thinking');
-      else if (data.isSpeaking) audioMixer.setContext('conversation');
-      
-      // ✅ تغيير الموسيقى الخلفية حسب الطاقة
-      if (data.warmth > 0.8) audioMixer.setContext('celebration');
-      else if (data.focusLevel > 0.8) audioMixer.setContext('study');
-      else if (data.energyLevel < 0.3) audioMixer.setContext('silence');
+      else if (data.isSilent) audioMixer.setContext('silence');
       else audioMixer.setContext('conversation');
     });
     return unsubscribe;
@@ -101,20 +95,6 @@ export default function LivingWorld() {
     return unsub;
   }, [colors.accent]);
 
-  
-  // ✅ الذكاء غير المرئي: الانتقال اللحظي للعالم
-  useEffect(() => {
-    const unsub = EventBus.on('INVISIBLE_TRANSITION', (payload: any) => {
-      if (payload?.capability) {
-        try {
-          capabilityOrchestrator.activateChain([payload.capability]);
-        } catch (e) {}
-      }
-    });
-    return unsub;
-  }, []);
-    
-
   const handleBirthComplete = useCallback(() => { setBirthComplete(true); }, []);
   useEffect(() => { if (birthComplete) setShowGreeting(true); }, [birthComplete]);
   const handleGreetingComplete = useCallback(() => setGreetingDone(true), []);
@@ -124,16 +104,6 @@ export default function LivingWorld() {
     if (!inputText.trim() || isThinking) return;
     const text = inputText.trim();
     
-    // ✅ تحليل الإدراك وإرساله مع الرسالة
-    const perceptionResult = perceptionEngine.analyze(text);
-    const perception = {
-      typingSpeed: 0,
-      messageLength: text.length,
-      absenceDurationMinutes: 0,
-      timeOfDay: 'morning' as const,
-      userState: perceptionResult.userState,
-    };
-
     try {
       const orchestration = await capabilityOrchestrator.orchestrate(text, userId);
       if (orchestration.primaryCapability !== 'general' && orchestration.primaryCapability !== null) {
@@ -203,10 +173,7 @@ export default function LivingWorld() {
           </View>
 
           <View style={styles.conversationContainer}>
-            <ConversationSpace
-              isThinking={isThinking}
-              isWriting={isWriting}
-            >
+            <ConversationSpace isThinking={isThinking} isWriting={isWriting}>
               {showGreeting && !greetingDone && (
                 <GreetingWord
                   word={greeting.word} colors={greeting.colors}
@@ -219,22 +186,15 @@ export default function LivingWorld() {
                 <Text key={msg.id} style={[
                   msg.sender === 'user' ? [styles.userMessage, { color: colors.textSecondary }] : [styles.twinMessage, { color: colors.text }],
                   { textAlign: msg.sender === 'user' ? rtl.textAlign : (rtl.isRTL ? 'left' : 'right') }
-                ]}>
-                  {msg.text}
-                </Text>
+                ]}>{msg.text}</Text>
               ))}
               {isThinking && thinkingPhase && <ThinkingIndicator phase={thinkingPhase} lang={rtl.isRTL ? 'ar' : 'en'} />}
               <SilencePresence />
             </ConversationSpace>
           </View>
 
-          <View style={styles.portalContainer}>
-            <WorkspacePortal />
-          </View>
-
-          <View style={styles.memoryContainer}>
-            <MemoryRibbon userId={userId} maxCards={2} />
-          </View>
+          <View style={styles.portalContainer}><WorkspacePortal /></View>
+          <View style={styles.memoryContainer}><MemoryRibbon userId={userId} maxCards={2} /></View>
 
           <QuickActions />
           <DailyTimeline />
@@ -249,8 +209,6 @@ export default function LivingWorld() {
                 onChangeText={(text) => {
                   setInputText(text);
                   setIsWriting(text.length > 0);
-                  if (text.length === 1) EventBus.emit('USER_START_TYPING');
-                  if (text.length === 0) EventBus.emit('USER_STOP_TYPING');
                   if (text.length === 1) perceptionEngine.registerTypingStart();
                   perceptionEngine.registerKeystroke(text.length);
                 }}
@@ -271,24 +229,12 @@ export default function LivingWorld() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  capabilityContainer: {
-    position: 'absolute', top: 100, left: 0, right: 0, zIndex: 15,
-  },
-  conversationContainer: {
-    position: 'absolute', bottom: 280, left: SPACE.lg, right: SPACE.lg,
-    zIndex: 15,
-  },
-  portalContainer: {
-    position: 'absolute', bottom: 180, left: 0, right: 0, zIndex: 12,
-  },
-  memoryContainer: {
-    position: 'absolute', bottom: 100, left: 0, right: 0, zIndex: 11,
-  },
+  capabilityContainer: { position: 'absolute', top: 100, left: 0, right: 0, zIndex: 15 },
+  conversationContainer: { position: 'absolute', bottom: 280, left: SPACE.lg, right: SPACE.lg, zIndex: 15 },
+  portalContainer: { position: 'absolute', bottom: 180, left: 0, right: 0, zIndex: 12 },
+  memoryContainer: { position: 'absolute', bottom: 100, left: 0, right: 0, zIndex: 11 },
   userMessage: { fontSize: 18, alignSelf: 'flex-end', marginVertical: SPACE.xs },
   twinMessage: { fontSize: 20, alignSelf: 'flex-start', marginVertical: SPACE.xs },
-  inputContainer: {
-    position: 'absolute', bottom: 30, left: SPACE.lg, right: SPACE.lg,
-    padding: SPACE.md, borderRadius: RADIUS.input, zIndex: 20,
-  },
+  inputContainer: { position: 'absolute', bottom: 30, left: SPACE.lg, right: SPACE.lg, padding: SPACE.md, borderRadius: RADIUS.input, zIndex: 20 },
   input: { fontSize: 18 },
 });

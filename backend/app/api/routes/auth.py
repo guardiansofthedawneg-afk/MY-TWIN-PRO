@@ -1,13 +1,7 @@
-"""
-Auth Routes v5.0 — متكاملة مع Unified Brain
-=============================================
-- تم تبسيط Google OAuth.
-- يتم تهيئة الكيان بعد تسجيل الدخول تلقائياً.
-"""
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
-from app.infrastructure.database.supabase_client import get_db
+from app.infrastructure.database.supabase_client import get_db, get_service_role_db
 import logging, httpx
 
 logger = logging.getLogger("auth_routes")
@@ -24,11 +18,12 @@ class SignupBody(BaseModel):
     lang: str = "ar"
 
 class GoogleAuthBody(BaseModel):
-    access_token: str = Field(..., min_length=10)
+    code: str = Field(..., min_length=10)
+    redirect_uri: str = Field(..., min_length=5)
+    code_verifier: str = Field(..., min_length=43)
     lang: str = "ar"
 
 async def _wake_up_twin(user_id: str, lang: str = "ar"):
-    """تهيئة الكيان بعد تسجيل الدخول"""
     try:
         from app.twin_brain.unified_brain import unified_brain
         greeting = "أنا هنا." if lang == "ar" else "I am here."
@@ -49,7 +44,6 @@ async def login(body: LoginBody):
         result = db.auth.sign_in_with_password({"email": body.email, "password": body.password})
         if result.user and result.session:
             db.table("profiles").update({"last_active": datetime.now(timezone.utc).isoformat()}).eq("id", result.user.id).execute()
-            # ✅ تهيئة الكيان بعد تسجيل الدخول
             await _wake_up_twin(result.user.id)
             return {
                 "token": result.session.access_token,
@@ -69,7 +63,9 @@ async def signup(body: SignupBody):
     try:
         result = db.auth.sign_up({"email": body.email, "password": body.password})
         if result.user:
-            db.table("profiles").insert({
+            # ✅ استخدام Service Role DB لتجاوز RLS
+            service_db = get_service_role_db()
+            service_db.table("profiles").insert({
                 "id": result.user.id,
                 "email": body.email,
                 "full_name": body.email.split('@')[0],
@@ -93,35 +89,53 @@ async def signup(body: SignupBody):
 
 @router.post("/google")
 async def google_auth(body: GoogleAuthBody):
-    db = get_db()
     try:
-        # 1. التحقق من صحة توكن Google
+        # 1. تبادل code بـ access_token من Google
         async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                "https://www.googleapis.com/oauth2/v3/userinfo",
-                headers={"Authorization": f"Bearer {body.access_token}"},
+            token_response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": body.code,
+                    "client_id": "907014926697-cj53f1nj1es27n1a5hhtnp7vv6q8uffn.apps.googleusercontent.com",
+                    "redirect_uri": body.redirect_uri,
+                    "code_verifier": body.code_verifier,
+                    "grant_type": "authorization_code",
+                },
                 timeout=10.0,
             )
-            if resp.status_code != 200:
+            if token_response.status_code != 200:
+                raise HTTPException(401, f"Google token exchange failed: {token_response.text}")
+            token_data = token_response.json()
+            access_token = token_data.get("access_token")
+
+        # 2. جلب معلومات المستخدم من Google
+        async with httpx.AsyncClient() as client:
+            user_response = await client.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10.0,
+            )
+            if user_response.status_code != 200:
                 raise HTTPException(401, "Invalid Google token")
-            user_info = resp.json()
+            user_info = user_response.json()
             email = user_info.get("email")
             name = user_info.get("name", "")
             if not email:
                 raise HTTPException(400, "Email not provided by Google")
 
-        # 2. تسجيل الدخول أو إنشاء حساب عبر Supabase OAuth
+        # 3. تسجيل الدخول أو إنشاء حساب عبر Supabase OAuth
+        db = get_db()
+        service_db = get_service_role_db()
         try:
             result = db.auth.sign_in_with_oauth({
                 "provider": "google",
-                "access_token": body.access_token,
+                "access_token": access_token,
             })
             if result.user and result.session:
                 user_id = result.user.id
-                # التأكد من وجود الملف الشخصي
-                profile = db.table("profiles").select("id").eq("id", user_id).execute()
+                profile = service_db.table("profiles").select("id").eq("id", user_id).execute()
                 if not profile.data:
-                    db.table("profiles").insert({
+                    service_db.table("profiles").insert({
                         "id": user_id,
                         "email": email,
                         "full_name": name or email.split('@')[0],
@@ -137,8 +151,6 @@ async def google_auth(body: GoogleAuthBody):
                         "email": email,
                         "last_active": datetime.now(timezone.utc).isoformat(),
                     }).eq("id", user_id).execute()
-
-                # ✅ تهيئة الكيان
                 await _wake_up_twin(user_id, body.lang)
                 return {
                     "token": result.session.access_token,
@@ -148,7 +160,6 @@ async def google_auth(body: GoogleAuthBody):
         except Exception as oauth_err:
             logger.error(f"Google OAuth failed: {oauth_err}")
             raise HTTPException(401, f"Google authentication failed: {str(oauth_err)}")
-
         raise HTTPException(500, "Google authentication failed")
     except HTTPException:
         raise
@@ -158,7 +169,6 @@ async def google_auth(body: GoogleAuthBody):
 
 @router.get("/verify-token")
 async def verify_token(user_id: str):
-    """التحقق من صحة التوكن (للاستعادة)"""
     try:
         db = get_db()
         profile = db.table("profiles").select("id").eq("id", user_id).execute()
@@ -168,4 +178,4 @@ async def verify_token(user_id: str):
     except Exception:
         return {"valid": False}
 
-logger.info("✅ Auth Routes v5.0 initialized — Unified Brain integrated")
+logger.info("✅ Auth Routes v5.0 initialized — Service Role + PKCE Google Auth")

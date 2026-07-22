@@ -51,24 +51,26 @@ export async function signup(email: string, password: string, twinName: string, 
 
 export async function googleLogin(lang: string = 'ar'): Promise<any> {
   try {
-    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
-
     const redirectUri = AuthSession.makeRedirectUri();
+    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
 
     const request = new AuthSession.AuthRequest({
       clientId: GOOGLE_CLIENT_ID,
       redirectUri,
-      scopes: ['profile', 'email'],
-      responseType: AuthSession.ResponseType.Token,
+      scopes: ['openid', 'profile', 'email'],
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
     });
 
     const result = await request.promptAsync(discovery);
 
-    if (result.type === 'success' && result.params.access_token) {
-      const accessToken = result.params.access_token;
+    if (result.type === 'success' && result.params.code) {
+      const code = result.params.code;
 
       const data = await apiPost('/api/auth/google', {
-        access_token: accessToken,
+        code: code,
+        redirect_uri: redirectUri,
+        code_verifier: request.codeVerifier,
         lang,
       });
 

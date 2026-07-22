@@ -1,12 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiPost, setToken } from './httpClient';
-import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const TOKEN_KEY = 'mytwin-token';
 const USER_KEY = 'mytwin-user';
+
+const GOOGLE_CLIENT_ID = '907014926697-cj53f1nj1es27n1a5hhtnp7vv6q8uffn.apps.googleusercontent.com';
 
 export async function saveAuthData(token: string, userId: string): Promise<void> {
   await AsyncStorage.setItem(TOKEN_KEY, token);
@@ -47,33 +49,36 @@ export async function signup(email: string, password: string, twinName: string, 
   return data;
 }
 
-// ✅ تسجيل الدخول عبر Google باستخدام expo-auth-session
 export async function googleLogin(lang: string = 'ar'): Promise<any> {
   try {
-    const [request, response, promptAsync] = Google.useAuthRequest({
-      androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-      iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
-      webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
+
+    const redirectUri = AuthSession.makeRedirectUri();
+
+    const request = new AuthSession.AuthRequest({
+      clientId: GOOGLE_CLIENT_ID,
+      redirectUri,
+      scopes: ['profile', 'email'],
+      responseType: AuthSession.ResponseType.Token,
     });
 
-    const result = await promptAsync();
-    
-    if (result?.type === 'success' && result.authentication?.accessToken) {
-      const accessToken = result.authentication.accessToken;
-      
-      // إرسال التوكن إلى الخادم الخلفي للتحقق منه وإنشاء/استرجاع المستخدم
+    const result = await request.promptAsync(discovery);
+
+    if (result.type === 'success' && result.params.access_token) {
+      const accessToken = result.params.access_token;
+
       const data = await apiPost('/api/auth/google', {
         access_token: accessToken,
         lang,
       });
-      
+
       if (data?.token && data?.user_id) {
         await saveAuthData(data.token, data.user_id);
         return { token: data.token, user_id: data.user_id, onboarded: data.onboarded || false };
       }
       throw new Error('Google authentication failed on server');
     }
-    
+
     throw new Error('Google sign-in was cancelled or failed');
   } catch (e: any) {
     console.error('[GoogleLogin] Error:', e);

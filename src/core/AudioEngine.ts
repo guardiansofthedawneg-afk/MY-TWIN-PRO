@@ -127,6 +127,60 @@ const AUDIO_FILES: Record<string, SoundConfig> = {
     category: 'one_shot', volume: 0.11, loops: false, isEmotional: true, group: 'workspace',
   },
 
+
+  // ── Device Presence ────────────────────────────────
+  camera_look: {
+    file: require('../../assets/audio/device/camera_look.mp3'),
+    category: 'one_shot', volume: 0.10, loops: false, isEmotional: true, group: 'device',
+  },
+  eye_blink: {
+    file: require('../../assets/audio/device/eye_blink.mp3'),
+    category: 'one_shot', volume: 0.05, loops: false, isEmotional: false, group: 'device',
+  },
+  head_nod: {
+    file: require('../../assets/audio/device/head_nod.mp3'),
+    category: 'one_shot', volume: 0.12, loops: false, isEmotional: true, group: 'device',
+  },
+  head_shake: {
+    file: require('../../assets/audio/device/head_shake.mp3'),
+    category: 'one_shot', volume: 0.10, loops: false, isEmotional: true, group: 'device',
+  },
+  battery_low: {
+    file: require('../../assets/audio/device/battery_low.mp3'),
+    category: 'one_shot', volume: 0.15, loops: false, isEmotional: true, group: 'device',
+  },
+  proximity_far: {
+    file: require('../../assets/audio/device/proximity_far.mp3'),
+    category: 'one_shot', volume: 0.12, loops: false, isEmotional: true, group: 'device',
+  },
+  proximity_near: {
+    file: require('../../assets/audio/device/proximity_near.mp3'),
+    category: 'one_shot', volume: 0.10, loops: false, isEmotional: true, group: 'device',
+  },
+  // ── Gestures ───────────────────────────────────────
+  gesture_swipe: {
+    file: require('../../assets/audio/gestures/gesture_swipe.mp3'),
+    category: 'one_shot', volume: 0.08, loops: false, isEmotional: false, group: 'gestures',
+  },
+  gesture_circle: {
+    file: require('../../assets/audio/gestures/gesture_circle.mp3'),
+    category: 'one_shot', volume: 0.09, loops: false, isEmotional: false, group: 'gestures',
+  },
+  // ── Life Rhythm ────────────────────────────────────
+  life_rhythm_morning: {
+    file: require('../../assets/audio/life_rhythm/life_rhythm_morning.mp3'),
+    category: 'layer', volume: 0.08, loops: true, isEmotional: true, group: 'life_rhythm',
+  },
+  life_rhythm_night: {
+    file: require('../../assets/audio/life_rhythm/life_rhythm_night.mp3'),
+    category: 'layer', volume: 0.06, loops: true, isEmotional: true, group: 'life_rhythm',
+  },
+
+
+  // ── Device Presence ────────────────────────────────
+  // ── Gestures ───────────────────────────────────────
+  // ── Life Rhythm ────────────────────────────────────
+
   // ── UI عام ───────────────────────────────────────
   typing: {
     file: require('../../assets/audio/ui/typing.mp3'),

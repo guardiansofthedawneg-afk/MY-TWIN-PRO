@@ -9,6 +9,7 @@ import { EventBus } from '../core/EventBus';
 import { stateBus } from '../core/StateBus';
 import { unifiedBrainBridge } from '../core/UnifiedBrainBridge';
 import { existenceLoop } from '../core/ExistenceLoop';
+import { devicePresenceEngine } from '../../engine/device/DevicePresenceEngine';
 import { getGreeting } from '../utils/languageDetector';
 import { useRTL } from '../../lib/useRTL';
 import { capabilityOrchestrator } from '../coordinators/CapabilityOrchestrator';
@@ -214,7 +215,7 @@ export default function LivingWorld() {
                 }}
                 onSubmitEditing={handleSend}
                 editable={!isThinking}
-                placeholder={rtl.isRTL ? 'اكتب رسالتك الأولى...' : 'Write your first message...'}
+                placeholder={rtl.isRTL ? 'اكتب رسالتك...' : 'Write your message...'}
                 placeholderTextColor={colors.textSecondary}
               />
             </View>

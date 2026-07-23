@@ -9,6 +9,7 @@ export type GenesisPhase =
   | 'first_breath'
   | 'awareness'
   | 'identity_gateway'
+  | 'permission_gateway'
   | 'birth_protocol'
   | 'first_bond'
   | 'progressive_identity'

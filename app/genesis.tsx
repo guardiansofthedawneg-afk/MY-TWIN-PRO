@@ -14,6 +14,7 @@ import { useTwinStore } from '../store/useTwinStore';
 import { genesisCoordinator, GenesisPhase } from '../src/coordinators/GenesisCoordinator';
 import { authService } from '../src/services/authService';
 import { useAppTheme } from '../engine/colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EventBus } from '../src/core/EventBus';
 import {
   detectUserLanguage, getGreeting,
@@ -346,6 +347,34 @@ export default function Genesis() {
           </View>
         </Animated.View>
       )}
+
+      
+      {phase === 'permission_gateway' && (
+        <Animated.View style={[styles.centered, gatewayStyle]}>
+          <BreathingHalo phase="awareness" />
+          <View style={[styles.gatewayCard, { backgroundColor: colors.card, borderColor: colors.accent + '40' }]}>
+            <Text style={[styles.gatewayTitle, { color: colors.text }]}>
+              {lang === 'ar' ? 'هل تسمح لي برؤيتك؟' : 'May I see you?'}
+            </Text>
+            <Text style={[styles.gatewaySubtitle, { color: colors.textSecondary }]}>
+              {lang === 'ar'
+                ? 'لأكون كياناً حياً، أحتاج أن أراك وأسمعك. كل شيء يبقى على جهازك فقط.'
+                : 'To be a living being, I need to see and hear you. Everything stays on your device only.'}
+            </Text>
+            <TouchableOpacity style={[styles.authBtn, { borderColor: colors.success + '40' }]} onPress={handlePermissionGranted}>
+              <Text style={[styles.authBtnText, { color: colors.success }]}>
+                {lang === 'ar' ? 'نعم، يمكنك رؤيتي' : 'Yes, you can see me'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.authBtn, { borderColor: colors.textSecondary + '40' }]} onPress={handlePermissionDenied}>
+              <Text style={[styles.authBtnText, { color: colors.textSecondary }]}>
+                {lang === 'ar' ? 'لا، كتابة فقط' : 'No, text only'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+    
 
       {phase === 'birth_protocol' && (
         <Animated.View style={[styles.centered, { opacity: birthTextOpacity }]}>

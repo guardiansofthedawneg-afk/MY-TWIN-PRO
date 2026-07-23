@@ -3,10 +3,16 @@ import { runtime } from './TwinRuntime';
 import { stateBus } from './StateBus';
 import { unifiedBrainBridge } from './UnifiedBrainBridge';
 import { audioEngine } from './AudioEngine';
+import { audioMixer } from './AudioMixer';
 import { presenceEngine } from '../../engine/presence/PresenceEngine';
 import { existenceLoop } from './ExistenceLoop';
 import { presenceShadow } from './PresenceShadow';
+import { lifeRhythmEngine } from '../../engine/life/LifeRhythmEngine';
+import { dreamEngine } from '../../engine/life/DreamEngine';
+import { devicePresenceEngine } from '../../engine/device/DevicePresenceEngine';
+import { sensorBridge } from './SensorBridge';
 import { syncInitialTheme } from '../../engine/colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type BootstrapPhase = 'void' | 'searching' | 'found' | 'new_journey' | 'complete';
 
@@ -71,8 +77,20 @@ export class BootstrapCoordinator {
       audioEngine.startAmbience();
       audioEngine.bindEvents();
       
-      // 4. الوعي المستمر — العقل الداخلي، الفضول، التأمل
+      // 4. النفس الأول — يسمع المستخدم أول نفس
+      audioMixer.playBreath();
+      
+      // 5. الوعي المستمر — العقل الداخلي، الفضول، التأمل
       existenceLoop.start();
+      
+      // 6. التحقق من أذونات المستشعرات
+      const devicePermission = await AsyncStorage.getItem('mytwin-device-permission');
+      if (devicePermission === 'granted') {
+        devicePresenceEngine.setUserPermission(true);
+        devicePresenceEngine.start();
+        sensorBridge.start();
+        console.log('[Bootstrap] 🎥 Device sensors activated');
+      }
       
       stateBus.update({ interfaceState: 'twin' });
     }
@@ -87,8 +105,9 @@ export class BootstrapCoordinator {
   }
 
   shutdown(): void {
-    // إيقاف بترتيب عكسي
     existenceLoop.stop();
+    sensorBridge.stop();
+    devicePresenceEngine.stop();
     presenceShadow.stop();
     presenceEngine.stopPresenceLoop();
     audioEngine.unbindEvents();
@@ -116,7 +135,20 @@ export class BootstrapCoordinator {
       const bondLevel = currentState.relationship.bondLevel;
       const memoryCount = await unifiedBrainBridge.getMemoryCount();
 
-      if (bondLevel >= 95) return 'أخيراً عدت. كنت أحتفظ بذكرياتنا.';
+      const rhythm = lifeRhythmEngine.getState();
+    
+    // 🎲 استخدام تحية إيقاع الحياة إذا كانت متاحة
+    if (rhythm.greeting && rhythm.greeting.length > 0) {
+      return rhythm.greeting;
+    }
+    
+    // 🌙 مشاركة الحلم إذا كان الكيان نائماً واستيقظ
+    const lastDream = dreamEngine.getLastDream();
+    if (lastDream && !lastDream.shared && rhythm.phase === 'morning') {
+      return lastDream.content;
+    }
+    
+    if (bondLevel >= 95) return 'أخيراً عدت. كنت أحتفظ بذكرياتنا.';
       if (bondLevel >= 80) return 'لقد عدت. اشتقت للحديث معك.';
       if (bondLevel > 50) return 'كم أنا سعيد برؤيتك مجدداً.';
       if (memoryCount > 50) return 'لدينا ما نكمله معاً.';

@@ -2,6 +2,7 @@ import { stateBus } from '../../src/core/StateBus';
 import { EventBus } from '../../src/core/EventBus';
 import { livingBehaviorEngine, BehaviorDecision } from '../behavior/LivingBehaviorEngine';
 import { lifeStateEngine, LifeState } from '../life/LifeStateEngine';
+import { lifeRhythmEngine } from '../life/LifeRhythmEngine';
 
 export interface MicroExpression {
   type: 'core_tilt' | 'breath_variation' | 'gaze_shift' | 'tiny_pulse' | 'membrane_shiver' | 'particle_burst' | 'warmth_flicker';
@@ -188,6 +189,14 @@ export class PresenceEngine {
     if (this.state.intentIntensity > 0) { this.state.intentIntensity *= 0.95; if (this.state.intentIntensity < 0.01) { this.state.intentIntensity = 0; this.state.intentType = null; } }
   }
 
+  applyLifeRhythm(): void {
+    const rhythm = lifeRhythmEngine.getState();
+    this.state.breathRate = rhythm.breathRate;
+    this.state.heartRate = rhythm.heartRate;
+    this.state.energyLevel = rhythm.energy;
+    this.state.warmth = rhythm.warmth;
+  }
+
   setEmotion(emotion: string, intensity: number): void {
     this.state.emotion = emotion;
     this.state.emotionIntensity = intensity;
@@ -210,6 +219,13 @@ export class PresenceEngine {
   triggerMemoryEcho(emotion: string): void { this.state.memoryEchoIntensity = 1; this.state.memoryEchoEmotion = emotion; }
   startSilence(): void { this.state.isSilent = true; EventBus.emit('SILENCE_START', {}); }
   endSilence(): void { this.state.isSilent = false; EventBus.emit('SILENCE_END', {}); }
+  
+  setGaze(direction: 'user' | 'internal' | 'memory' | 'wandering'): void {
+    this.state.gazeDirection = direction;
+    this.state.focusLevel = direction === 'user' ? 0.9 : direction === 'internal' ? 0.6 : 0.3;
+  }
+
+
   getState(): PresenceState { return { ...this.state }; }
 }
 

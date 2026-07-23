@@ -253,6 +253,23 @@ export default function Genesis() {
     } finally { setAuthLoading(false); }
   };
 
+
+  const handlePermissionGranted = async () => {
+    try {
+      await AsyncStorage.setItem('mytwin-device-permission', 'granted');
+    } catch (e) {}
+    setPhase('birth_protocol');
+    await genesisCoordinator.startBirthProtocol();
+  };
+
+  const handlePermissionDenied = async () => {
+    try {
+      await AsyncStorage.setItem('mytwin-device-permission', 'denied');
+    } catch (e) {}
+    setPhase('birth_protocol');
+    await genesisCoordinator.startBirthProtocol();
+  };
+
   const handleBondSubmit = async () => {
     if (!bondAnswer.trim()) return;
     setBondSaved(true);

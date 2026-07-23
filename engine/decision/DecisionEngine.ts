@@ -1,6 +1,7 @@
 import { stateBus } from '../../src/core/StateBus';
 import { GoalType } from '../goal/GoalEngine';
 import { IdentityRole } from '../identity/IdentityEngine';
+import { constitutionEngine } from '../constitution/ConstitutionEngine';
 
 export type DecisionType = 'comfort' | 'encourage' | 'inform' | 'celebrate' | 'listen' | 'protect' | 'challenge' | 'guide' | 'observe' | 'stay_silent' | 'wait' | 'reflect' | 'initiate';
 
@@ -132,10 +133,30 @@ export class DecisionEngine {
         }
     }
 
+    // ✅ فحص الدستور قبل إصدار القرار
+    const constitutionCheck = constitutionEngine.checkAction(decision, reasoning, bondLevel, identity);
+    if (!constitutionCheck.allowed) {
+      decision = 'observe';
+      reasoning = constitutionCheck.reasoning;
+      if (constitutionCheck.alternativeAction) {
+        decision = this.mapAlternativeToDecision(constitutionCheck.alternativeAction);
+      }
+    }
+
     this.currentDecision = { decision, confidence, reasoning, shouldAct, urgency, timestamp: Date.now() };
     stateBus.emit('decision:made', this.currentDecision);
     return this.currentDecision;
   }
+
+  
+  private mapAlternativeToDecision(alternative: string): DecisionType {
+    if (alternative.includes('الحقيقة')) return 'inform';
+    if (alternative.includes('احترام')) return 'listen';
+    if (alternative.includes('الاعتراف')) return 'reflect';
+    if (alternative.includes('خصوصية')) return 'protect';
+    return 'observe';
+  }
+
 
   getCurrentDecision(): DecisionResult {
     return { ...this.currentDecision };

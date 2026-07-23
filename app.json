@@ -27,7 +27,8 @@
         "NSMicrophoneUsageDescription": "My Twin needs microphone to hear your voice, feel your emotions, and whisper back to you.",
         "NSSpeechRecognitionUsageDescription": "\u064a\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u062a\u0648\u0623\u0645 \u0627\u0644\u062a\u0639\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0635\u0648\u062a \u0644\u062a\u062d\u0648\u064a\u0644 \u0643\u0644\u0627\u0645\u0643 \u0625\u0644\u0649 \u0646\u0635.",
         "NSCameraUsageDescription": "My Twin needs camera to see you, follow your face, and respond to your presence with life-like movements.",
-        "NSMotionUsageDescription": "My Twin needs motion sensors to feel your steps, your movements, and sync its heartbeat with yours."
+        "NSMotionUsageDescription": "My Twin needs motion sensors to feel your steps, your movements, and sync its heartbeat with yours.",
+        "NSLocationWhenInUseUsageDescription": "My Twin uses your location to remember places you visit and connect memories to locations."
       }
     },
     "android": {
@@ -48,7 +49,9 @@
         "CAMERA",
         "RECORD_AUDIO",
         "BODY_SENSORS",
-        "ACTIVITY_RECOGNITION"
+        "ACTIVITY_RECOGNITION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
       ]
     },
     "plugins": [
@@ -90,7 +93,8 @@
         "projectId": "7b96fc72-c7e0-4ebf-937f-e41354fc0ebe"
       },
       "API_URL": "my-twin-pro-production.up.railway.app",
-      "ENVIRONMENT": "production"
+      "ENVIRONMENT": "production",
+      "GOOGLE_CLIENT_ID": "907014926697-cj53f1nj1es27n1a5hhtnp7vv6q8uffn.apps.googleusercontent.com"
     },
     "updates": {
       "url": "https://u.expo.dev/6cb78668-322b-476f-ab25-4136d85f8d68"

@@ -62,38 +62,38 @@ export class BootstrapCoordinator {
     }
     
     if (this.phase === 'found') {
-      // 🧬 تسلسل الاستيقاظ الكامل
-      runtime.start();
-      stateBus.update({ isOnline: true, interfaceState: 'aware', uptime: Date.now() });
-      
-      // 1. الجسد — يبدأ التنفس والنبض
-      presenceEngine.startPresenceLoop();
-      
-      // 2. الأثر — يبدأ الأثر في المكان
-      presenceShadow.start();
-      
-      // 3. الصوت — يبدأ المشهد الصوتي
-      await audioEngine.init();
-      audioEngine.startAmbience();
-      audioEngine.bindEvents();
-      
-      // 4. النفس الأول — يسمع المستخدم أول نفس
-      audioMixer.playBreath();
-      
-      // 5. الوعي المستمر — العقل الداخلي، الفضول، التأمل
-      existenceLoop.start();
-      
-      // 6. التحقق من أذونات المستشعرات
-      const devicePermission = await AsyncStorage.getItem('mytwin-device-permission');
-      if (devicePermission === 'granted') {
-        devicePresenceEngine.setUserPermission(true);
-        devicePresenceEngine.start();
-        sensorBridge.start();
-        console.log('[Bootstrap] 🎥 Device sensors activated');
+      try {
+        // 1. الجسد — يبدأ التنفس والنبض
+        presenceEngine.startPresenceLoop();
+        
+        // 2. الأثر — يبدأ الأثر في المكان
+        presenceShadow.start();
+        
+        // 3. الصوت — يبدأ المشهد الصوتي
+        await audioEngine.init();
+        audioEngine.startAmbience();
+        audioEngine.bindEvents();
+        
+        // 4. النفس الأول
+        audioMixer.playBreath();
+        
+        // 5. الوعي المستمر
+        existenceLoop.start();
+        
+        // 6. المستشعرات (إذا وافق المستخدم)
+        const devicePermission = await AsyncStorage.getItem('mytwin-device-permission');
+        if (devicePermission === 'granted') {
+          devicePresenceEngine.setUserPermission(true);
+          devicePresenceEngine.start();
+          sensorBridge.start();
+        }
+      } catch (e) {
+        console.warn('[Bootstrap] Engine start failed:', e);
       }
-      
-      stateBus.update({ interfaceState: 'twin' });
     }
+    
+    stateBus.update({ isOnline: true, interfaceState: 'twin', uptime: Date.now() });
+    runtime.start();
     
     this.phase = 'complete';
     bootSteps.push('جارٍ استعادة الذاكرة...');
@@ -105,14 +105,14 @@ export class BootstrapCoordinator {
   }
 
   shutdown(): void {
-    existenceLoop.stop();
-    sensorBridge.stop();
-    devicePresenceEngine.stop();
-    presenceShadow.stop();
-    presenceEngine.stopPresenceLoop();
-    audioEngine.unbindEvents();
-    audioEngine.fadeAll();
-    runtime.stop();
+    try { existenceLoop.stop(); } catch (e) {}
+    try { sensorBridge.stop(); } catch (e) {}
+    try { devicePresenceEngine.stop(); } catch (e) {}
+    try { presenceShadow.stop(); } catch (e) {}
+    try { presenceEngine.stopPresenceLoop(); } catch (e) {}
+    try { audioEngine.unbindEvents(); } catch (e) {}
+    try { audioEngine.fadeAll(); } catch (e) {}
+    try { runtime.stop(); } catch (e) {}
     stateBus.update({ isOnline: false, interfaceState: 'dormant' });
   }
 
@@ -136,19 +136,16 @@ export class BootstrapCoordinator {
       const memoryCount = await unifiedBrainBridge.getMemoryCount();
 
       const rhythm = lifeRhythmEngine.getState();
-    
-    // 🎲 استخدام تحية إيقاع الحياة إذا كانت متاحة
-    if (rhythm.greeting && rhythm.greeting.length > 0) {
-      return rhythm.greeting;
-    }
-    
-    // 🌙 مشاركة الحلم إذا كان الكيان نائماً واستيقظ
-    const lastDream = dreamEngine.getLastDream();
-    if (lastDream && !lastDream.shared && rhythm.phase === 'morning') {
-      return lastDream.content;
-    }
-    
-    if (bondLevel >= 95) return 'أخيراً عدت. كنت أحتفظ بذكرياتنا.';
+      if (rhythm.greeting && rhythm.greeting.length > 0) {
+        return rhythm.greeting;
+      }
+      
+      const lastDream = dreamEngine.getLastDream();
+      if (lastDream && !lastDream.shared && rhythm.phase === 'morning') {
+        return lastDream.content;
+      }
+      
+      if (bondLevel >= 95) return 'أخيراً عدت. كنت أحتفظ بذكرياتنا.';
       if (bondLevel >= 80) return 'لقد عدت. اشتقت للحديث معك.';
       if (bondLevel > 50) return 'كم أنا سعيد برؤيتك مجدداً.';
       if (memoryCount > 50) return 'لدينا ما نكمله معاً.';

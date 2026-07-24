@@ -7,7 +7,7 @@
     "build:android": "eas build --platform android --profile preview",
     "build:android:prod": "eas build --platform android --profile production",
     "submit": "eas submit",
-    "postinstall": "node scripts/setup-posthog-stub.js",
+    "postinstall": "npx expo install --fix",
     "test": "jest"
   },
   "dependencies": {
@@ -65,6 +65,7 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "~15.8.0",
     "react-native-url-polyfill": "^2.0.0",
+    "sentry-expo": "~7.0.0",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

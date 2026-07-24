@@ -4,17 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { syncInitialTheme, useAppTheme } from '../engine/colors';
-import * as Sentry from '@sentry/react-native';
-
-try {
-  Sentry.init({
-    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || '',
-    debug: true,
-    tracesSampleRate: 1.0,
-  });
-} catch (e) {
-  console.warn('Sentry init failed:', e);
-}
 
 function RootNavigator() {
   const { isDark } = useAppTheme();

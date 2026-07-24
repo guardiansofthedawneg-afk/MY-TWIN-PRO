@@ -93,8 +93,7 @@
         "projectId": "7b96fc72-c7e0-4ebf-937f-e41354fc0ebe"
       },
       "API_URL": "my-twin-pro-production.up.railway.app",
-      "ENVIRONMENT": "production",
-      "GOOGLE_CLIENT_ID": "907014926697-cj53f1nj1es27n1a5hhtnp7vv6q8uffn.apps.googleusercontent.com"
+      "ENVIRONMENT": "production"
     },
     "updates": {
       "url": "https://u.expo.dev/6cb78668-322b-476f-ab25-4136d85f8d68"

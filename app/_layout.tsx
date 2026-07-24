@@ -1,27 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, LogBox } from 'react-native';
+
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { syncInitialTheme, useAppTheme } from '../engine/colors';
-import * as ErrorRecovery from 'expo-error-recovery';
 
-const fallbackErrorHandler = (error: Error) => {
-  console.error('FATAL ERROR:', error);
-  if (__DEV__) {
-    console.log('Dev mode: showing error');
-  }
-};
-
-const globalHandler = ErrorUtils.getGlobalHandler();
-ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
-  console.error('Global Error Caught:', error.message);
-  fallbackErrorHandler(error);
-  if (globalHandler) {
-    globalHandler(error, isFatal);
-  }
-});
 
 function RootNavigator() {
   const { isDark } = useAppTheme();

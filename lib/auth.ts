@@ -8,7 +8,7 @@ WebBrowser.maybeCompleteAuthSession();
 const TOKEN_KEY = 'mytwin-token';
 const USER_KEY = 'mytwin-user';
 
-const GOOGLE_CLIENT_ID = '907014926697-cj53f1nj1es27n1a5hhtnp7vv6q8uffn.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export async function saveAuthData(token: string, userId: string): Promise<void> {
   await AsyncStorage.setItem(TOKEN_KEY, token);

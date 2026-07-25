@@ -46,6 +46,7 @@ import MemoryForest from './MemoryForest';
 import LivingLightEntity from '../renderers/zones/LivingLightEntity';
 import ConversationSpace from './ConversationSpace';
 import { useTwinStore } from '../../store/useTwinStore';
+import { bootstrapCoordinator } from '../core/BootstrapCoordinator';
 import { audioMixer } from '../core/AudioMixer';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
 
@@ -95,6 +96,20 @@ export default function LivingWorld() {
     });
     return unsub;
   }, [colors.accent]);
+
+  
+  // 🧬 تشغيل جميع المحركات عند دخول العالم الحي
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await bootstrapCoordinator.bootstrap();
+      } catch (e) {
+        console.warn('[LivingWorld] Engine start failed:', e);
+      }
+    };
+    init();
+  }, []);
+
 
   const handleBirthComplete = useCallback(() => { setBirthComplete(true); }, []);
   useEffect(() => { if (birthComplete) setShowGreeting(true); }, [birthComplete]);

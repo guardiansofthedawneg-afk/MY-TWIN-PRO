@@ -78,7 +78,8 @@ export class BootstrapCoordinator {
         audioMixer.playBreath();
         
         // 5. الوعي المستمر
-        existenceLoop.start();
+        // TODO: Enable after testing
+      // existenceLoop.start();
         
         // 6. المستشعرات (إذا وافق المستخدم)
         const devicePermission = await AsyncStorage.getItem('mytwin-device-permission');

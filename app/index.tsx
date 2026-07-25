@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { bootstrapCoordinator } from '../src/core/BootstrapCoordinator';
@@ -7,30 +7,38 @@ import AmbientField from '../src/world/AmbientField';
 
 export default function Index() {
   const fadeIn = useRef(new Animated.Value(0)).current;
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // ظهور تدريجي للكيان
+    // ظهور تدريجي للكيان الحي
     Animated.timing(fadeIn, {
       toValue: 1,
       duration: 2000,
       useNativeDriver: true,
     }).start();
 
-    // بدء الإقلاع
-    bootstrapCoordinator.bootstrap().then(result => {
-      setTimeout(() => {
-        if (result.isReturning) {
-          router.replace('/living-world');
-        } else {
+    // بدء الإقلاع مع معالجة الأخطاء
+    const boot = async () => {
+      try {
+        const result = await bootstrapCoordinator.bootstrap();
+        // انتظار قصير ليشعر المستخدم بالحضور
+        setTimeout(() => {
+          if (result.isReturning) {
+            router.replace('/living-world');
+          } else {
+            router.replace('/genesis');
+          }
+        }, 2000);
+      } catch (e) {
+        console.warn('[Index] Bootstrap failed, going to genesis:', e);
+        // حتى لو فشل الإقلاع، ننتقل إلى genesis بعد تأخير
+        setTimeout(() => {
           router.replace('/genesis');
-        }
-      }, 1500);
-    }).catch(() => {
-      // حتى لو فشل الإقلاع، ننتقل إلى genesis
-      setTimeout(() => {
-        router.replace('/genesis');
-      }, 3000);
-    });
+        }, 3000);
+      }
+    };
+    
+    boot();
   }, []);
 
   return (

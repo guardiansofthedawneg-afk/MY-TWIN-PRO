@@ -8,6 +8,7 @@ WebBrowser.maybeCompleteAuthSession();
 const TOKEN_KEY = 'mytwin-token';
 const USER_KEY = 'mytwin-user';
 
+// ✅ استخدام المتغير البيئي
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export async function saveAuthData(token: string, userId: string): Promise<void> {
@@ -51,7 +52,10 @@ export async function signup(email: string, password: string, twinName: string, 
 
 export async function googleLogin(lang: string = 'ar'): Promise<any> {
   try {
-    const redirectUri = AuthSession.makeRedirectUri();
+    const redirectUri = AuthSession.makeRedirectUri({
+      scheme: 'mytwin',
+    });
+
     const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
 
     const request = new AuthSession.AuthRequest({

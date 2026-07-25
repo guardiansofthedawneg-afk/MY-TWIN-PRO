@@ -1,24 +1,44 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 import { router } from 'expo-router';
+import { bootstrapCoordinator } from '../src/core/BootstrapCoordinator';
+import LivingLightEntity from '../src/renderers/zones/LivingLightEntity';
+import AmbientField from '../src/world/AmbientField';
 
 export default function Index() {
-  const [status, setStatus] = useState('جارٍ التحميل...');
-  
+  const fadeIn = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
+    // ظهور تدريجي للكيان
+    Animated.timing(fadeIn, {
+      toValue: 1,
+      duration: 2000,
+      useNativeDriver: true,
+    }).start();
+
+    // بدء الإقلاع
+    bootstrapCoordinator.bootstrap().then(result => {
+      setTimeout(() => {
+        if (result.isReturning) {
+          router.replace('/living-world');
+        } else {
+          router.replace('/genesis');
+        }
+      }, 1500);
+    }).catch(() => {
+      // حتى لو فشل الإقلاع، ننتقل إلى genesis
+      setTimeout(() => {
         router.replace('/genesis');
-      } catch (e: any) {
-        setStatus('خطأ: ' + (e?.message || 'Unknown'));
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
+      }, 3000);
+    });
   }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>{status}</Text>
+      <AmbientField />
+      <Animated.View style={[styles.entityContainer, { opacity: fadeIn }]}>
+        <LivingLightEntity />
+      </Animated.View>
     </View>
   );
 }
@@ -30,8 +50,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#0A0014',
   },
-  text: {
-    color: '#FFFFFF',
-    fontSize: 18,
+  entityContainer: {
+    position: 'absolute',
+    top: '35%',
   },
 });

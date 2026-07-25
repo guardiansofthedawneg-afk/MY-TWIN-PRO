@@ -223,7 +223,6 @@ class UnifiedTwinBrain:
         interaction_count = await unified_evolution_engine._get_interaction_count(user_id)
         soul_state = {}
         # استدعاء نظام الروح الجديد مع بيانات حقيقية من TCMA
-        from app.memory.unified_memory import unified_memory_engine
         memory_count = await unified_memory_engine.get_memory_count(user_id)
         core_memory_count = await unified_memory_engine.get_core_memory_count(user_id)
         memory_patterns_dict = await unified_memory_engine.get_patterns(user_id, days=14)

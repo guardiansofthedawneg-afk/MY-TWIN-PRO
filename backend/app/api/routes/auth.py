@@ -65,7 +65,7 @@ async def signup(body: SignupBody):
         if result.user:
             # ✅ استخدام Service Role DB لتجاوز RLS
             service_db = get_service_role_db()
-            service_db.table("profiles").insert({
+            service_service_db.table("profiles").insert({
                 "id": result.user.id,
                 "email": body.email,
                 "full_name": body.email.split('@')[0],
@@ -135,7 +135,7 @@ async def google_auth(body: GoogleAuthBody):
                 user_id = result.user.id
                 profile = service_db.table("profiles").select("id").eq("id", user_id).execute()
                 if not profile.data:
-                    service_db.table("profiles").insert({
+                    service_service_db.table("profiles").insert({
                         "id": user_id,
                         "email": email,
                         "full_name": name or email.split('@')[0],
@@ -171,7 +171,8 @@ async def google_auth(body: GoogleAuthBody):
 async def verify_token(user_id: str):
     try:
         db = get_db()
-        profile = db.table("profiles").select("id").eq("id", user_id).execute()
+        service_db = get_service_role_db()
+                profile = service_db.table("profiles").select("id").eq("id", user_id).execute()
         if profile.data:
             return {"valid": True}
         return {"valid": False}

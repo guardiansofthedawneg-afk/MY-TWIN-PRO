@@ -4,6 +4,7 @@ import { useTwinBrain } from '../hooks/useTwinBrain';
 import { useRTL } from '../../lib/useRTL';
 import { useAppTheme } from '../../engine/colors';
 import { useTwinStore } from '../../store/useTwinStore';
+import { bootstrapCoordinator } from '../core/BootstrapCoordinator';
 import AmbientField from './AmbientField';
 import LivingLightEntity from '../renderers/zones/LivingLightEntity';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
@@ -18,6 +19,20 @@ export default function LivingWorld() {
 
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; sender: 'user' | 'twin'; text: string }>>([]);
+
+  
+  // 🧬 تشغيل جميع المحركات
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await bootstrapCoordinator.bootstrap();
+      } catch (e) {
+        console.warn('[LivingWorld] Bootstrap failed:', e);
+      }
+    };
+    init();
+  }, []);
+
 
   const handleSend = useCallback(async () => {
     if (!inputText.trim() || isThinking) return;

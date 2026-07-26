@@ -34,6 +34,12 @@ export default function LivingWorld() {
   }, []);
 
 
+  
+  useEffect(() => {
+    import('../core/TestAllEngines').then(m => m.testAllEngines()).then(console.log).catch(console.error);
+  }, []);
+
+
   const handleSend = useCallback(async () => {
     if (!inputText.trim() || isThinking) return;
     const text = inputText.trim();

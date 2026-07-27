@@ -16,6 +16,7 @@ import { worldAwarenessEngine } from '../consciousness/WorldAwarenessEngine';
 import { lifeStateEngine } from '../life/LifeStateEngine';
 import { sensorContextEngine } from '../sensor/SensorContextEngine';
 import { expressionEngine } from '../expression/ExpressionEngine';
+import { attentionEngine } from '../attention/AttentionEngine';
 import { digitalPassportEngine } from '../passport/DigitalPassport';
 import { portableMemoryEngine } from '../memory/PortableMemoryEngine';
 
@@ -36,7 +37,7 @@ export class SoulKernel {
     startedAt: 0,
     uptime: 0,
     activeEngines: 0,
-    totalEngines: 18,
+    totalEngines: 19,
     lastError: null,
   };
 

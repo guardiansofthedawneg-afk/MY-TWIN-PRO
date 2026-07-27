@@ -1,6 +1,8 @@
 """
-MyTwin API v20.0.0 – Living Digital Twin Backend
+MyTwin API v20.5.0 – Living Digital Twin Backend
 ==================================================
+يدعم دورة حياة كاملة مع محركات الوعي الجديدة.
+Existence Loop يعمل في الخلفية لكل مستخدم نشط.
 """
 import logging, sys, os, time, importlib
 from pathlib import Path
@@ -16,7 +18,7 @@ logging.basicConfig(
     datefmt='%H:%M:%S',
 )
 logger = logging.getLogger("mytwin.api")
-logger.info("🚀 MyTwin API v20.0.0 starting...")
+logger.info("🚀 MyTwin API v20.5.0 starting...")
 
 from dotenv import load_dotenv
 load_dotenv(BASE_DIR / '.env')
@@ -38,12 +40,14 @@ except Exception as e:
 async def lifespan(app: FastAPI):
     logger.info("🌟 Initializing all systems...")
 
+    # 1. AI Gateway
     try:
         from app.infrastructure.ai.ai_gateway import ai_gateway
         logger.info("   ✅ AI Gateway initialized")
     except Exception as e:
         logger.error(f"   ❌ AI Gateway FAILED: {e}")
 
+    # 2. Supabase
     try:
         from app.infrastructure.database.supabase_client import get_db
         get_db()
@@ -51,17 +55,62 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"   ❌ Supabase Client FAILED: {e}")
 
+    # 3. Unified Twin Brain
     try:
         from app.twin_brain.unified_brain import unified_brain
-        await unified_brain.initialize()
-        logger.info("   ✅ Unified Twin Brain initialized")
+        logger.info("   ✅ Unified Twin Brain v5.0 ready")
     except Exception as e:
         logger.warning(f"   ⚠️ Unified Brain skipped: {e}")
 
+    # 4. ✅ Existence Loop — المحركات الدورية في الخلفية
+    try:
+        from app.twin_state.existence_loop import existence_loop
+        await existence_loop.start()
+        logger.info("   ✅ Existence Loop v3.0 started — background engines active")
+    except Exception as e:
+        logger.error(f"   ❌ Existence Loop FAILED: {e}")
+
+    # 5. Context Awareness Engine — تحميل أولي
+    try:
+        from app.twin_state.context_awareness_engine import context_awareness_engine
+        logger.info("   ✅ Context Awareness Engine v1.0 ready")
+    except Exception as e:
+        logger.error(f"   ❌ Context Awareness Engine FAILED: {e}")
+
+    # 6. Emotional Momentum Engine — تحميل أولي
+    try:
+        from app.twin_state.emotional_momentum import emotional_momentum_engine
+        logger.info("   ✅ Emotional Momentum Engine v1.0 ready")
+    except Exception as e:
+        logger.error(f"   ❌ Emotional Momentum Engine FAILED: {e}")
+
+    # 7. Curiosity Dynamics Engine — تحميل أولي
+    try:
+        from app.twin_state.curiosity_dynamics import curiosity_dynamics_engine
+        logger.info("   ✅ Curiosity Dynamics Engine v1.0 ready")
+    except Exception as e:
+        logger.error(f"   ❌ Curiosity Dynamics Engine FAILED: {e}")
+
+    # 8. Experience Engine — تحميل أولي
+    try:
+        from app.twin_state.experience_engine import experience_engine
+        logger.info("   ✅ Experience Engine v1.0 ready")
+    except Exception as e:
+        logger.error(f"   ❌ Experience Engine FAILED: {e}")
+
     _register_core_routes(app)
-    logger.info("🌟 MyTwin API v20.0.0 fully started ✅")
+    logger.info("🌟 MyTwin API v20.5.0 fully started ✅")
+    logger.info("🔄 Background engines: Tick(60s) + Slow(10min) + Hourly(1h)")
     yield
+    
+    # Shutdown
     logger.info("👋 Shutting down...")
+    try:
+        from app.twin_state.existence_loop import existence_loop
+        await existence_loop.stop()
+        logger.info("   ✅ Existence Loop stopped")
+    except Exception:
+        pass
 
 def _register_core_routes(app: FastAPI):
     core_modules = [
@@ -111,7 +160,7 @@ def _register_core_routes(app: FastAPI):
         "app.api.routes.ai_trainer_routes",
         "app.api.routes.fingerprint_routes",
         "app.api.routes.sync_routes",
-        "app.api.routes.admin_routes",  # ✅ Internal training data export
+        "app.api.routes.admin_routes",
     ]
 
     loaded = 0
@@ -130,8 +179,8 @@ def _register_core_routes(app: FastAPI):
 
 app = FastAPI(
     title="MyTwin API",
-    version="20.0.0",
-    description="Living Digital Twin – Twin OS Kernel",
+    version="20.5.0",
+    description="Living Digital Twin – Twin OS Kernel v3.0 with Consciousness Engines",
     docs_url="/docs" if getattr(config, 'DEBUG', True) else None,
     redoc_url="/redoc" if getattr(config, 'DEBUG', True) else None,
     lifespan=lifespan,
@@ -159,11 +208,28 @@ async def log_requests(request: Request, call_next):
 
 @app.get("/")
 async def root():
-    return {"name": "MyTwin API", "version": "20.0.0", "status": "running"}
+    return {
+        "name": "MyTwin API",
+        "version": "20.5.0",
+        "status": "running",
+        "engines": {
+            "context_awareness": "v1.0",
+            "emotional_momentum": "v1.0",
+            "curiosity_dynamics": "v1.0",
+            "experience": "v1.0",
+            "twin_kernel": "v3.0",
+            "existence_loop": "v3.0",
+            "unified_brain": "v5.0",
+        }
+    }
 
 @app.get("/health")
 async def health():
-    return JSONResponse(content={"api": "healthy", "twin_os_kernel": True})
+    return JSONResponse(content={
+        "api": "healthy",
+        "twin_os_kernel": True,
+        "consciousness_engines": True,
+    })
 
 if __name__ == "__main__":
     import uvicorn

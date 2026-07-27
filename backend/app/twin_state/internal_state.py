@@ -1,13 +1,11 @@
 """
-Twin Internal State v2.0 – الحالة الداخلية للتوأم الرقمي
+Twin Internal State v3.0 – الحالة الداخلية للتوأم الرقمي
 =============================================================
-- مزاج مستمر (يتغير بتفاعل المستخدم)
-- طاقة (تنخفض مع الاستخدام، ترتفع مع الراحة)
-- فضول (يزيد مع المواضيع المثيرة)
-- عمق الرابطة (يتعمق مع الزمن)
+- مزاج، طاقة، فضول، عمق الرابطة
 - آخر ما فكّر فيه التوأم
 - أسئلة يريد أن يسألها للمستخدم
-- ✅ المرحلة E: Personality DNA، Life Book، Goals، Self Reflections، Continuity
+- Personality DNA، Life Book، Goals، Self Reflections، Continuity
+- ✅ حقول جديدة: cognitive_load, curiosity_dynamics_state, emotional_momentum_state
 """
 import logging, random, asyncio
 from typing import Dict, Any, Optional, List
@@ -31,7 +29,7 @@ MOOD_LABELS = {
 }
 
 # ═══════════════════════════════════════════════════════
-# المرحلة E: هيكل Personality DNA
+# Personality DNA
 # ═══════════════════════════════════════════════════════
 DEFAULT_PERSONALITY_DNA = {
     "empathy": 0.85,
@@ -42,6 +40,20 @@ DEFAULT_PERSONALITY_DNA = {
     "logic": 0.75,
     "creativity": 0.80,
     "calmness": 0.85,
+}
+
+DEFAULT_CURIOSITY_STATE = {
+    "phase": "gathering",
+    "last_question_time": None,
+    "topics_explored": [],
+    "questions_asked_today": 0,
+}
+
+DEFAULT_MOMENTUM_STATE = {
+    "current_momentum": 0.0,
+    "phase": "stable",
+    "transition_path": None,
+    "time_in_current_emotion": 0.0,
 }
 
 class TwinInternalState:
@@ -70,13 +82,17 @@ class TwinInternalState:
                     "dreams": res.data.get("dreams", []),
                     "sent_milestones": res.data.get("sent_milestones", []),
                     "emotions_toward_user": res.data.get("emotions_toward_user", {"longing": 0.1, "gratitude": 0.5, "worry": 0.0}),
-                    # ✅ المرحلة E
+                    # المرحلة E
                     "personality_dna": res.data.get("personality_dna", DEFAULT_PERSONALITY_DNA),
                     "life_book": res.data.get("life_book", []),
                     "goals": res.data.get("goals", []),
                     "self_reflections": res.data.get("self_reflections", []),
                     "continuity_snapshot": res.data.get("continuity_snapshot", {}),
                     "maturity_level": res.data.get("maturity_level", "newborn"),
+                    # ✅ حقول المحركات الجديدة
+                    "cognitive_load": res.data.get("cognitive_load", 0.0),
+                    "curiosity_dynamics_state": res.data.get("curiosity_dynamics_state", DEFAULT_CURIOSITY_STATE),
+                    "emotional_momentum_state": res.data.get("emotional_momentum_state", DEFAULT_MOMENTUM_STATE),
                     "updated_at": res.data.get("updated_at", datetime.now(timezone.utc).isoformat()),
                 }
                 self._states[user_id] = state
@@ -95,13 +111,16 @@ class TwinInternalState:
             "dreams": [],
             "sent_milestones": [],
             "emotions_toward_user": {"longing": 0.1, "gratitude": 0.5, "worry": 0.0},
-            # ✅ المرحلة E
             "personality_dna": DEFAULT_PERSONALITY_DNA.copy(),
             "life_book": [],
             "goals": [],
             "self_reflections": [],
             "continuity_snapshot": {},
             "maturity_level": "newborn",
+            # ✅ حقول المحركات الجديدة
+            "cognitive_load": 0.0,
+            "curiosity_dynamics_state": DEFAULT_CURIOSITY_STATE.copy(),
+            "emotional_momentum_state": DEFAULT_MOMENTUM_STATE.copy(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         self._states[user_id] = state
@@ -171,16 +190,14 @@ class TwinInternalState:
         return MOOD_LABELS.get(mood, {}).get(lang, mood)
     
     # ═══════════════════════════════════════════════════
-    # ✅ المرحلة E: دوال جديدة
+    # المرحلة E: دوال متقدمة
     # ═══════════════════════════════════════════════════
     
     async def get_personality_dna(self, user_id: str) -> Dict[str, float]:
-        """استرجاع DNA الشخصية"""
         state = await self.get_state(user_id)
         return state.get("personality_dna", DEFAULT_PERSONALITY_DNA.copy())
     
     async def update_personality_dna(self, user_id: str, dna_updates: Dict[str, float]) -> Dict[str, float]:
-        """تحديث DNA الشخصية"""
         state = await self.get_state(user_id)
         current = state.get("personality_dna", DEFAULT_PERSONALITY_DNA.copy())
         for key, value in dna_updates.items():
@@ -192,7 +209,6 @@ class TwinInternalState:
         return current
     
     async def add_life_book_entry(self, user_id: str, event: str, metadata: Optional[Dict] = None) -> Dict:
-        """إضافة حدث إلى كتاب الحياة"""
         state = await self.get_state(user_id)
         entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -212,13 +228,11 @@ class TwinInternalState:
         return entry
     
     async def get_life_book(self, user_id: str, limit: int = 20) -> List[Dict]:
-        """استرجاع كتاب الحياة"""
         state = await self.get_state(user_id)
         life_book = state.get("life_book", [])
         return life_book[-limit:][::-1]
     
     async def add_goal(self, user_id: str, title: str, goal_type: str = "general") -> Dict:
-        """إضافة هدف"""
         state = await self.get_state(user_id)
         goal = {
             "id": f"goal_{datetime.now(timezone.utc).timestamp()}",
@@ -236,7 +250,6 @@ class TwinInternalState:
         return goal
     
     async def update_goal_progress(self, user_id: str, goal_id: str, progress: float) -> Optional[Dict]:
-        """تحديث تقدم هدف"""
         state = await self.get_state(user_id)
         goals = state.get("goals", [])
         for goal in goals:
@@ -249,12 +262,10 @@ class TwinInternalState:
         return None
     
     async def get_active_goals(self, user_id: str) -> List[Dict]:
-        """جلب الأهداف النشطة"""
         state = await self.get_state(user_id)
         return [g for g in state.get("goals", []) if g.get("progress", 0) < 100]
     
     async def add_self_reflection(self, user_id: str, observation: str, confidence: float = 0.7) -> Dict:
-        """إضافة تأمل ذاتي"""
         state = await self.get_state(user_id)
         reflection = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -271,13 +282,11 @@ class TwinInternalState:
         return reflection
     
     async def get_self_reflections(self, user_id: str, limit: int = 5) -> List[Dict]:
-        """استرجاع التأملات الذاتية"""
         state = await self.get_state(user_id)
         reflections = state.get("self_reflections", [])
         return reflections[-limit:][::-1]
     
     async def save_continuity_snapshot(self, user_id: str) -> Dict:
-        """حفظ لقطة استمرارية"""
         state = await self.get_state(user_id)
         snapshot = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -286,6 +295,9 @@ class TwinInternalState:
             "memory_count": len(state.get("life_book", [])),
             "goals_active": len([g for g in state.get("goals", []) if g.get("progress", 0) < 100]),
             "maturity_level": state.get("maturity_level", "newborn"),
+            "cognitive_load": state.get("cognitive_load", 0.0),
+            "curiosity_phase": state.get("curiosity_dynamics_state", {}).get("phase", "gathering"),
+            "emotional_momentum_phase": state.get("emotional_momentum_state", {}).get("phase", "stable"),
         }
         state["continuity_snapshot"] = snapshot
         state["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -293,7 +305,6 @@ class TwinInternalState:
         return snapshot
     
     async def restore_from_continuity(self, user_id: str) -> Dict:
-        """استعادة من لقطة الاستمرارية"""
         state = await self.get_state(user_id)
         snapshot = state.get("continuity_snapshot", {})
         if snapshot:
@@ -304,9 +315,9 @@ class TwinInternalState:
         return snapshot
     
     async def update_maturity_level(self, user_id: str, level: str) -> str:
-        """تحديث مستوى النضج"""
         valid_levels = ["newborn", "growing", "maturing", "mature", "wise"]
         if level not in valid_levels:
+            state = await self.get_state(user_id)
             return state.get("maturity_level", "newborn")
         state = await self.get_state(user_id)
         state["maturity_level"] = level
@@ -315,7 +326,6 @@ class TwinInternalState:
         return level
     
     async def update_internal_emotion(self, user_id: str) -> str:
-        """عاطفة داخلية تنشأ من الداخل"""
         state = await self.get_state(user_id)
         now = datetime.now(timezone.utc)
         
@@ -352,7 +362,6 @@ class TwinInternalState:
         return state["mood"]
 
     async def update_emotion_toward_user(self, user_id: str, emotion_type: str, delta: float):
-        """تحديث المشاعر تجاه المستخدم (شوق، امتنان، قلق)"""
         state = await self.get_state(user_id)
         if "emotions_toward_user" not in state:
             state["emotions_toward_user"] = {"longing": 0.1, "gratitude": 0.5, "worry": 0.0}
@@ -361,12 +370,10 @@ class TwinInternalState:
             await self._save_state(user_id, state)
 
     async def get_emotions_toward_user(self, user_id: str) -> Dict[str, float]:
-        """استرجاع المشاعر تجاه المستخدم"""
         state = await self.get_state(user_id)
         return state.get("emotions_toward_user", {"longing": 0.1, "gratitude": 0.5, "worry": 0.0})
 
     async def get_dominant_emotion_toward_user(self, user_id: str) -> str:
-        """أكثر شعور طاغٍ تجاه المستخدم"""
         emotions = await self.get_emotions_toward_user(user_id)
         if not emotions:
             return "neutral"
@@ -384,7 +391,6 @@ class TwinInternalState:
                 "bond_depth": state["bond_depth"],
                 "last_thought": state["last_thought"],
                 "pending_questions": state.get("pending_questions", []),
-                # ✅ المرحلة E
                 "personality_dna": state.get("personality_dna", DEFAULT_PERSONALITY_DNA),
                 "life_book": state.get("life_book", []),
                 "goals": state.get("goals", []),
@@ -392,6 +398,10 @@ class TwinInternalState:
                 "continuity_snapshot": state.get("continuity_snapshot", {}),
                 "maturity_level": state.get("maturity_level", "newborn"),
                 "emotions_toward_user": state.get("emotions_toward_user", {}),
+                # ✅ حقول جديدة
+                "cognitive_load": state.get("cognitive_load", 0.0),
+                "curiosity_dynamics_state": state.get("curiosity_dynamics_state", DEFAULT_CURIOSITY_STATE),
+                "emotional_momentum_state": state.get("emotional_momentum_state", DEFAULT_MOMENTUM_STATE),
                 "updated_at": state["updated_at"],
             }).execute()
         except Exception as e:
@@ -400,4 +410,4 @@ class TwinInternalState:
 
 # نسخة عالمية
 twin_internal_state = TwinInternalState()
-logger.info("✅ Twin Internal State v2.0 initialized with Personality DNA support")
+logger.info("✅ Twin Internal State v3.0 initialized with Cognitive Load, Curiosity Dynamics & Emotional Momentum fields")

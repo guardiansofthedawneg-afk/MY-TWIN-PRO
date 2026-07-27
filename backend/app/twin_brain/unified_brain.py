@@ -1,15 +1,23 @@
 """
-Unified Twin Brain v4.0 — العقل المركزي الموحد
+Unified Twin Brain v5.0 — العقل المركزي الموحد
 =================================================
-ينسق كل الخدمات: الإدراك، العاطفة (TCMA)، الذاكرة، الفضول،
-الشخصية، القرار، الصمت، التوقيت، الروح، التطور.
-يُعيد حالة كيان كاملة (Kernel State) للواجهة.
-يدعم العربي والأجنبي بنفس العمق.
+ينسق كل الخدمات: الإدراك، العاطفة، الذاكرة، الفضول، الشخصية،
+القرار، الصمت، التوقيت، الروح، التطور، الوعي السياقي، الزخم العاطفي،
+التجارب، وديناميكيات الفضول.
 
-❌ لا يوجد منطق ذكاء في الـ Frontend بعد الآن.
+يدمج الآن:
+- ContextAwarenessEngine (الوعي السياقي)
+- EmotionalMomentumEngine (الزخم العاطفي)
+- CuriosityDynamicsEngine (ديناميكيات الفضول)
+- ExperienceEngine (محرك التجارب)
+- TwinKernel v3.0 (النواة الموحدة)
+
+✅ لا يوجد منطق ذكاء في الـ Frontend.
 ✅ هذا الملف هو "الحقيقة الواحدة" (Single Source of Truth).
+✅ جميع المتغيرات معرفة قبل الاستخدام.
+✅ جميع المحركات مستدعاة في مكانها الصحيح.
 """
-import logging, asyncio
+import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
@@ -26,7 +34,7 @@ from app.twin_state.personality_engine import (
 )
 from app.twin_brain.identity_service import get_identity_context
 from app.twin_brain.response_builder import build_response
-from app.soul import get_soul_state, evolve_soul
+from app.soul.soul_orchestrator import get_soul_state, evolve_soul
 from app.engine.goal.goal_engine import goal_engine as backend_goal_engine
 from app.engine.decision.decision_engine import decision_engine as backend_decision_engine
 from app.engine.constitution.constitution_engine import constitution_engine as backend_constitution_engine
@@ -37,13 +45,20 @@ from app.engine.energy.twin_energy_engine import twin_energy_engine as backend_t
 
 from app.soul.soul_bonds import soul_bonds
 from app.twin_state.unified_evolution import unified_evolution_engine
-
 from app.twin_state.relationship_service import load as load_relationship
+
+# ═══════════════════════════════════════════
+# استيراد المحركات الجديدة
+# ═══════════════════════════════════════════
+from app.twin_state.context_awareness_engine import context_awareness_engine
+from app.twin_state.emotional_momentum import emotional_momentum_engine
+from app.twin_state.curiosity_dynamics import curiosity_dynamics_engine
+from app.twin_state.experience_engine import experience_engine
 
 
 class UnifiedTwinBrain:
     """
-    العقل الوحيد للتوأم الرقمي.
+    العقل الوحيد للتوأم الرقمي - v5.0.
     يستقبل UnifiedInput ويعيد UnifiedResponse.
     """
     
@@ -54,6 +69,7 @@ class UnifiedTwinBrain:
         lang: str = "ar",
         perception: Optional[Dict] = None,
         history: Optional[List[Dict]] = None,
+        device_info: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         دورة الحياة الكاملة:
@@ -118,58 +134,116 @@ class UnifiedTwinBrain:
         trust = relationship.get("trust", 50)
         
         # ═══════════════════════════════
-        # 7. تحديد النية والسلوك (Intent & Behavior)
+        # 7. الوعي السياقي (Context Awareness) — جديد
+        # ═══════════════════════════════
+        context_snapshot = None
+        try:
+            context_snapshot = await context_awareness_engine.get_full_context(
+                user_id=user_id,
+                current_emotion=real_emotion,
+                user_activity="active",
+                device_info=device_info,
+            )
+            logger.debug(f"Context snapshot: {context_snapshot['time']['time_of_day']}")
+        except Exception as e:
+            logger.warning(f"Context awareness failed: {e}")
+        
+        # ═══════════════════════════════
+        # 8. الزخم العاطفي (Emotional Momentum) — جديد
+        # ═══════════════════════════════
+        momentum_state = None
+        try:
+            momentum_state = await emotional_momentum_engine.update_momentum(
+                user_id=user_id,
+                detected_emotion=real_emotion,
+                emotion_intensity=emotion_intensity,
+                context_snapshot=context_snapshot,
+            )
+            # العاطفة الفعالة بعد تطبيق الزخم
+            effective_emotion = momentum_state.get("current_emotion", real_emotion)
+            requires_silence = momentum_state.get("requires_silence", False)
+        except Exception as e:
+            logger.warning(f"Emotional momentum failed: {e}")
+            effective_emotion = real_emotion
+            requires_silence = False
+        
+        # ═══════════════════════════════
+        # 9. تحديد النية والسلوك (Intent & Behavior)
         # ═══════════════════════════════
         intent = self._determine_intent(
             user_state=user_state,
-            emotion=real_emotion,
+            emotion=effective_emotion,
             intensity=emotion_intensity,
             bond_level=bond_level,
             phase=phase,
             dna=dna,
+            lang=lang,
         )
         behavior = self._decide_behavior(
             intent=intent,
-            emotion=real_emotion,
+            emotion=effective_emotion,
             phase=phase,
         )
         
         # ═══════════════════════════════
-        # 8. الصمت الذكي (M7: Silence)
+        # 10. بناء حالة الحضور الأساسية
+        # ═══════════════════════════════
+        presence_state = self._build_presence_state(
+            emotion=current_emotion,
+            intensity=emotion_intensity,
+            dna=dna,
+            phase=phase,
+            silence_before_ms=0,
+        )
+        
+        # تأثير التعب على الحضور
+        if perception.get("user_state") == "tired":
+            presence_state["voice_tone"] = "soft"
+            presence_state["energy"] = max(0.3, presence_state.get("energy", 0.7) - 0.2)
+
+        
+        # ═══════════════════════════════
+        # 11. الصمت الذكي (Silence)
         # ═══════════════════════════════
         silence = self._evaluate_silence(
             behavior=behavior,
-            emotion=real_emotion,
+            emotion=effective_emotion,
             intensity=emotion_intensity,
         )
+        
+        # إذا كان الزخم العاطفي يتطلب صمتاً
+        if requires_silence and not silence["should_be_silent"]:
+            silence_duration = await emotional_momentum_engine.get_silence_duration(user_id)
+            silence = {
+                "should_be_silent": True,
+                "reason": "emotional_transition",
+                "suggested_pause_ms": int(silence_duration * 1000),
+                "presence_action": "soft_breathing",
+            }
+        
         if silence["should_be_silent"]:
             return self._build_silence_response(silence, emotion_state, relationship)
         
         # ═══════════════════════════════
-        # 9. التوقيت الحي (M8: Living Timing)
+        # 12. التوقيت الحي (Living Timing)
         # ═══════════════════════════════
         timing = self._calculate_timing(
-            emotion=current_emotion,
+            emotion=effective_emotion,
             intensity=emotion_intensity,
             user_state=user_state,
         )
         
-        # ═══════════════════════════════
-        
-        # Bidirectional influence: low energy slows thinking
+        # تأثير التعب على التوقيت
         if perception.get("user_state") == "tired":
-            timing["reason_ms"] = int(timing["reason_ms"] * 1.5)
-            timing["respond_ms"] = int(timing["respond_ms"] * 1.3)
-            presence_state["voice_tone"] = "soft"
-            presence_state["energy"] = max(0.3, presence_state.get("energy", 0.7) - 0.2)
-    
+            timing["reason_ms"] = int(timing.get("reason_ms", 800) * 1.5)
+            timing["respond_ms"] = int(timing.get("respond_ms", 400) * 1.3)
         
         # ═══════════════════════════════
-        # المحركات الذهنية الجديدة (Backend Engines)
+        # 13. المحركات الذهنية (Backend Engines)
         # ═══════════════════════════════
         backend_goal = backend_goal_engine.determine_goal(
             perception=user_state,
-            emotion=real_emotion,
+            emotion=effective_emotion,
             bond_level=bond_level,
             relationship_phase=phase,
             time_of_day=time_of_day,
@@ -193,14 +267,14 @@ class UnifiedTwinBrain:
             goal=backend_goal["primary_goal"],
             identity_role=backend_identity["role"],
             bond_level=bond_level,
-            emotion=real_emotion,
+            emotion=effective_emotion,
             emotion_intensity=emotion_intensity,
             perception=user_state,
             time_of_day=time_of_day,
         )
         
         backend_internal = backend_internal_state_engine.evaluate(
-            emotion=real_emotion,
+            emotion=effective_emotion,
             bond_level=bond_level,
             twin_energy=0.7,
         )
@@ -214,23 +288,79 @@ class UnifiedTwinBrain:
             bond_level=bond_level,
             identity_role=backend_identity["role"],
         )
-
-        # 10. توليد الرد
+        
+        # ═══════════════════════════════
+        # 14. بناء سياق المحركات
+        # ═══════════════════════════════
+        engine_context = self._build_engine_context(
+            goal=backend_goal,
+            decision=backend_decision,
+            constitution=backend_constitution_check,
+            identity=backend_identity,
+            internal=backend_internal,
+            reflection=backend_reflection,
+            twin_energy=backend_twin_energy,
+        )
+        
+        # ═══════════════════════════════
+        # 15. استدعاء TwinKernel v3.0 — ينسق المحركات الجديدة
+        # ═══════════════════════════════
+        kernel_result = None
+        try:
+            from app.twin_state.twin_kernel import twin_kernel
+            kernel_result = await twin_kernel.process_interaction(
+                user_id=user_id,
+                message=message,
+                reply="",  # سيتم ملؤه لاحقاً
+                emotion=effective_emotion,
+                interaction_depth=emotion_intensity,
+                device_info=device_info,
+            )
+            logger.debug(f"TwinKernel processed: {kernel_result.get('engines_triggered', [])}")
+        except Exception as e:
+            logger.warning(f"TwinKernel failed: {e}")
+        
+        # ═══════════════════════════════
+        # 16. ديناميكيات الفضول (Curiosity Dynamics)
+        # ═══════════════════════════════
+        curiosity_state = None
+        proactive_question = None
+        try:
+            curiosity_state = await curiosity_dynamics_engine.update_curiosity(
+                user_id=user_id,
+                current_topic=message[:50],
+                topic_novelty=0.5,
+                user_emotion=effective_emotion,
+                context_snapshot=context_snapshot,
+            )
+            
+            # التحقق من المبادرة
+            proactive = await curiosity_dynamics_engine.should_be_proactive(
+                user_id, context_snapshot
+            )
+            if proactive.get("should_proact"):
+                proactive_question = proactive.get("suggested_question")
+        except Exception as e:
+            logger.debug(f"Curiosity dynamics failed: {e}")
+        
+        # ═══════════════════════════════
+        # 17. توليد الرد
         # ═══════════════════════════════
         strategy = {
             "goal": intent["goal"],
             "tone": behavior["tone"],
             "personality_dna": dna,
-            "emotion": real_emotion,
+            "emotion": effective_emotion,
             "engine_context": engine_context,
         }
+        
         reply = await build_response(
             user_id=user_id,
             message=message,
             identity_context=identity,
             emotion_context={
                 "current_emotion": current_emotion,
-                "real_emotion": real_emotion,
+                "real_emotion": effective_emotion,
                 "intensity": emotion_intensity,
                 "confidence": emotion_confidence,
                 "recommendation": emotion_state.get("recommendation", ""),
@@ -246,28 +376,51 @@ class UnifiedTwinBrain:
         )
         
         # ═══════════════════════════════
-        # 11. تخزين الذاكرة (Consolidate)
+        # 18. تخزين الذاكرة (Consolidate)
         # ═══════════════════════════════
         await unified_memory_engine.store(
             user_id=user_id,
             content=message,
             reply=reply,
-            emotion=real_emotion,
+            emotion=effective_emotion,
             importance=self._calculate_importance(emotion_intensity, message),
             lang=lang,
         )
         
         # ═══════════════════════════════
-        # 12. تحديث الشخصية (Evolution)
+        # 19. محرك التجارب (Experience Engine)
+        # ═══════════════════════════════
+        experience_result = None
+        try:
+            event = {
+                "type": "message",
+                "content": f"User: {message[:100]} | Twin: {reply[:100]}",
+                "emotion": effective_emotion,
+                "importance": self._calculate_importance(emotion_intensity, message),
+                "metadata": {"intent": intent.get("intent")},
+            }
+            experience_result = await experience_engine.process_event(
+                user_id=user_id,
+                event=event,
+                context_snapshot=context_snapshot,
+            )
+            if experience_result.get("became_experience"):
+                logger.info(f"✨ New experience: {experience_result['experience']['type']}")
+        except Exception as e:
+            logger.debug(f"Experience engine failed: {e}")
+
+        
+        # ═══════════════════════════════
+        # 20. تحديث الشخصية (Evolution)
         # ═══════════════════════════════
         evolved_dna = self._evolve_dna(
             dna=dna,
-            interaction_quality=self._assess_quality(real_emotion, intensity=emotion_intensity),
+            interaction_quality=self._assess_quality(effective_emotion, intensity=emotion_intensity),
         )
         await save_personality_dna(user_id, evolved_dna)
         
         # ═══════════════════════════════
-        # 13. بناء حالة الحضور (Presence State)
+        # 21. تحديث حالة الحضور بعد الرد
         # ═══════════════════════════════
         presence_state = self._build_presence_state(
             emotion=current_emotion,
@@ -277,13 +430,14 @@ class UnifiedTwinBrain:
             silence_before_ms=silence.get("suggested_pause_ms", 0),
         )
         
-
+        if perception.get("user_state") == "tired":
+            presence_state["voice_tone"] = "soft"
+            presence_state["energy"] = max(0.3, presence_state.get("energy", 0.7) - 0.2)
+        
         # ═══════════════════════════════
-        # 13.5 تطور الروح (كل 10 رسائل)
+        # 22. تطور الروح (Soul State)
         # ═══════════════════════════════
         interaction_count = await unified_evolution_engine._get_interaction_count(user_id)
-        soul_state = {}
-        # استدعاء نظام الروح الجديد مع بيانات حقيقية من TCMA
         memory_count = await unified_memory_engine.get_memory_count(user_id)
         core_memory_count = await unified_memory_engine.get_core_memory_count(user_id)
         memory_patterns_dict = await unified_memory_engine.get_patterns(user_id, days=14)
@@ -299,7 +453,7 @@ class UnifiedTwinBrain:
             bond_level=bond_level,
             interaction_count=interaction_count,
             personality_dna=evolved_dna,
-            dominant_emotion=real_emotion,
+            dominant_emotion=effective_emotion,
             recent_emotions=recent_emotions_list,
             memory_count=memory_count,
             core_memory_count=core_memory_count,
@@ -309,8 +463,8 @@ class UnifiedTwinBrain:
         )
         
         # ═══════════════════════════════
-        
-        # تحديث SoulBonds (للربط بين المستخدمين)
+        # 23. SoulBonds
+        # ═══════════════════════════════
         try:
             active_bonds = await soul_bonds.get_bonds(user_id)
             if active_bonds:
@@ -318,20 +472,27 @@ class UnifiedTwinBrain:
                     await soul_bonds.strengthen_bond(user_id, bond.get("partner_id", ""))
         except Exception:
             pass
-    
-        # 13.6 التطور طويل المدى
+        
         # ═══════════════════════════════
-        evolution_updates = await unified_evolution_engine.record_interaction(user_id, real_emotion, evolved_dna)
-
+        # 24. التطور طويل المدى
         # ═══════════════════════════════
-        # 14. تجميع الاستجابة الموحدة
+        evolution_updates = await unified_evolution_engine.record_interaction(
+            user_id, effective_emotion, evolved_dna
+        )
+        
+        # ═══════════════════════════════
+        # 25. تجميع الاستجابة الموحدة
         # ═══════════════════════════════
         latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         
-        # بناء مسار الوعي ونموذج الثقة
-        consciousness_trace = self._build_consciousness_trace(perception, real_emotion, relevant_memories, intent, behavior)
-        trust_model = await self._build_trust_model(user_id, bond_level, evolved_dna, None)
-
+        consciousness_trace = self._build_consciousness_trace(
+            perception, effective_emotion, relevant_memories, intent, behavior
+        )
+        
+        trust_model = await self._build_trust_model(
+            user_id, bond_level, evolved_dna, None
+        )
+        
         return {
             "reply": reply,
             "presence_state": presence_state,
@@ -339,9 +500,31 @@ class UnifiedTwinBrain:
             "evolution_updates": evolution_updates,
             "consciousness_trace": consciousness_trace,
             "trust_model": trust_model,
+            "context_snapshot": {
+                "time_of_day": context_snapshot.get("time", {}).get("time_of_day") if context_snapshot else None,
+                "session_type": context_snapshot.get("session", {}).get("session_type") if context_snapshot else None,
+                "recommended_tone": context_snapshot.get("composite", {}).get("recommended_tone") if context_snapshot else None,
+                "should_be_proactive": context_snapshot.get("composite", {}).get("should_be_proactive") if context_snapshot else None,
+            } if context_snapshot else None,
+            "emotional_momentum": {
+                "effective_emotion": effective_emotion,
+                "phase": momentum_state.get("phase") if momentum_state else "stable",
+                "requires_silence": requires_silence,
+                "momentum_value": momentum_state.get("momentum_value") if momentum_state else 0.0,
+            },
+            "curiosity": {
+                "level": curiosity_state.get("curiosity_level") if curiosity_state else 0.7,
+                "phase": curiosity_state.get("phase") if curiosity_state else "gathering",
+                "proactive_question": proactive_question,
+            },
+            "experience": {
+                "became_experience": experience_result.get("became_experience") if experience_result else False,
+                "type": experience_result.get("experience", {}).get("type") if experience_result else None,
+                "reflection": experience_result.get("reflection_generated") if experience_result else None,
+            } if experience_result else None,
             "twin_emotional_state": {
                 "current_emotion": current_emotion,
-                "real_emotion": real_emotion,
+                "real_emotion": effective_emotion,
                 "intensity": emotion_intensity,
                 "confidence": emotion_confidence,
                 "cultural_analysis": cultural_analysis,
@@ -368,9 +551,9 @@ class UnifiedTwinBrain:
             "latency_ms": round(latency_ms, 2),
         }
     
-    # ═══════════════════════════════════
+    # ═══════════════════════════════════════════
     # دوال القرار الداخلية
-    # ═══════════════════════════════════
+    # ═══════════════════════════════════════════
     
     def _determine_intent(
         self,
@@ -380,9 +563,8 @@ class UnifiedTwinBrain:
         bond_level: int,
         phase: str,
         dna: Dict[str, float],
+        lang: str = "ar",
     ) -> Dict[str, str]:
-        """تحديد نية التوأم بناءً على كل المدخلات."""
-        # قاعدة النوايا
         if emotion == "sadness" and intensity > 0.6:
             goal = "أريد مواساته بلطف" if lang == "ar" else "I want to comfort gently"
             intent = "comfort"
@@ -410,7 +592,6 @@ class UnifiedTwinBrain:
         else:
             goal = "أريد أن أكون حاضراً" if lang == "ar" else "I want to be present"
             intent = "reflect"
-        
         return {"intent": intent, "goal": goal}
     
     def _decide_behavior(
@@ -419,123 +600,66 @@ class UnifiedTwinBrain:
         emotion: str,
         phase: str,
     ) -> Dict[str, str]:
-        """تحديد نبرة وسلوك التوأم."""
         intent_type = intent["intent"]
         tones = {
-            "comfort": "soft_warm",
-            "reassure": "calm_steady",
-            "listen": "gentle_patient",
-            "celebrate": "warm_enthusiastic",
-            "encourage": "supportive_gentle",
-            "reconnect": "warm_inviting",
-            "inform": "precise_clear",
-            "explore": "curious_warm",
+            "comfort": "soft_warm", "reassure": "calm_steady",
+            "listen": "gentle_patient", "celebrate": "warm_enthusiastic",
+            "encourage": "supportive_gentle", "reconnect": "warm_inviting",
+            "inform": "precise_clear", "explore": "curious_warm",
             "reflect": "calm_observant",
         }
         tone = tones.get(intent_type, "neutral_warm")
         return {"behavior": intent_type, "tone": tone}
     
     def _evaluate_silence(
-        self,
-        behavior: Dict[str, str],
-        emotion: str,
-        intensity: float,
+        self, behavior: Dict[str, str], emotion: str, intensity: float
     ) -> Dict[str, Any]:
-        """M7: تقييم ما إذا كان الصمت أفضل من الكلام."""
         if behavior["behavior"] in ["listen"] and intensity > 0.7:
-            return {
-                "should_be_silent": True,
-                "reason": "user_needs_listener",
-                "suggested_pause_ms": 2500,
-                "presence_action": "attentive_gaze",
-            }
+            return {"should_be_silent": True, "reason": "user_needs_listener", "suggested_pause_ms": 2500, "presence_action": "attentive_gaze"}
         if emotion in ["sadness"] and intensity > 0.8:
-            return {
-                "should_be_silent": True,
-                "reason": "profound_sadness",
-                "suggested_pause_ms": 3500,
-                "presence_action": "soft_breathing",
-            }
+            return {"should_be_silent": True, "reason": "profound_sadness", "suggested_pause_ms": 3500, "presence_action": "soft_breathing"}
         return {"should_be_silent": False, "suggested_pause_ms": 0}
     
-    def _build_silence_response(
-        self,
-        silence: Dict,
-        emotion_state: Dict,
-        relationship: Dict,
-    ) -> Dict[str, Any]:
-        """بناء رد الصمت."""
+    def _build_silence_response(self, silence: Dict, emotion_state: Dict, relationship: Dict) -> Dict[str, Any]:
         return {
             "reply": "",
             "presence_state": {
-                "emotion": emotion_state["primary_emotion"],
-                "intensity": emotion_state["intensity"],
-                "action": silence["presence_action"],
-                "silence_duration_ms": silence["suggested_pause_ms"],
-                "halo_color": "#3B82F6",
-                "energy": 0.3,
+                "emotion": emotion_state["primary_emotion"], "intensity": emotion_state["intensity"],
+                "action": silence["presence_action"], "silence_duration_ms": silence["suggested_pause_ms"],
+                "halo_color": "#3B82F6", "energy": 0.3,
             },
-            "behavior": {
-                "intent": "silent_presence",
-                "goal": "حضور صامت",
-                "tone": "silent",
-                "silence_before_speaking_ms": silence["suggested_pause_ms"],
-            },
+            "behavior": {"intent": "silent_presence", "goal": "حضور صامت", "tone": "silent", "silence_before_speaking_ms": silence["suggested_pause_ms"]},
             "memory_surfaced": None,
-            "twin_state_update": {
-                "bond_delta": 2,
-                "relationship": relationship,
-            },
+            "twin_state_update": {"bond_delta": 2, "relationship": relationship},
             "timing": {"response_delay_ms": silence["suggested_pause_ms"]},
             "latency_ms": 0,
         }
     
-    def _calculate_timing(
-        self,
-        emotion: str,
-        intensity: float,
-        user_state: str,
-    ) -> Dict[str, int]:
-        """M8: حساب توقيت الردود."""
+    def _calculate_timing(self, emotion: str, intensity: float, user_state: str) -> Dict[str, int]:
         base = 250
-        if emotion in ["sadness", "fear"]:
-            base = 400
-        elif emotion == "anger":
-            base = 300
-        elif emotion == "joy":
-            base = 200
+        if emotion in ["sadness", "fear"]: base = 400
+        elif emotion == "anger": base = 300
+        elif emotion == "joy": base = 200
         base += int(intensity * 150)
         return {
-            "observe_ms": int(base * 0.8),
-            "understand_ms": int(base * 1.0),
-            "recall_ms": int(base * 1.2),
-            "reason_ms": int(base * 1.5),
+            "observe_ms": int(base * 0.8), "understand_ms": int(base * 1.0),
+            "recall_ms": int(base * 1.2), "reason_ms": int(base * 1.5),
             "respond_ms": int(base * 0.6),
         }
     
     def _calculate_importance(self, intensity: float, message: str) -> int:
-        """حساب أهمية الذاكرة."""
         score = int(intensity * 70)
-        if len(message) > 50:
-            score += 15
+        if len(message) > 50: score += 15
         return min(100, max(10, score))
     
     def _assess_quality(self, emotion: str, intensity: float) -> str:
-        """تقييم جودة التفاعل."""
-        if emotion in ["joy", "love"]:
-            return "positive"
-        elif emotion in ["sadness", "fear", "anger"] and intensity > 0.7:
-            return "negative"
+        if emotion in ["joy", "love"]: return "positive"
+        elif emotion in ["sadness", "fear", "anger"] and intensity > 0.7: return "negative"
         return "neutral"
     
-    def _evolve_dna(
-        self,
-        dna: Dict[str, float],
-        interaction_quality: str,
-    ) -> Dict[str, float]:
-        """تطوير DNA الشخصية."""
+    def _evolve_dna(self, dna: Dict[str, float], interaction_quality: str) -> Dict[str, float]:
         delta = 0.02 if interaction_quality == "positive" else -0.01 if interaction_quality == "negative" else 0
-        evolved = {
+        return {
             "empathy": min(1.0, dna.get("empathy", 0.85) + delta),
             "curiosity": min(1.0, dna.get("curiosity", 0.80) + delta * 0.5),
             "humor": min(1.0, dna.get("humor", 0.50) + (0.03 if interaction_quality == "positive" else 0)),
@@ -545,21 +669,26 @@ class UnifiedTwinBrain:
             "creativity": min(1.0, dna.get("creativity", 0.80) + delta * 0.6),
             "calmness": min(1.0, dna.get("calmness", 0.85) + (-0.02 if interaction_quality == "negative" else 0.01)),
         }
-        return evolved
+
     
-    
-    def _build_consciousness_trace(self, perception, real_emotion, relevant_memories, intent, behavior):
-        """يبني مسار الوعي الذي يُعرض في الواجهة"""
+    def _build_consciousness_trace(
+        self,
+        perception: Dict,
+        real_emotion: str,
+        relevant_memories: List,
+        intent: Dict,
+        behavior: Dict,
+    ) -> List[Dict]:
+        """يبني مسار الوعي الذي يُعرض في الواجهة."""
         trace = []
-        # مرحلة الإدراك
+        
         if perception.get("user_state") == "tired":
             trace.append({"phase": "perception", "label_ar": "أشعر بتعبك...", "label_en": "I sense your tiredness..."})
         elif perception.get("user_state") == "excited":
             trace.append({"phase": "perception", "label_ar": "ألمح حماسك...", "label_en": "I notice your excitement..."})
         else:
             trace.append({"phase": "perception", "label_ar": "أقرأ رسالتك...", "label_en": "Reading your message..."})
-
-        # مرحلة العاطفة
+        
         emotion_labels = {
             "joy": {"ar": "أشاركك الفرحة...", "en": "Sharing your joy..."},
             "sadness": {"ar": "أتفهم حزنك...", "en": "Understanding your sadness..."},
@@ -569,16 +698,14 @@ class UnifiedTwinBrain:
         }
         label = emotion_labels.get(real_emotion, {"ar": "أفهم مشاعرك...", "en": "Understanding your feelings..."})
         trace.append({"phase": "emotion", "label_ar": label["ar"], "label_en": label["en"]})
-
-        # مرحلة الذاكرة
+        
         if relevant_memories:
             mem = relevant_memories[0]
             snippet = (mem.get("content") or "")[:40]
             trace.append({"phase": "memory", "label_ar": f"أتذكر: {snippet}...", "label_en": f"Remembering: {snippet}..."})
         else:
             trace.append({"phase": "memory", "label_ar": "أسترجع ذكرياتنا...", "label_en": "Recalling our memories..."})
-
-        # مرحلة القرار
+        
         decision_labels = {
             "comfort": {"ar": "سأواسيك...", "en": "I'll comfort you..."},
             "encourage": {"ar": "سأشجعك...", "en": "I'll encourage you..."},
@@ -587,30 +714,20 @@ class UnifiedTwinBrain:
         }
         dec_label = decision_labels.get(behavior.get("intent"), {"ar": "أختار ردي...", "en": "Choosing my response..."})
         trace.append({"phase": "decision", "label_ar": dec_label["ar"], "label_en": dec_label["en"]})
-
-        # مرحلة البناء
         trace.append({"phase": "response", "label_ar": "أصوغ الرد...", "label_en": "Crafting reply..."})
-
+        
         return trace
     
-    
-    async def _build_trust_model(self, user_id, bond_level, dna, resonance):
-        """يبني نموذج الثقة من عناصر متعددة"""
-        # محاولة استدعاء نظام الروح للحصول على بيانات أعمق
+    async def _build_trust_model(
+        self, user_id: str, bond_level: int, dna: Dict[str, float], resonance: Optional[Dict]
+    ) -> Dict[str, Any]:
         try:
-            from app.soul import get_soul_state
+            from app.soul.soul_orchestrator import get_soul_state
             soul = await get_soul_state(
-                user_id=user_id,
-                relationship_stage="friend",
-                bond_level=bond_level,
-                interaction_count=0,
-                personality_dna=dna,
-                dominant_emotion="neutral",
-                recent_emotions=[],
-                memory_count=0,
-                core_memory_count=0,
-                memory_patterns={},
-                evolution_count=0,
+                user_id=user_id, relationship_stage="friend", bond_level=bond_level,
+                interaction_count=0, personality_dna=dna, dominant_emotion="neutral",
+                recent_emotions=[], memory_count=0, core_memory_count=0,
+                memory_patterns={}, evolution_count=0,
             )
             resonance = soul.get("resonance", {})
             harmony = resonance.get("harmony", 0.5)
@@ -618,7 +735,7 @@ class UnifiedTwinBrain:
         except:
             harmony = 0.5
             understanding = 0.5
-
+        
         return {
             "overall_trust": round(bond_level * 0.6 + harmony * 40, 1),
             "components": {
@@ -636,51 +753,30 @@ class UnifiedTwinBrain:
             "vulnerability_index": round(harmony * 0.8),
         }
     
-    
-    def _build_engine_context(self, goal: Dict, decision: Dict, constitution: Dict, identity: Dict, internal: Dict, reflection: Dict, twin_energy: Dict) -> str:
-        """بناء سياق المحركات الذهنية لإضافته إلى prompt"""
+    def _build_engine_context(
+        self, goal: Dict, decision: Dict, constitution: Dict, identity: Dict,
+        internal: Dict, reflection: Dict, twin_energy: Dict,
+    ) -> str:
         parts = []
-        
-        # الهدف
         if goal.get("primary_goal"):
-            parts.append(f"[GOAL] Primary: {goal['primary_goal']}, Confidence: {goal['confidence']:.0%}")
-        
-        # القرار
+            parts.append(f"[GOAL] Primary: {goal['primary_goal']}, Confidence: {goal.get('confidence', 0):.0%}")
         if decision.get("decision"):
-            parts.append(f"[DECISION] {decision['decision']}, Urgency: {decision['urgency']}, ShouldSpeak: {decision['should_act']}")
-        
-        # الدستور
+            parts.append(f"[DECISION] {decision['decision']}, Urgency: {decision.get('urgency', 'normal')}, ShouldSpeak: {decision.get('should_act', True)}")
         if not constitution.get("allowed", True):
-            parts.append(f"[CONSTITUTION] BLOCKED: {constitution['reasoning']}")
-        
-        # الهوية
+            parts.append(f"[CONSTITUTION] BLOCKED: {constitution.get('reasoning', '')}")
         if identity.get("role"):
-            parts.append(f"[IDENTITY] Role: {identity['role']}, Phase: {identity['phase']}, Version: {identity['version']}")
-        
-        # الحالة الداخلية
+            parts.append(f"[IDENTITY] Role: {identity['role']}, Phase: {identity.get('phase', 'unknown')}, Version: {identity.get('version', '1.0')}")
         if internal.get("mood"):
-            parts.append(f"[INTERNAL] Mood: {internal['mood']}, Energy: {internal['overall_energy']:.0%}, Stress: {internal['stress']:.0%}, Curiosity: {internal['curiosity']:.0%}")
-        
-        # التأمل
+            parts.append(f"[INTERNAL] Mood: {internal['mood']}, Energy: {internal.get('overall_energy', 0):.0%}, Stress: {internal.get('stress', 0):.0%}, Curiosity: {internal.get('curiosity', 0):.0%}")
         if reflection.get("thought"):
-            parts.append(f"[REFLECTION] {reflection['thought']} → {reflection['insight']}")
-        
-        # طاقة الكيان
+            parts.append(f"[REFLECTION] {reflection['thought']} → {reflection.get('insight', '')}")
         if twin_energy.get("energy"):
-            parts.append(f"[TWIN_ENERGY] Level: {twin_energy['energy']:.0%}, Exhausted: {twin_energy['is_exhausted']}, Resting: {twin_energy['is_resting']}")
-        
+            parts.append(f"[TWIN_ENERGY] Level: {twin_energy['energy']:.0%}, Exhausted: {twin_energy.get('is_exhausted', False)}, Resting: {twin_energy.get('is_resting', False)}")
         return "\n".join(parts)
     
-
     def _build_presence_state(
-        self,
-        emotion: str,
-        intensity: float,
-        dna: Dict[str, float],
-        phase: str,
-        silence_before_ms: int = 0,
+        self, emotion: str, intensity: float, dna: Dict[str, float], phase: str, silence_before_ms: int = 0,
     ) -> Dict[str, Any]:
-        """بناء حالة الحضور للعرض في الواجهة."""
         color_map = {
             "joy": "#F59E0B", "sadness": "#3B82F6", "calm": "#10B981",
             "love": "#EC4899", "anger": "#EF4444", "fear": "#A78BFA",
@@ -692,16 +788,11 @@ class UnifiedTwinBrain:
             "anger": 0.9, "fear": 0.5, "neutral": 0.7, "curious": 0.8,
             "focused": 0.9, "inspired": 0.85, "concerned": 0.6, "happy": 0.9,
         }
-        breath_map = {
-            "joy": 14, "sadness": 8, "calm": 10, "love": 12,
-            "anger": 16, "fear": 12, "neutral": 12,
-        }
+        breath_map = {"joy": 14, "sadness": 8, "calm": 10, "love": 12, "anger": 16, "fear": 12, "neutral": 12}
         warmth = dna.get("empathy", 0.85) * 0.8 + intensity * 0.2
         return {
-            "emotion": emotion,
-            "intensity": intensity,
-            "energy": energy_map.get(emotion, 0.7),
-            "warmth": round(warmth, 2),
+            "emotion": emotion, "intensity": intensity,
+            "energy": energy_map.get(emotion, 0.7), "warmth": round(warmth, 2),
             "halo_color": color_map.get(emotion, "#A855F7"),
             "breath_rate": breath_map.get(emotion, 12),
             "voice_tone": "soft" if emotion in ["sadness", "calm"] else "warm" if emotion in ["joy", "love"] else "neutral",
@@ -711,4 +802,4 @@ class UnifiedTwinBrain:
 
 # نسخة عامة
 unified_brain = UnifiedTwinBrain()
-logger.info("✅ Unified Twin Brain v4.0 ready")
+logger.info("✅ Unified Twin Brain v5.0 ready — all consciousness engines integrated")

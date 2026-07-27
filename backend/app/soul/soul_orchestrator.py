@@ -1,7 +1,9 @@
 """
-SoulOrchestrator v1.0 – المنسق الرئيسي للروح
+SoulOrchestrator v2.0 – المنسق الرئيسي للروح
 =================================================
 يُعيد حالة روح كاملة ويُدير التطور.
+يدمج الآن Context Awareness, Emotional Momentum, Curiosity Dynamics, Experience Engine.
+
 يُستدعى من unified_brain.py.
 """
 import logging
@@ -42,7 +44,7 @@ async def get_soul_state(
     evolution_count: int,
     lang: str = "ar",
 ) -> Dict[str, Any]:
-    """تجميع حالة الروح الكاملة"""
+    """تجميع حالة الروح الكاملة مع المحركات الجديدة"""
     role = await soul_core.get_role(relationship_stage)
     labels = soul_core.get_labels(role)
     phase = await soul_core.evolve_phase(role, bond_level, interaction_count)
@@ -64,7 +66,38 @@ async def get_soul_state(
     milestones = await soul_timeline.record_evolution(evolution_count)
     timeline = await soul_timeline.get_life_story()
 
-    return {
+    # --- دمج المحركات الجديدة ---
+    context_state = None
+    curiosity_state = None
+    momentum_state = None
+    recent_experiences = None
+
+    try:
+        from app.twin_state.context_awareness_engine import context_awareness_engine
+        context_state = await context_awareness_engine.get_current_context(user_id)
+    except Exception as e:
+        logger.debug(f"Context awareness in soul failed: {e}")
+
+    try:
+        from app.twin_state.curiosity_dynamics import curiosity_dynamics_engine
+        curiosity_state = await curiosity_dynamics_engine.get_curiosity_state(user_id)
+    except Exception as e:
+        logger.debug(f"Curiosity dynamics in soul failed: {e}")
+
+    try:
+        from app.twin_state.emotional_momentum import emotional_momentum_engine
+        momentum_state = await emotional_momentum_engine.get_momentum_state(user_id)
+    except Exception as e:
+        logger.debug(f"Emotional momentum in soul failed: {e}")
+
+    try:
+        from app.twin_state.experience_engine import experience_engine
+        recent_experiences = await experience_engine.get_recent_experiences(user_id, limit=5)
+    except Exception as e:
+        logger.debug(f"Experience engine in soul failed: {e}")
+
+    # --- بناء النتيجة ---
+    result = {
         "core": {
             "role": role,
             "phase": phase,
@@ -85,6 +118,36 @@ async def get_soul_state(
         "timeline": timeline,
     }
 
+    # إضافة المحركات الجديدة إن توفرت
+    if context_state:
+        result["context"] = {
+            "time_of_day": context_state.get("time", {}).get("time_of_day"),
+            "session_type": context_state.get("session", {}).get("session_type"),
+            "recommended_tone": context_state.get("composite", {}).get("recommended_tone"),
+        }
+
+    if curiosity_state:
+        result["curiosity"] = curiosity_state
+
+    if momentum_state:
+        result["emotional_momentum"] = {
+            "current_emotion": momentum_state.get("current_emotion"),
+            "phase": momentum_state.get("phase"),
+            "requires_silence": momentum_state.get("requires_silence", False),
+        }
+
+    if recent_experiences:
+        result["recent_experiences"] = [
+            {
+                "type": exp.get("type"),
+                "intensity": exp.get("intensity"),
+                "timestamp": exp.get("timestamp"),
+            }
+            for exp in recent_experiences[:3]
+        ]
+
+    return result
+
 
 async def evolve_soul(
     user_id: str,
@@ -99,3 +162,5 @@ async def evolve_soul(
         "evolution_count": evolution_count + 1,
         "new_milestones": new_milestones,
     }
+
+logger.info("✅ Soul Orchestrator v2.0 ready with consciousness engines")

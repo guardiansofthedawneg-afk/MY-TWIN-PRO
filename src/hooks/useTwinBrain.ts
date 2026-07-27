@@ -4,15 +4,10 @@ import { perceptionEngine } from '../../engine/perception/PerceptionEngine';
 import { contextEngine } from '../../engine/context/ContextEngine';
 import { memoryContextEngine } from '../../engine/memory/MemoryContextEngine';
 import { relationshipContextEngine } from '../../engine/relationship/RelationshipContextEngine';
-import { identityEngine } from '../../engine/identity/IdentityEngine';
-import { goalEngine } from '../../engine/goal/GoalEngine';
-import { decisionEngine } from '../../engine/decision/DecisionEngine';
-import { livingBehaviorEngine } from '../../engine/behavior/LivingBehaviorEngine';
 import { presenceEngine } from '../../engine/presence/PresenceEngine';
 import { worldAwarenessEngine } from '../../engine/consciousness/WorldAwarenessEngine';
 import { lifeStateEngine } from '../../engine/life/LifeStateEngine';
 import { devicePresenceEngine } from '../../engine/device/DevicePresenceEngine';
-import { sensorContextEngine } from '../../engine/sensor/SensorContextEngine';
 import { stateBus } from '../core/StateBus';
 import { EventBus } from '../core/EventBus';
 
@@ -46,10 +41,6 @@ const PHASE_LABELS: Record<string, { ar: string; en: string }> = {
   context:     { ar: 'أفهم السياق...',  en: 'Understanding context...' },
   remember:    { ar: 'أتذكر...',        en: 'Remembering...' },
   relate:      { ar: 'أفهم علاقتنا...', en: 'Understanding our bond...' },
-  identity:    { ar: 'أعرف من أنا...',  en: 'Knowing who I am...' },
-  goal:        { ar: 'أحدد هدفي...',    en: 'Setting my goal...' },
-  decide:      { ar: 'أتخذ قراري...',   en: 'Making my decision...' },
-  behave:      { ar: 'أخطط لسلوكي...',  en: 'Planning my behavior...' },
   respond:     { ar: 'أستجيب...',       en: 'Responding...' },
 };
 
@@ -73,22 +64,19 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
     setIsThinking(true);
     const lang = initialLang;
 
-    // 🧬 دورة الوعي الكاملة
     emitPhase('perceive', 0.05, lang);
     const perception = perceptionEngine.analyze(message);
     worldAwarenessEngine.recordInteraction();
     
-    // 🎥 إذا كانت المستشعرات مفعلة، الكيان "يشعر" بحركتك
     if (devicePresenceEngine.isActive_()) {
       const sensors = devicePresenceEngine.getSensors();
-      if (sensors.userWalking) presenceEngine.setEmotion('calm', 0.6);
-      if (sensors.faceDetected) presenceEngine.setGaze('user');
+      if (sensors.faceDetected) stateBus.update({ avatar: { ...stateBus.getState().avatar, gazeTarget: 'user' } });
     }
     
     await new Promise(r => setTimeout(r, 150));
 
     emitPhase('context', 0.15, lang);
-    const context = contextEngine.build(perception);
+    contextEngine.build(perception);
     await new Promise(r => setTimeout(r, 150));
 
     emitPhase('remember', 0.25, lang);
@@ -100,42 +88,8 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
     await new Promise(r => setTimeout(r, 200));
 
     emitPhase('relate', 0.40, lang);
-    const relationship = relationshipContextEngine.evaluate();
-    const bondLevel = stateBus.getState().relationship?.bondLevel || 0;
+    relationshipContextEngine.evaluate();
     await new Promise(r => setTimeout(r, 150));
-
-    emitPhase('identity', 0.50, lang);
-    const identity = identityEngine.evaluate(bondLevel, 0, memoryCtx.memoryCount);
-    await new Promise(r => setTimeout(r, 150));
-
-    emitPhase('goal', 0.60, lang);
-    const currentEmotion = perception.valence === 'negative' ? 'sadness' : perception.valence === 'positive' ? 'joy' : 'neutral';
-    const goal = goalEngine.determineGoal(
-      perception.userState, currentEmotion, bondLevel,
-      relationship.phase, perception.timeOfDay, memoryCtx.recentMemories,
-    );
-    await new Promise(r => setTimeout(r, 150));
-
-    emitPhase('decide', 0.70, lang);
-    const decision = decisionEngine.decide(
-      goal.primaryGoal, identity.role, bondLevel,
-      currentEmotion, perception.valence === 'negative' ? 0.7 : 0.4,
-      perception.userState, perception.timeOfDay,
-    );
-    await new Promise(r => setTimeout(r, 150));
-
-    emitPhase('behave', 0.80, lang);
-    const behavior = livingBehaviorEngine.decide(
-      goal.primaryGoal, currentEmotion,
-      perception.valence === 'negative' ? 0.7 : 0.4,
-      bondLevel, memoryCtx.recentMemories,
-    );
-
-    if (decision.shouldAct) {
-      lifeStateEngine.transition('speaking', 'responding to user');
-    } else {
-      lifeStateEngine.transition('observing', 'choosing silence');
-    }
 
     emitPhase('respond', 0.90, lang);
     EventBus.emit('AI_START_THINKING', { intent: message, confidence: 0.8 });
@@ -149,8 +103,6 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
         userState: perception.userState,
       };
 
-      // إثراء الرسالة بسياق المستشعرات
-      // TODO: إرسال sensorContext كحقل منفصل في API
       const response: UnifiedResponse = await bridgeRef.current.process(message, perceptionData);
 
       if (response.reply) {
@@ -158,7 +110,7 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
           { phase: 'observe', progress: 0.1, label: PHASE_LABELS.perceive[lang === 'ar' ? 'ar' : 'en'] },
           { phase: 'understand', progress: 0.4, label: PHASE_LABELS.context[lang === 'ar' ? 'ar' : 'en'] },
           { phase: 'recall', progress: 0.6, label: PHASE_LABELS.remember[lang === 'ar' ? 'ar' : 'en'] },
-          { phase: 'reason', progress: 0.8, label: PHASE_LABELS.decide[lang === 'ar' ? 'ar' : 'en'] },
+          { phase: 'reason', progress: 0.8, label: PHASE_LABELS.relate[lang === 'ar' ? 'ar' : 'en'] },
           { phase: 'respond', progress: 1.0, label: PHASE_LABELS.respond[lang === 'ar' ? 'ar' : 'en'] },
         ];
 

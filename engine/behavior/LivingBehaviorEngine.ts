@@ -1,6 +1,7 @@
 import { stateBus } from '../../src/core/StateBus';
 import { EventBus } from '../../src/core/EventBus';
-import { goalEngine, GoalType } from '../goal/GoalEngine';
+// GoalEngine now in backend
+// TwinEnergyEngine now in backend
 
 export type BehaviorType = 'comfort' | 'encourage' | 'inform' | 'celebrate' | 'listen' | 'protect' | 'challenge' | 'guide' | 'observe' | 'stay_silent' | 'wait' | 'reflect';
 
@@ -28,7 +29,7 @@ export class LivingBehaviorEngine {
   };
 
   decide(
-    goal: GoalType,
+    goal: string,
     emotion: string,
     emotionIntensity: number,
     bondLevel: number,
@@ -141,6 +142,14 @@ export class LivingBehaviorEngine {
         shouldSpeak = false;
         timingSequence.push('breath_normal', 'attention_wander', 'silence');
         reasoning = 'المراقبة الافتراضية.';
+    }
+
+    // ✅ طاقة الكيان تؤثر على سلوكه
+    const twinEnergy = 0.7; // TwinEnergy now in backend
+    if (twinEnergy < 0.2) {
+      silenceBeforeMs = Math.min(5000, silenceBeforeMs * 1.5);
+      voiceTone = 'soft';
+      responseSpeed = 'slow';
     }
 
     this.currentBehavior = {

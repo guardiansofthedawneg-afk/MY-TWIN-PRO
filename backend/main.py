@@ -111,6 +111,7 @@ def _register_core_routes(app: FastAPI):
         "app.api.routes.ai_trainer_routes",
         "app.api.routes.fingerprint_routes",
         "app.api.routes.sync_routes",
+        "app.api.routes.admin_routes",  # ✅ Internal training data export
     ]
 
     loaded = 0

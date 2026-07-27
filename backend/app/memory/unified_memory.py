@@ -304,5 +304,66 @@ class UnifiedMemoryEngine:
             return 0
     
 
+
+    async def store_engine_output(self, user_id: str, engine_name: str, output: Dict[str, Any]) -> Optional[str]:
+        """تخزين مخرجات المحركات الذهنية في TCMA بصيغة JSON منظمة"""
+        if not DB_AVAILABLE:
+            return None
+        try:
+            import json
+            db = get_db()
+            # تحويل المخرجات إلى JSON منظم
+            json_output = json.dumps(output, ensure_ascii=False, default=str)
+            label = f"[ENGINE:{engine_name}]"
+            
+            payload = {
+                "user_id": user_id,
+                "expressed_text": f"{label} {json_output[:500]}",
+                "expressed_emotion": output.get("mood", output.get("emotion", "neutral")),
+                "real_emotion": output.get("mood", output.get("emotion", "neutral")),
+                "intensity": output.get("energy", output.get("overall_energy", 0.5)),
+                "confidence": output.get("confidence", 0.8),
+                "importance": 40,  # أهمية متوسطة — بيانات محركات
+                "cultural_context": json_output[:500],  # تخزين JSON في cultural_context للاستعلام
+                "arabic_category": engine_name,  # تصنيف حسب المحرك
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            result = db.table(TABLE_NAME).insert(payload).execute()
+            logger.info(f"📊 {engine_name} output stored for {user_id}")
+            return result.data[0]["id"] if result.data else None
+        except Exception as e:
+            logger.error(f"store_engine_output failed: {e}")
+            return None
+
+    async def get_engine_outputs(self, user_id: str, engine_name: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """استرجاع مخرجات محرك معين"""
+        if not DB_AVAILABLE:
+            return []
+        try:
+            import json
+            db = get_db()
+            result = (
+                db.table(TABLE_NAME)
+                .select("*")
+                .eq("user_id", user_id)
+                .eq("arabic_category", engine_name)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            outputs = []
+            for row in (result.data or []):
+                ctx = row.get("cultural_context", "{}")
+                try:
+                    parsed = json.loads(ctx)
+                    outputs.append(parsed)
+                except:
+                    outputs.append({"raw": ctx})
+            return outputs
+        except Exception as e:
+            logger.error(f"get_engine_outputs failed: {e}")
+            return []
+    
+
 unified_memory_engine = UnifiedMemoryEngine()
 logger.info("✅ Unified Memory Engine v2.0 ready")

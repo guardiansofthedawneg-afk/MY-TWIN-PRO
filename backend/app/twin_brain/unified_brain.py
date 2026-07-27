@@ -27,6 +27,14 @@ from app.twin_state.personality_engine import (
 from app.twin_brain.identity_service import get_identity_context
 from app.twin_brain.response_builder import build_response
 from app.soul import get_soul_state, evolve_soul
+from app.engine.goal.goal_engine import goal_engine as backend_goal_engine
+from app.engine.decision.decision_engine import decision_engine as backend_decision_engine
+from app.engine.constitution.constitution_engine import constitution_engine as backend_constitution_engine
+from app.engine.identity.identity_engine import identity_engine as backend_identity_engine
+from app.engine.reflection.reflection_engine import reflection_engine as backend_reflection_engine
+from app.engine.internal.internal_state_engine import internal_state_engine as backend_internal_state_engine
+from app.engine.energy.twin_energy_engine import twin_energy_engine as backend_twin_energy_engine
+
 from app.soul.soul_bonds import soul_bonds
 from app.twin_state.unified_evolution import unified_evolution_engine
 
@@ -155,6 +163,58 @@ class UnifiedTwinBrain:
             presence_state["voice_tone"] = "soft"
             presence_state["energy"] = max(0.3, presence_state.get("energy", 0.7) - 0.2)
     
+        
+        # ═══════════════════════════════
+        # المحركات الذهنية الجديدة (Backend Engines)
+        # ═══════════════════════════════
+        backend_goal = backend_goal_engine.determine_goal(
+            perception=user_state,
+            emotion=real_emotion,
+            bond_level=bond_level,
+            relationship_phase=phase,
+            time_of_day=time_of_day,
+            memory_context=[m.get("content", "") for m in relevant_memories],
+        )
+        
+        backend_identity = backend_identity_engine.evaluate(
+            bond_level=bond_level,
+            interaction_count=0,
+            memory_count=len(relevant_memories),
+        )
+        
+        backend_constitution_check = backend_constitution_engine.check_action(
+            intent=backend_goal["primary_goal"],
+            goal=backend_goal["reasoning"],
+            bond_level=bond_level,
+            identity_role=backend_identity["role"],
+        )
+        
+        backend_decision = backend_decision_engine.decide(
+            goal=backend_goal["primary_goal"],
+            identity_role=backend_identity["role"],
+            bond_level=bond_level,
+            emotion=real_emotion,
+            emotion_intensity=emotion_intensity,
+            perception=user_state,
+            time_of_day=time_of_day,
+        )
+        
+        backend_internal = backend_internal_state_engine.evaluate(
+            emotion=real_emotion,
+            bond_level=bond_level,
+            twin_energy=0.7,
+        )
+        
+        backend_twin_energy = backend_twin_energy_engine.update(
+            bond_level=bond_level,
+            hour=datetime.now(timezone.utc).hour,
+        )
+        
+        backend_reflection = backend_reflection_engine.reflect(
+            bond_level=bond_level,
+            identity_role=backend_identity["role"],
+        )
+
         # 10. توليد الرد
         # ═══════════════════════════════
         strategy = {
@@ -162,6 +222,7 @@ class UnifiedTwinBrain:
             "tone": behavior["tone"],
             "personality_dna": dna,
             "emotion": real_emotion,
+            "engine_context": engine_context,
         }
         reply = await build_response(
             user_id=user_id,
@@ -575,6 +636,42 @@ class UnifiedTwinBrain:
             "vulnerability_index": round(harmony * 0.8),
         }
     
+    
+    def _build_engine_context(self, goal: Dict, decision: Dict, constitution: Dict, identity: Dict, internal: Dict, reflection: Dict, twin_energy: Dict) -> str:
+        """بناء سياق المحركات الذهنية لإضافته إلى prompt"""
+        parts = []
+        
+        # الهدف
+        if goal.get("primary_goal"):
+            parts.append(f"[GOAL] Primary: {goal['primary_goal']}, Confidence: {goal['confidence']:.0%}")
+        
+        # القرار
+        if decision.get("decision"):
+            parts.append(f"[DECISION] {decision['decision']}, Urgency: {decision['urgency']}, ShouldSpeak: {decision['should_act']}")
+        
+        # الدستور
+        if not constitution.get("allowed", True):
+            parts.append(f"[CONSTITUTION] BLOCKED: {constitution['reasoning']}")
+        
+        # الهوية
+        if identity.get("role"):
+            parts.append(f"[IDENTITY] Role: {identity['role']}, Phase: {identity['phase']}, Version: {identity['version']}")
+        
+        # الحالة الداخلية
+        if internal.get("mood"):
+            parts.append(f"[INTERNAL] Mood: {internal['mood']}, Energy: {internal['overall_energy']:.0%}, Stress: {internal['stress']:.0%}, Curiosity: {internal['curiosity']:.0%}")
+        
+        # التأمل
+        if reflection.get("thought"):
+            parts.append(f"[REFLECTION] {reflection['thought']} → {reflection['insight']}")
+        
+        # طاقة الكيان
+        if twin_energy.get("energy"):
+            parts.append(f"[TWIN_ENERGY] Level: {twin_energy['energy']:.0%}, Exhausted: {twin_energy['is_exhausted']}, Resting: {twin_energy['is_resting']}")
+        
+        return "\n".join(parts)
+    
+
     def _build_presence_state(
         self,
         emotion: str,

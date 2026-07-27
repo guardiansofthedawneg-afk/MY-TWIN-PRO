@@ -72,11 +72,11 @@ export class SensorContextEngine {
     }
 
     // 5. batteryStatus
-    if (sensors.battery && sensors.battery < 5) {
+    if (sensors.deviceBattery && sensors.deviceBattery < 5) {
       this.context.batteryStatus = 'critical';
-    } else if (sensors.battery && sensors.battery < 15) {
+    } else if (sensors.deviceBattery && sensors.deviceBattery < 15) {
       this.context.batteryStatus = 'low';
-    } else if (sensors.battery && sensors.battery > 80) {
+    } else if (sensors.deviceBattery && sensors.deviceBattery > 80) {
       this.context.batteryStatus = 'full';
     } else {
       this.context.batteryStatus = 'normal';
@@ -90,7 +90,7 @@ export class SensorContextEngine {
     else this.context.timeContext = 'late_night';
 
     // 7. stepCount
-    this.context.stepCount = devicePresenceEngine.getStepCount();
+    this.context.stepCount = devicePresenceEngine.getStepCount?.() || 0;
 
     // 8. contextualSummary
     this.context.contextualSummary = this.buildContextualSummary();

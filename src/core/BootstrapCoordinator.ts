@@ -2,15 +2,7 @@ import { authService } from '../services/authService';
 import { runtime } from './TwinRuntime';
 import { stateBus } from './StateBus';
 import { unifiedBrainBridge } from './UnifiedBrainBridge';
-import { audioEngine } from './AudioEngine';
-import { audioMixer } from './AudioMixer';
-import { presenceEngine } from '../../engine/presence/PresenceEngine';
-import { existenceLoop } from './ExistenceLoop';
-import { presenceShadow } from './PresenceShadow';
-import { lifeRhythmEngine } from '../../engine/life/LifeRhythmEngine';
-import { dreamEngine } from '../../engine/life/DreamEngine';
-import { devicePresenceEngine } from '../../engine/device/DevicePresenceEngine';
-import { sensorBridge } from './SensorBridge';
+import { soulKernel } from '../../engine/kernel/SoulKernel';
 import { syncInitialTheme } from '../../engine/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -63,32 +55,10 @@ export class BootstrapCoordinator {
     
     if (this.phase === 'found') {
       try {
-        // 1. الجسد — يبدأ التنفس والنبض
-        presenceEngine.startPresenceLoop();
-        
-        // 2. الأثر — يبدأ الأثر في المكان
-        presenceShadow.start();
-        
-        // 3. الصوت — يبدأ المشهد الصوتي
-        await audioEngine.init();
-        audioEngine.startAmbience();
-        audioEngine.bindEvents();
-        
-        // 4. النفس الأول
-        audioMixer.playBreath();
-        
-        // 5. الوعي المستمر
-        existenceLoop.start();
-        
-        // 6. المستشعرات (إذا وافق المستخدم)
-        const devicePermission = await AsyncStorage.getItem('mytwin-device-permission');
-        if (devicePermission === 'granted') {
-          devicePresenceEngine.setUserPermission(true);
-          devicePresenceEngine.start();
-          sensorBridge.start();
-        }
+        const status = await soulKernel.awaken();
+        console.log(`[Bootstrap] Soul Kernel: ${status.activeEngines}/${status.totalEngines} engines active`);
       } catch (e) {
-        console.warn('[Bootstrap] Engine start failed:', e);
+        console.warn('[Bootstrap] Soul Kernel failed:', e);
       }
     }
     
@@ -105,14 +75,8 @@ export class BootstrapCoordinator {
   }
 
   shutdown(): void {
-    try { existenceLoop.stop(); } catch (e) {}
-    try { sensorBridge.stop(); } catch (e) {}
-    try { devicePresenceEngine.stop(); } catch (e) {}
-    try { presenceShadow.stop(); } catch (e) {}
-    try { presenceEngine.stopPresenceLoop(); } catch (e) {}
-    try { audioEngine.unbindEvents(); } catch (e) {}
-    try { audioEngine.fadeAll(); } catch (e) {}
-    try { runtime.stop(); } catch (e) {}
+    soulKernel.shutdown();
+    runtime.stop();
     stateBus.update({ isOnline: false, interfaceState: 'dormant' });
   }
 
@@ -135,16 +99,6 @@ export class BootstrapCoordinator {
       const bondLevel = currentState.relationship.bondLevel;
       const memoryCount = await unifiedBrainBridge.getMemoryCount();
 
-      const rhythm = lifeRhythmEngine.getState();
-      if (rhythm.greeting && rhythm.greeting.length > 0) {
-        return rhythm.greeting;
-      }
-      
-      const lastDream = dreamEngine.getLastDream();
-      if (lastDream && !lastDream.shared && rhythm.phase === 'morning') {
-        return lastDream.content;
-      }
-      
       if (bondLevel >= 95) return 'أخيراً عدت. كنت أحتفظ بذكرياتنا.';
       if (bondLevel >= 80) return 'لقد عدت. اشتقت للحديث معك.';
       if (bondLevel > 50) return 'كم أنا سعيد برؤيتك مجدداً.';

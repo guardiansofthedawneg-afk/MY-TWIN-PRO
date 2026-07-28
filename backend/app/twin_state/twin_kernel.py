@@ -1,10 +1,9 @@
 """
-Twin OS Kernel v3.0 – نواة موحدة مع محركات الوعي الجديدة
-===========================================================
-- يربط Context Awareness, Emotional Momentum, Curiosity Dynamics, Experience Engine
-- تشغيل المحركات بالتوازي مع عزل الأخطاء
-- تسجيل أداء كل محرك
-- تمرير context_snapshot لجميع المحركات
+Twin OS Kernel v4.0 – نواة موحدة مع محركات P1
+=================================================
+- يضيف Self Model, World Model, Salience, Cognitive Load
+- تقييم الذات والنموذج العالمي بشكل دوري
+- حساب الأهمية والعبء المعرفي قبل كل رد
 """
 import logging, asyncio, time
 from typing import Dict, Any, Optional
@@ -12,15 +11,13 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger("twin_kernel")
 
 class TwinKernel:
-    """النواة الموحدة للتوأم الرقمي - v3.0"""
-    
     def __init__(self):
         self._initialized = False
         self._interaction_count = 0
 
     async def initialize(self):
         self._initialized = True
-        logger.info("🧬 Twin OS Kernel v3.0 initialized")
+        logger.info("🧬 Twin OS Kernel v4.0 initialized")
 
     async def process_interaction(
         self,
@@ -31,18 +28,15 @@ class TwinKernel:
         interaction_depth: float = 0.5,
         device_info: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """معالجة تفاعل كامل مع دمج جميع محركات الوعي."""
         self._interaction_count += 1
         result = {
-            "kernel_version": "3.0",
+            "kernel_version": "4.0",
             "interaction_count": self._interaction_count,
             "engines_triggered": [],
             "perf": {},
         }
-        
-        # ═══════════════════════════════════════════════
-        # 1. بناء السياق أولاً (تحتاجه بقية المحركات)
-        # ═══════════════════════════════════════════════
+
+        # 1. Context Awareness (أساسي)
         context_snapshot = None
         try:
             from app.twin_state.context_awareness_engine import context_awareness_engine
@@ -57,13 +51,10 @@ class TwinKernel:
             result["perf"]["context_awareness"] = f"{(time.time()-t0)*1000:.1f}ms"
         except Exception as e:
             logger.error(f"Context awareness failed: {e}")
-        
-        # ═══════════════════════════════════════════════
-        # 2. تجهيز المهام بالتوازي
-        # ═══════════════════════════════════════════════
+
+        # 2. المحركات الأساسية والجديدة بالتوازي
         tasks, task_names = [], []
-        
-        # Internal State
+
         async def update_internal():
             t0 = time.time()
             from app.twin_state.internal_state import twin_internal_state
@@ -71,7 +62,6 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(update_internal()); task_names.append("internal_state")
 
-        # Relationship Economy
         async def update_economy():
             t0 = time.time()
             from app.twin_state.relationship_economy import relationship_economy
@@ -82,7 +72,6 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(update_economy()); task_names.append("relationship_economy")
 
-        # Dynamic Personality
         async def update_personality():
             t0 = time.time()
             from app.twin_state.dynamic_personality import dynamic_personality
@@ -91,7 +80,6 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(update_personality()); task_names.append("dynamic_personality")
 
-        # Emotion Bus
         async def broadcast_emotion():
             t0 = time.time()
             from app.twin_state.emotion_bus import emotion_bus
@@ -99,7 +87,6 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(broadcast_emotion()); task_names.append("emotion_bus")
 
-        # Episodic Memory
         if interaction_depth > 0.6:
             async def record_episode():
                 t0 = time.time()
@@ -108,7 +95,6 @@ class TwinKernel:
                 return time.time() - t0
             tasks.append(record_episode()); task_names.append("episodic_memory")
 
-        # Working Memory
         async def update_working():
             t0 = time.time()
             from app.twin_state.working_memory import working_memory
@@ -116,8 +102,7 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(update_working()); task_names.append("working_memory")
 
-        # --- المحركات الجديدة ---
-        # Emotional Momentum
+        # P0 engines
         async def emotional_momentum_task():
             t0 = time.time()
             from app.twin_state.emotional_momentum import emotional_momentum_engine
@@ -139,7 +124,6 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(emotional_momentum_task()); task_names.append("emotional_momentum")
 
-        # Curiosity Dynamics
         async def curiosity_task():
             t0 = time.time()
             from app.twin_state.curiosity_dynamics import curiosity_dynamics_engine
@@ -161,7 +145,6 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(curiosity_task()); task_names.append("curiosity_dynamics")
 
-        # Experience Engine
         async def experience_task():
             t0 = time.time()
             from app.twin_state.experience_engine import experience_engine
@@ -180,9 +163,53 @@ class TwinKernel:
             return time.time() - t0
         tasks.append(experience_task()); task_names.append("experience_engine")
 
-        # ═══════════════════════════════════════════════
-        # 3. تنفيذ متوازي مع عزل الأخطاء
-        # ═══════════════════════════════════════════════
+        # ---- P1 Engines ----
+        async def cognitive_load_task():
+            t0 = time.time()
+            from app.twin_state.cognitive_load import cognitive_load_engine
+            load_state = await cognitive_load_engine.evaluate_load(
+                user_id=user_id,
+                current_task="conversation",
+                task_complexity=interaction_depth,
+                context_snapshot=context_snapshot,
+            )
+            result["cognitive_load"] = load_state
+            return time.time() - t0
+        tasks.append(cognitive_load_task()); task_names.append("cognitive_load")
+
+        async def salience_task():
+            t0 = time.time()
+            from app.twin_state.salience_engine import salience_engine
+            salience = await salience_engine.evaluate_salience(
+                user_id=user_id,
+                event={"type": "message", "content": message[:200], "emotion": emotion, "intensity": interaction_depth},
+                context_snapshot=context_snapshot,
+            )
+            result["salience"] = salience
+            return time.time() - t0
+        tasks.append(salience_task()); task_names.append("salience_engine")
+
+        async def world_model_task():
+            t0 = time.time()
+            from app.twin_state.world_model import world_model_engine
+            updates = await world_model_engine.update_world(
+                user_id=user_id, message=message, reply=reply,
+                context_snapshot=context_snapshot,
+            )
+            result["world_updates"] = updates
+            return time.time() - t0
+        tasks.append(world_model_task()); task_names.append("world_model")
+
+        async def self_model_task():
+            t0 = time.time()
+            from app.twin_state.self_model import self_model_engine
+            if self._interaction_count % 5 == 0:  # تحديث كل 5 تفاعلات
+                model = await self_model_engine.evaluate_self(user_id, context_snapshot)
+                result["self_model"] = model
+            return time.time() - t0
+        tasks.append(self_model_task()); task_names.append("self_model")
+
+        # تنفيذ متوازي
         results_raw = await asyncio.gather(*tasks, return_exceptions=True)
         for name, res in zip(task_names, results_raw):
             if isinstance(res, Exception):
@@ -191,31 +218,23 @@ class TwinKernel:
                 result["engines_triggered"].append(name)
                 result["perf"][name] = f"{res*1000:.1f}ms"
 
-        # ═══════════════════════════════════════════════
-        # 4. اقتراح مبادرات الفضول
-        # ═══════════════════════════════════════════════
+        # تحديث العبء المعرفي والطاقة في internal state
+        try:
+            from app.twin_state.internal_state import twin_internal_state
+            state = await twin_internal_state.get_state(user_id)
+            if "cognitive_load" in result:
+                state["cognitive_load"] = result["cognitive_load"]["load_value"]
+            await twin_internal_state._save_state(user_id, state)
+        except: pass
+
+        # اقتراح مبادرات
         try:
             from app.twin_state.curiosity_dynamics import curiosity_dynamics_engine
             proactive = await curiosity_dynamics_engine.should_be_proactive(user_id, context_snapshot)
             if proactive.get("should_proact"):
                 result["proactive_suggestion"] = proactive.get("suggested_question")
-                result["proactive_type"] = proactive.get("question_type")
-        except Exception as e:
-            logger.debug(f"Proactive check failed: {e}")
-
-        # ═══════════════════════════════════════════════
-        # 5. تحديث العبء المعرفي
-        # ═══════════════════════════════════════════════
-        try:
-            from app.twin_state.internal_state import twin_internal_state
-            state = await twin_internal_state.get_state(user_id)
-            state["cognitive_load"] = context_snapshot["cognitive"]["load_level"] if context_snapshot else 0.5
-            await twin_internal_state._save_state(user_id, state)
         except: pass
 
-        # ═══════════════════════════════════════════════
-        # 6. تعلم كل 10 تفاعلات
-        # ═══════════════════════════════════════════════
         if self._interaction_count % 10 == 0:
             try:
                 from app.twin_state.twin_learner import twin_learner
@@ -227,4 +246,4 @@ class TwinKernel:
         return result
 
 twin_kernel = TwinKernel()
-logger.info("✅ Twin OS Kernel v3.0 ready (all consciousness engines integrated)")
+logger.info("✅ Twin OS Kernel v4.0 ready with P1 engines")

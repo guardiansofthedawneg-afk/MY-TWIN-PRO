@@ -1,9 +1,10 @@
 """
-Tier Service v2.0 – متكامل مع جميع ميزات MyTwin الجديدة
-=============================================================
+Tier Service v3.0 – مصدر واحد لحدود الباقات
+=============================================
 - 5 باقات (Free, Plus, Premium, Pro, Yearly)
-- حدود لكل ميزة على حدة
-- تكامل مع Feature Flags و Limits Service
+- جميع الحدود معرفة هنا فقط
+- limits_service.py يستدعي هذا الملف
+- لا تكرار في تعريف الحدود
 """
 from typing import Dict, Any
 
@@ -11,38 +12,38 @@ TIER_CONFIGS: Dict[str, Dict[str, Any]] = {
     "free": {
         "name": "Free", "price": 0, "daily_messages": 15,
         "daily_features": {
-            "chat": 15, "study": 3, "content": 2, "business": 1,
-            "code_lab": 1, "life_coach": 1, "dreams": 1, "smart_home": 3,
+            "chat": 15, "study": 5, "content": 2, "business": 2,
+            "code_lab": 2, "life_coach": 1, "dreams": 1, "smart_home": 3,
             "search": 5, "translate": 3, "summarize": 3, "weather": 10,
             "news": 5, "currency": 5, "voice": 3,
         },
         "ads_required": True, "memory_days": 3,
         "models": ["groq", "gemini"], "voice": "edge_tts",
-        "coaching": False, "dreams": False, "study": True,
+        "coaching": False, "dreams_feature": False, "study": True,
     },
     "plus": {
         "name": "Plus", "price": 5.99, "daily_messages": 50,
         "daily_features": {
-            "chat": 50, "study": 15, "content": 10, "business": 5,
-            "code_lab": 5, "life_coach": 3, "dreams": 3, "smart_home": 10,
+            "chat": 50, "study": 15, "content": 10, "business": 10,
+            "code_lab": 10, "life_coach": 5, "dreams": 3, "smart_home": 10,
             "search": 20, "translate": 15, "summarize": 15, "weather": 30,
             "news": 20, "currency": 20, "voice": 10,
         },
         "ads_required": False, "memory_days": 30,
         "models": ["groq", "gemini", "openrouter"], "voice": "edge_tts",
-        "coaching": True, "dreams": True, "study": True,
+        "coaching": True, "dreams_feature": True, "study": True,
     },
     "premium": {
         "name": "Premium", "price": 14.99, "daily_messages": 150,
         "daily_features": {
-            "chat": 150, "study": 50, "content": 40, "business": 30,
-            "code_lab": 30, "life_coach": 20, "dreams": 20, "smart_home": 50,
+            "chat": 150, "study": 50, "content": 40, "business": 40,
+            "code_lab": 40, "life_coach": 30, "dreams": 20, "smart_home": 50,
             "search": 100, "translate": 50, "summarize": 50, "weather": 100,
             "news": 100, "currency": 100, "voice": 50,
         },
         "ads_required": False, "memory_days": 90,
         "models": ["gemini", "openrouter", "groq"], "voice": "elevenlabs",
-        "coaching": True, "dreams": True, "study": True,
+        "coaching": True, "dreams_feature": True, "study": True,
     },
     "pro": {
         "name": "Pro", "price": 110, "billing_period": "6_months", "daily_messages": 500,
@@ -54,7 +55,7 @@ TIER_CONFIGS: Dict[str, Dict[str, Any]] = {
         },
         "ads_required": False, "memory_days": 365,
         "models": ["gemini", "openrouter", "groq"], "voice": "elevenlabs",
-        "coaching": True, "dreams": True, "study": True,
+        "coaching": True, "dreams_feature": True, "study": True,
     },
     "yearly": {
         "name": "Yearly", "price": 199, "billing_period": "yearly", "daily_messages": 9999,
@@ -66,7 +67,7 @@ TIER_CONFIGS: Dict[str, Dict[str, Any]] = {
         },
         "ads_required": False, "memory_days": 999,
         "models": ["gemini", "openrouter", "groq"], "voice": "elevenlabs",
-        "coaching": True, "dreams": True, "study": True,
+        "coaching": True, "dreams_feature": True, "study": True,
     },
 }
 
@@ -78,8 +79,7 @@ def get_feature_limit(tier: str, feature: str) -> int:
     return config.get("daily_features", {}).get(feature, 0)
 
 def can_use_feature(tier: str, feature: str) -> bool:
-    limit = get_feature_limit(tier, feature)
-    return limit > 0
+    return get_feature_limit(tier, feature) > 0
 
 def is_ads_required(tier: str) -> bool:
     config = get_tier_config(tier)
@@ -88,3 +88,38 @@ def is_ads_required(tier: str) -> bool:
 def get_daily_messages(tier: str) -> int:
     config = get_tier_config(tier)
     return config.get("daily_messages", 15)
+
+def get_memory_days(tier: str) -> int:
+    config = get_tier_config(tier)
+    return config.get("memory_days", 3)
+
+# ✅ دوال جديدة للتوافق مع limits_service
+def get_all_daily_message_limits() -> Dict[str, int]:
+    """كل حدود الرسائل اليومية لكل الباقات"""
+    return {tier: cfg["daily_messages"] for tier, cfg in TIER_CONFIGS.items()}
+
+def get_all_feature_limits() -> Dict[str, Dict[str, int]]:
+    """كل حدود الميزات لكل الباقات"""
+    result = {}
+    # جمع أسماء جميع الميزات
+    all_features = set()
+    for cfg in TIER_CONFIGS.values():
+        all_features.update(cfg.get("daily_features", {}).keys())
+    for feature in all_features:
+        result[feature] = {tier: cfg.get("daily_features", {}).get(feature, 0) 
+                          for tier, cfg in TIER_CONFIGS.items()}
+    return result
+
+def get_tier_features(tier: str) -> Dict[str, bool]:
+    """جلب مميزات الباقة (tts, dreams, coaching...)"""
+    config = get_tier_config(tier)
+    return {
+        "tts": config.get("voice", "edge_tts") == "elevenlabs",
+        "dreams": config.get("dreams_feature", False),
+        "coaching": config.get("coaching", False),
+        "study": config.get("study", True),
+        "code_lab": config.get("code_lab", False),
+        "business": config.get("business", False),
+    }
+
+logger.info("✅ Tier Service v3.0 initialized — unified limits")

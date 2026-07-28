@@ -1,104 +1,137 @@
 """
-MyTwin – Limits Service v6.0 (متكامل مع جميع الميزات)
-=============================================================
-- حدود يومية لكل باقة
-- حدود لكل ميزة على حدة
-- تكامل مع Feature Flags و TierConfig
-- تخزين في Supabase + Cache
+Limits Service v7.0 – متكامل مع Supabase و Tier Service
+===========================================================
+- حدود يومية لكل باقة (من tier_service)
+- تخزين في Supabase + Redis Cache
+- آمن ضد فقدان البيانات
 """
 import logging
 from typing import Dict, Tuple, Optional
 from datetime import datetime, timezone, timedelta
 from app.infrastructure.cache.cache_service import get, set as cache_set
+from app.infrastructure.database.supabase_client import get_db
 
 logger = logging.getLogger(__name__)
 
-# ========== حدود الرسائل اليومية ==========
-DAILY_MESSAGES = {
-    "free": 15, "plus": 50, "premium": 150, "pro": 500, "yearly": 9999,
-}
+def _get_today() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
 
-# ========== حدود الميزات اليومية ==========
-FEATURE_DAILY_LIMITS = {
-    "study": {"free": 5, "plus": 15, "premium": 50, "pro": 200, "yearly": 9999},
-    "code_lab": {"free": 2, "plus": 10, "premium": 40, "pro": 150, "yearly": 9999},
-    "business": {"free": 2, "plus": 10, "premium": 40, "pro": 150, "yearly": 9999},
-    "life_coach": {"free": 1, "plus": 5, "premium": 30, "pro": 100, "yearly": 9999},
-    "dreams": {"free": 1, "plus": 3, "premium": 20, "pro": 50, "yearly": 9999},
-    "content": {"free": 2, "plus": 10, "premium": 40, "pro": 150, "yearly": 9999},
-    "smart_home": {"free": 3, "plus": 10, "premium": 50, "pro": 200, "yearly": 9999},
-    "search": {"free": 5, "plus": 20, "premium": 100, "pro": 500, "yearly": 9999},
-    "deep_search": {"free": 0, "plus": 1, "premium": 10, "pro": 50, "yearly": 200},
-    "translate": {"free": 3, "plus": 15, "premium": 50, "pro": 200, "yearly": 9999},
-    "summarize": {"free": 3, "plus": 15, "premium": 50, "pro": 200, "yearly": 9999},
-    "weather": {"free": 10, "plus": 30, "premium": 100, "pro": 500, "yearly": 9999},
-    "news": {"free": 5, "plus": 20, "premium": 100, "pro": 500, "yearly": 9999},
-    "currency": {"free": 5, "plus": 20, "premium": 100, "pro": 500, "yearly": 9999},
-    "voice": {"free": 3, "plus": 10, "premium": 50, "pro": 200, "yearly": 9999},
-}
+def _get_today_start() -> str:
+    return datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
 
-# ========== مميزات الباقات ==========
-TIER_FEATURES = {
-    "free": {"tts": False, "dreams": False, "coaching": False, "study": True, "code_lab": False, "business": False},
-    "plus": {"tts": True, "dreams": True, "coaching": False, "study": True, "code_lab": True, "business": False},
-    "premium": {"tts": True, "dreams": True, "coaching": True, "study": True, "code_lab": True, "business": True},
-    "pro": {"tts": True, "dreams": True, "coaching": True, "study": True, "code_lab": True, "business": True},
-    "yearly": {"tts": True, "dreams": True, "coaching": True, "study": True, "code_lab": True, "business": True},
-}
+async def _get_db_usage(user_id: str, usage_type: str, today: str) -> int:
+    """جلب الاستخدام من Supabase (مصدر دائم)"""
+    try:
+        db = get_db()
+        res = db.table("daily_usage").select("count").eq(
+            "user_id", user_id
+        ).eq("usage_type", usage_type).eq("date", today).single().execute()
+        if res.data:
+            return res.data.get("count", 0)
+        return 0
+    except Exception as e:
+        logger.debug(f"Failed to get db usage: {e}")
+        return 0
 
-def get_tier_features(tier: str) -> Dict:
-    """جلب مميزات الباقة"""
-    base = tier.split("_")[0] if "_" in tier else tier
-    return TIER_FEATURES.get(base, TIER_FEATURES["free"])
+async def _increment_db_usage(user_id: str, usage_type: str, today: str, current_count: int):
+    """زيادة عداد الاستخدام في Supabase"""
+    try:
+        db = get_db()
+        db.table("daily_usage").upsert({
+            "user_id": user_id,
+            "usage_type": usage_type,
+            "date": today,
+            "count": current_count + 1,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+    except Exception as e:
+        logger.warning(f"Failed to increment db usage: {e}")
 
-def check_message_limit(uid: str, tier: str) -> Tuple[bool, int]:
-    """التحقق من حد الرسائل اليومي"""
-    today = datetime.now(timezone.utc).date().isoformat()
+async def check_message_limit(uid: str, tier: str) -> Tuple[bool, int]:
+    """التحقق من حد الرسائل اليومي (مع تخزين مزدوج)"""
+    from app.domain.services.tier_service import get_daily_messages
+    today = _get_today()
     key = f"msg:{uid}:{today}"
-    used = get(key) or 0
-    limit = DAILY_MESSAGES.get(tier, 15)
+    
+    # 1. جلب من الكاش
+    used_cache = get(key)
+    if used_cache is not None:
+        used = used_cache
+    else:
+        # 2. جلب من Supabase
+        used = await _get_db_usage(uid, "messages", today)
+        cache_set(key, used, 86400)
+    
+    limit = get_daily_messages(tier)
+    if limit >= 9999:  # باقة غير محدودة
+        return True, 9999
     
     if used >= limit:
         return False, 0
     
+    # 3. زيادة العداد
     cache_set(key, used + 1, 86400)
-    return True, limit - used - 1
+    await _increment_db_usage(uid, "messages", today, used)
+    
+    remaining = limit - used - 1
+    return True, remaining
+
 
 async def check_feature_usage(uid: str, tier: str, feature: str) -> Tuple[bool, int]:
     """التحقق من حد استخدام ميزة معينة"""
+    from app.domain.services.tier_service import get_feature_limit, get_tier_features
+    
     # 1. التحقق من صلاحية الميزة للباقة
     features = get_tier_features(tier)
     if feature in features and not features[feature]:
         return False, 0
 
-    # 2. التحقق من الحد اليومي
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = _get_today()
     key = f"feat:{uid}:{feature}:{today}"
-    used = get(key) or 0
-    limits = FEATURE_DAILY_LIMITS.get(feature, {"free": 1})
-    limit = limits.get(tier, limits.get("free", 1))
+    
+    # 2. جلب من الكاش
+    used_cache = get(key)
+    if used_cache is not None:
+        used = used_cache
+    else:
+        used = await _get_db_usage(uid, f"feature:{feature}", today)
+        cache_set(key, used, 86400)
+    
+    limit = get_feature_limit(tier, feature)
+    if limit >= 9999:
+        return True, 9999
     
     if used >= limit:
         return False, 0
     
+    # 3. زيادة العداد
     cache_set(key, used + 1, 86400)
-    return True, limit - used - 1
+    await _increment_db_usage(uid, f"feature:{feature}", today, used)
+    
+    remaining = limit - used - 1
+    return True, remaining
+
 
 def get_usage_summary(uid: str, tier: str) -> Dict:
-    """ملخص الاستخدام اليومي"""
-    today = datetime.now(timezone.utc).date().isoformat()
-    msg_used = get(f"msg:{uid}:{today}") or 0
-    msg_limit = DAILY_MESSAGES.get(tier, 15)
+    """ملخص الاستخدام اليومي (متزامن - من الكاش فقط للسرعة)"""
+    from app.domain.services.tier_service import get_daily_messages, get_all_feature_limits
+    today = _get_today()
     
-    # استخدام الميزات
+    msg_used = get(f"msg:{uid}:{today}") or 0
+    msg_limit = get_daily_messages(tier)
+    
+    all_feature_limits = get_all_feature_limits()
     feature_usage = {}
-    for feature in FEATURE_DAILY_LIMITS:
+    for feature in all_feature_limits:
         key = f"feat:{uid}:{feature}:{today}"
         used = get(key) or 0
-        limits = FEATURE_DAILY_LIMITS.get(feature, {"free": 1})
-        limit = limits.get(tier, limits.get("free", 1))
+        limit = all_feature_limits.get(feature, {}).get(tier, 0)
         if used > 0 or limit > 0:
-            feature_usage[feature] = {"used": used, "limit": limit, "remaining": max(0, limit - used)}
+            feature_usage[feature] = {
+                "used": used,
+                "limit": limit,
+                "remaining": max(0, limit - used),
+            }
     
     return {
         "messages": {
@@ -109,4 +142,16 @@ def get_usage_summary(uid: str, tier: str) -> Dict:
         "features": feature_usage,
     }
 
-logger.info("✅ Limits Service v6.0 initialized")
+
+async def reset_daily_usage(user_id: str):
+    """إعادة تعيين الاستخدام اليومي (تُستدعى عند منتصف الليل)"""
+    today = _get_today()
+    db = get_db()
+    try:
+        db.table("daily_usage").delete().eq("user_id", user_id).lt("date", today).execute()
+        logger.debug(f"Daily usage reset for {user_id}")
+    except Exception as e:
+        logger.warning(f"Failed to reset daily usage: {e}")
+
+
+logger.info("✅ Limits Service v7.0 initialized — Supabase + Cache")

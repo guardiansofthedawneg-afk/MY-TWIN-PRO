@@ -1,7 +1,7 @@
 """
-SoulOrchestrator v3.0 – منسق الروح مع محركات P1
-==================================================
-يدمج Self Model و World Model في حالة الروح.
+SoulOrchestrator v4.0 – منسق الروح مع Digital Fingerprint
+============================================================
+يدمج Self Model, World Model, و Digital Fingerprint في حالة الروح.
 """
 import logging
 from typing import Dict, Any, Optional
@@ -27,17 +27,11 @@ soul_evolution = SoulEvolution()
 soul_bonds = SoulBonds()
 
 async def get_soul_state(
-    user_id: str,
-    relationship_stage: str,
-    bond_level: int,
-    interaction_count: int,
-    personality_dna: Dict[str, float],
-    dominant_emotion: str,
-    recent_emotions: list,
-    memory_count: int,
-    core_memory_count: int,
-    memory_patterns: Dict[str, float],
-    evolution_count: int,
+    user_id: str, relationship_stage: str, bond_level: int,
+    interaction_count: int, personality_dna: Dict[str, float],
+    dominant_emotion: str, recent_emotions: list,
+    memory_count: int, core_memory_count: int,
+    memory_patterns: Dict[str, float], evolution_count: int,
     lang: str = "ar",
 ) -> Dict[str, Any]:
     role = await soul_core.get_role(relationship_stage)
@@ -51,7 +45,7 @@ async def get_soul_state(
 
     # دمج P1
     context_state = curiosity_state = momentum_state = recent_experiences = None
-    self_model = world_snapshot = None
+    self_model = world_snapshot = fingerprint = None
 
     try:
         from app.twin_state.context_awareness_engine import context_awareness_engine
@@ -77,6 +71,10 @@ async def get_soul_state(
         from app.twin_state.world_model import world_model_engine
         world_snapshot = await world_model_engine.get_world_snapshot(user_id)
     except: pass
+    try:
+        from app.features.digital_fingerprint import fingerprint_engine
+        fingerprint = await fingerprint_engine.get_fingerprint(user_id)
+    except: pass
 
     result = {
         "core": {"role": role, "phase": phase, "labels": labels},
@@ -98,6 +96,8 @@ async def get_soul_state(
         result["self_model"] = {"role": self_model["identity"]["role"], "maturity": self_model["identity"]["maturity"], "narrative": self_model["narrative"][:100]}
     if world_snapshot:
         result["world_model"] = {"entities": world_snapshot["entities"], "top_persons": world_snapshot.get("top_persons", [])[:5]}
+    if fingerprint:
+        result["fingerprint"] = {"hash": fingerprint.get("fingerprint_hash", ""), "dominant_emotion": fingerprint.get("dominant_emotion", "neutral"), "attachment_style": fingerprint.get("attachment_style", "unknown")}
 
     return result
 
@@ -105,4 +105,4 @@ async def evolve_soul(user_id: str, interaction_quality: str, new_emotion: str, 
     new_milestones = await soul_timeline.record_evolution(evolution_count + 1)
     return {"evolution_count": evolution_count + 1, "new_milestones": new_milestones}
 
-logger.info("✅ Soul Orchestrator v3.0 ready with P1")
+logger.info("✅ Soul Orchestrator v4.0 ready with Digital Fingerprint")

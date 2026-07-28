@@ -1,8 +1,8 @@
 """
-Unified Twin Brain v6.0 – العقل المركزي مع P1
-=================================================
-يدمج Self Model, World Model, Salience, Cognitive Load
-في دورة الحياة والاستجابة النهائية.
+Unified Twin Brain v7.0 – العقل المركزي مع tier + limits + energy
+====================================================================
+يدمج جميع محركات P0 و P1.
+يمرر tier الحقيقي لفحص الحدود والطاقة.
 """
 import logging
 from typing import Dict, Any, Optional, List
@@ -13,9 +13,7 @@ logger = logging.getLogger("unified_brain")
 from app.twin_state.unified_emotion import unified_emotion_engine
 from app.memory.unified_memory import unified_memory_engine
 from app.twin_state.unified_curiosity import unified_curiosity_engine
-from app.twin_state.personality_engine import (
-    get_personality_dna, save_personality_dna, DEFAULT_PERSONALITY_DNA
-)
+from app.twin_state.personality_engine import get_personality_dna, save_personality_dna, DEFAULT_PERSONALITY_DNA
 from app.twin_brain.identity_service import get_identity_context
 from app.twin_brain.response_builder import build_response
 from app.soul.soul_orchestrator import get_soul_state, evolve_soul
@@ -29,8 +27,6 @@ from app.engine.energy.twin_energy_engine import twin_energy_engine as backend_t
 from app.soul.soul_bonds import soul_bonds
 from app.twin_state.unified_evolution import unified_evolution_engine
 from app.twin_state.relationship_service import load as load_relationship
-
-# محركات جديدة
 from app.twin_state.context_awareness_engine import context_awareness_engine
 from app.twin_state.emotional_momentum import emotional_momentum_engine
 from app.twin_state.curiosity_dynamics import curiosity_dynamics_engine
@@ -40,18 +36,13 @@ from app.twin_state.salience_engine import salience_engine
 from app.twin_state.self_model import self_model_engine
 from app.twin_state.world_model import world_model_engine
 
-
 class UnifiedTwinBrain:
-    """العقل المركزي الموحد v6.0"""
+    """العقل المركزي الموحد v7.0"""
 
     async def process(
-        self,
-        user_id: str,
-        message: str,
-        lang: str = "ar",
-        perception: Optional[Dict] = None,
-        history: Optional[List[Dict]] = None,
-        device_info: Optional[Dict] = None,
+        self, user_id: str, message: str, lang: str = "ar",
+        perception: Optional[Dict] = None, history: Optional[List[Dict]] = None,
+        device_info: Optional[Dict] = None, tier: str = "free",
     ) -> Dict[str, Any]:
         start_time = datetime.now(timezone.utc)
         perception = perception or {}
@@ -59,252 +50,122 @@ class UnifiedTwinBrain:
         user_state = perception.get("user_state", "normal")
         time_of_day = perception.get("time_of_day", "morning")
 
+        # فحص الحدود قبل المعالجة
+        can_send, remaining = True, 9999
+        try:
+            from app.domain.services.limits_service import check_message_limit
+            can_send, remaining = await check_message_limit(user_id, tier)
+        except: pass
+
         identity = await get_identity_context(user_id, lang)
-        emotion_state = await unified_emotion_engine.analyze(
-            user_id=user_id, text=message, lang=lang,
-            previous_messages=[h.get("content", "") for h in history[-5:]],
-        )
+        emotion_state = await unified_emotion_engine.analyze(user_id=user_id, text=message, lang=lang, previous_messages=[h.get("content", "") for h in history[-5:]])
         current_emotion = emotion_state["primary_emotion"]
         real_emotion = emotion_state["real_emotion"]
         emotion_intensity = emotion_state["intensity"]
 
-        memory_context = await unified_memory_engine.retrieve(
-            user_id=user_id, query=message, current_emotion=current_emotion, limit=5,
-        )
+        memory_context = await unified_memory_engine.retrieve(user_id=user_id, query=message, current_emotion=current_emotion, limit=5)
         relevant_memories = memory_context.get("memories", [])
-
         dna = await get_personality_dna(user_id)
         relationship = await load_relationship(user_id)
         bond_level = relationship.get("bond_level", 0)
         phase = relationship.get("stage", "stranger")
 
-        # Context
         context_snapshot = None
-        try:
-            context_snapshot = await context_awareness_engine.get_full_context(
-                user_id=user_id, current_emotion=real_emotion,
-                user_activity="active", device_info=device_info,
-            )
-        except Exception as e:
-            logger.debug(f"Context awareness failed: {e}")
+        try: context_snapshot = await context_awareness_engine.get_full_context(user_id=user_id, current_emotion=real_emotion, user_activity="active", device_info=device_info)
+        except: pass
 
-        # Emotional Momentum
         momentum_state = None
         effective_emotion = real_emotion
         requires_silence = False
         try:
-            momentum_state = await emotional_momentum_engine.update_momentum(
-                user_id=user_id, detected_emotion=real_emotion,
-                emotion_intensity=emotion_intensity,
-                context_snapshot=context_snapshot,
-            )
+            momentum_state = await emotional_momentum_engine.update_momentum(user_id=user_id, detected_emotion=real_emotion, emotion_intensity=emotion_intensity, context_snapshot=context_snapshot)
             effective_emotion = momentum_state.get("current_emotion", real_emotion)
             requires_silence = momentum_state.get("requires_silence", False)
-        except Exception as e:
-            logger.debug(f"Emotional momentum failed: {e}")
+        except: pass
 
-        intent = self._determine_intent(
-            user_state, effective_emotion, emotion_intensity,
-            bond_level, phase, dna, lang,
-        )
+        intent = self._determine_intent(user_state, effective_emotion, emotion_intensity, bond_level, phase, dna, lang)
         behavior = self._decide_behavior(intent, effective_emotion, phase)
         silence = self._evaluate_silence(behavior, effective_emotion, emotion_intensity)
-
         if requires_silence and not silence["should_be_silent"]:
-            silence_duration = await emotional_momentum_engine.get_silence_duration(user_id)
-            silence = {
-                "should_be_silent": True,
-                "reason": "emotional_transition",
-                "suggested_pause_ms": int(silence_duration * 1000),
-                "presence_action": "soft_breathing",
-            }
-
+            sd = await emotional_momentum_engine.get_silence_duration(user_id) if 'emotional_momentum_engine' in dir() else 2.0
+            silence = {"should_be_silent": True, "reason": "emotional_transition", "suggested_pause_ms": int(sd*1000), "presence_action": "soft_breathing"}
         if silence["should_be_silent"]:
             return self._build_silence_response(silence, emotion_state, relationship)
 
         timing = self._calculate_timing(effective_emotion, emotion_intensity, user_state)
         if perception.get("user_state") == "tired":
-            timing["reason_ms"] = int(timing.get("reason_ms", 800) * 1.5)
-            timing["respond_ms"] = int(timing.get("respond_ms", 400) * 1.3)
+            timing["reason_ms"] = int(timing.get("reason_ms",800)*1.5)
+            timing["respond_ms"] = int(timing.get("respond_ms",400)*1.3)
 
-        # Backend engines
-        backend_goal = backend_goal_engine.determine_goal(
-            perception=user_state, emotion=effective_emotion,
-            bond_level=bond_level, relationship_phase=phase,
-            time_of_day=time_of_day,
-            memory_context=[m.get("content", "") for m in relevant_memories],
-        )
-        backend_identity = backend_identity_engine.evaluate(
-            bond_level=bond_level, interaction_count=0,
-            memory_count=len(relevant_memories),
-        )
-        backend_constitution_check = backend_constitution_engine.check_action(
-            intent=backend_goal["primary_goal"],
-            goal=backend_goal["reasoning"],
-            bond_level=bond_level,
-            identity_role=backend_identity["role"],
-        )
-        backend_decision = backend_decision_engine.decide(
-            goal=backend_goal["primary_goal"],
-            identity_role=backend_identity["role"],
-            bond_level=bond_level,
-            emotion=effective_emotion,
-            emotion_intensity=emotion_intensity,
-            perception=user_state,
-            time_of_day=time_of_day,
-        )
-        backend_internal = backend_internal_state_engine.evaluate(
-            emotion=effective_emotion, bond_level=bond_level, twin_energy=0.7,
-        )
-        backend_twin_energy = backend_twin_energy_engine.update(
-            bond_level=bond_level, hour=datetime.now(timezone.utc).hour,
-        )
-        backend_reflection = backend_reflection_engine.reflect(
-            bond_level=bond_level, identity_role=backend_identity["role"],
-        )
-        engine_context = self._build_engine_context(
-            backend_goal, backend_decision, backend_constitution_check,
-            backend_identity, backend_internal, backend_reflection,
-            backend_twin_energy,
-        )
+        backend_goal = backend_goal_engine.determine_goal(perception=user_state, emotion=effective_emotion, bond_level=bond_level, relationship_phase=phase, time_of_day=time_of_day, memory_context=[m.get("content","") for m in relevant_memories])
+        backend_identity = backend_identity_engine.evaluate(bond_level=bond_level, interaction_count=0, memory_count=len(relevant_memories))
+        backend_constitution_check = backend_constitution_engine.check_action(intent=backend_goal["primary_goal"], goal=backend_goal["reasoning"], bond_level=bond_level, identity_role=backend_identity["role"])
+        backend_decision = backend_decision_engine.decide(goal=backend_goal["primary_goal"], identity_role=backend_identity["role"], bond_level=bond_level, emotion=effective_emotion, emotion_intensity=emotion_intensity, perception=user_state, time_of_day=time_of_day)
+        backend_internal = backend_internal_state_engine.evaluate(emotion=effective_emotion, bond_level=bond_level, twin_energy=0.7)
+        backend_twin_energy = backend_twin_energy_engine.update(bond_level=bond_level, hour=datetime.now(timezone.utc).hour)
+        backend_reflection = backend_reflection_engine.reflect(bond_level=bond_level, identity_role=backend_identity["role"])
+        engine_context = self._build_engine_context(backend_goal, backend_decision, backend_constitution_check, backend_identity, backend_internal, backend_reflection, backend_twin_energy)
 
-        # توليد الرد
-        strategy = {
-            "goal": intent["goal"],
-            "tone": behavior["tone"],
-            "personality_dna": dna,
-            "emotion": effective_emotion,
-            "engine_context": engine_context,
-        }
-        reply = await build_response(
-            user_id=user_id, message=message, identity_context=identity,
-            emotion_context={
-                "current_emotion": current_emotion,
-                "real_emotion": effective_emotion,
-                "intensity": emotion_intensity,
-                "confidence": emotion_state["confidence"],
-                "recommendation": emotion_state.get("recommendation", ""),
-                "cultural_analysis": emotion_state.get("cultural_analysis", ""),
-                "is_culturally_disguised": emotion_state.get("is_disguised", False),
-            },
-            memory_context={"recent_conversations": [
-                {"role": "user", "content": m.get("content", ""), "importance": m.get("importance", 50)}
-                for m in relevant_memories
-            ]},
-            strategy=strategy, lang=lang,
-        )
+        strategy = {"goal": intent["goal"], "tone": behavior["tone"], "personality_dna": dna, "emotion": effective_emotion, "engine_context": engine_context}
+        reply = await build_response(user_id=user_id, message=message, identity_context=identity, emotion_context={"current_emotion": current_emotion, "real_emotion": effective_emotion, "intensity": emotion_intensity, "confidence": emotion_state["confidence"], "recommendation": emotion_state.get("recommendation",""), "cultural_analysis": emotion_state.get("cultural_analysis",""), "is_culturally_disguised": emotion_state.get("is_disguised",False)}, memory_context={"recent_conversations": [{"role":"user","content":m.get("content",""),"importance":m.get("importance",50)} for m in relevant_memories]}, strategy=strategy, lang=lang)
 
-        # تخزين الذاكرة
-        await unified_memory_engine.store(
-            user_id=user_id, content=message, reply=reply,
-            emotion=effective_emotion,
-            importance=self._calculate_importance(emotion_intensity, message),
-            lang=lang,
-        )
+        await unified_memory_engine.store(user_id=user_id, content=message, reply=reply, emotion=effective_emotion, importance=self._calculate_importance(emotion_intensity, message), lang=lang)
 
-        # P1 engines
-        cognitive_state = await cognitive_load_engine.evaluate_load(
-            user_id=user_id, current_task="conversation",
-            task_complexity=emotion_intensity, context_snapshot=context_snapshot,
-        )
-        salience_result = await salience_engine.evaluate_salience(
-            user_id=user_id,
-            event={"type": "message", "content": message[:200], "emotion": effective_emotion, "intensity": emotion_intensity},
-            context_snapshot=context_snapshot,
-        )
-        world_updates = await world_model_engine.update_world(
-            user_id=user_id, message=message, reply=reply, context_snapshot=context_snapshot,
-        )
+        cognitive_state = await cognitive_load_engine.evaluate_load(user_id=user_id, current_task="conversation", task_complexity=emotion_intensity, context_snapshot=context_snapshot)
+        salience_result = await salience_engine.evaluate_salience(user_id=user_id, event={"type":"message","content":message[:200],"emotion":effective_emotion,"intensity":emotion_intensity}, context_snapshot=context_snapshot)
+        world_updates = await world_model_engine.update_world(user_id=user_id, message=message, reply=reply, context_snapshot=context_snapshot)
 
         interaction_count = await unified_evolution_engine._get_interaction_count(user_id)
         self_model = None
         if interaction_count % 5 == 0:
             self_model = await self_model_engine.evaluate_self(user_id, context_snapshot)
 
-        # تطور الشخصية
-        evolved_dna = self._evolve_dna(
-            dna, self._assess_quality(effective_emotion, intensity=emotion_intensity),
-        )
+        evolved_dna = self._evolve_dna(dna, self._assess_quality(effective_emotion, intensity=emotion_intensity))
         await save_personality_dna(user_id, evolved_dna)
 
-        # Soul state
         memory_count = await unified_memory_engine.get_memory_count(user_id)
         core_memory_count = await unified_memory_engine.get_core_memory_count(user_id)
         memory_patterns_dict = await unified_memory_engine.get_patterns(user_id, days=14)
-        memory_patterns_data = memory_patterns_dict.get("distribution", {}) if memory_patterns_dict else {}
+        memory_patterns_data = memory_patterns_dict.get("distribution",{}) if memory_patterns_dict else {}
         from app.memory.emotional.emotional_memory import get_emotional_patterns
         emotional_data = await get_emotional_patterns(user_id, days=7)
-        recent_emotions_list = emotional_data.get("recent_emotions", []) if emotional_data else []
+        recent_emotions_list = emotional_data.get("recent_emotions",[]) if emotional_data else []
 
-        soul_state = await get_soul_state(
-            user_id=user_id, relationship_stage=phase, bond_level=bond_level,
-            interaction_count=interaction_count, personality_dna=evolved_dna,
-            dominant_emotion=effective_emotion, recent_emotions=recent_emotions_list,
-            memory_count=memory_count, core_memory_count=core_memory_count,
-            memory_patterns=memory_patterns_data, evolution_count=interaction_count // 10,
-            lang=lang,
-        )
-
-        evolution_updates = await unified_evolution_engine.record_interaction(
-            user_id, effective_emotion, evolved_dna,
-        )
-
-        latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-        consciousness_trace = self._build_consciousness_trace(
-            perception, effective_emotion, relevant_memories, intent, behavior,
-        )
+        soul_state = await get_soul_state(user_id=user_id, relationship_stage=phase, bond_level=bond_level, interaction_count=interaction_count, personality_dna=evolved_dna, dominant_emotion=effective_emotion, recent_emotions=recent_emotions_list, memory_count=memory_count, core_memory_count=core_memory_count, memory_patterns=memory_patterns_data, evolution_count=interaction_count//10, lang=lang)
+        evolution_updates = await unified_evolution_engine.record_interaction(user_id, effective_emotion, evolved_dna)
+        latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds()*1000
+        consciousness_trace = self._build_consciousness_trace(perception, effective_emotion, relevant_memories, intent, behavior)
         trust_model = await self._build_trust_model(user_id, bond_level, evolved_dna, None)
+
+        # ✅ Energy state مع tier حقيقي
+        energy_state = {}
+        try:
+            energy_state = await backend_twin_energy_engine.get_energy_state(user_id, tier=tier, bond_level=bond_level, hour=datetime.now(timezone.utc).hour, device_battery=device_info.get("battery_level") if device_info else None)
+        except: pass
 
         return {
             "reply": reply,
-            "presence_state": self._build_presence_state(
-                current_emotion, emotion_intensity, evolved_dna, phase,
-                silence.get("suggested_pause_ms", 0),
-            ),
+            "presence_state": self._build_presence_state(current_emotion, emotion_intensity, evolved_dna, phase, silence.get("suggested_pause_ms",0)),
             "soul_state": soul_state,
             "evolution_updates": evolution_updates,
             "consciousness_trace": consciousness_trace,
             "trust_model": trust_model,
-            "context_snapshot": {
-                "time_of_day": context_snapshot["time"]["time_of_day"] if context_snapshot else None,
-                "session_type": context_snapshot["session"]["session_type"] if context_snapshot else None,
-                "recommended_tone": context_snapshot["composite"]["recommended_tone"] if context_snapshot else None,
-            } if context_snapshot else None,
-            "emotional_momentum": {
-                "effective_emotion": effective_emotion,
-                "phase": momentum_state.get("phase") if momentum_state else "stable",
-                "requires_silence": requires_silence,
-            },
+            "context_snapshot": {"time_of_day": context_snapshot["time"]["time_of_day"] if context_snapshot else None, "session_type": context_snapshot["session"]["session_type"] if context_snapshot else None, "recommended_tone": context_snapshot["composite"]["recommended_tone"] if context_snapshot else None} if context_snapshot else None,
+            "emotional_momentum": {"effective_emotion": effective_emotion, "phase": momentum_state.get("phase") if momentum_state else "stable", "requires_silence": requires_silence},
             "cognitive_load": cognitive_state,
             "salience": salience_result,
             "self_model": self_model,
             "world_updates": world_updates,
             "curiosity": {"level": 0.7, "phase": "gathering"},
             "experience": None,
-            "twin_emotional_state": {
-                "current_emotion": current_emotion,
-                "real_emotion": effective_emotion,
-                "intensity": emotion_intensity,
-                "confidence": emotion_state["confidence"],
-            },
-            "behavior": {
-                "intent": intent["intent"],
-                "goal": intent["goal"],
-                "tone": behavior["tone"],
-                "silence_before_speaking_ms": silence.get("suggested_pause_ms", 0),
-            },
+            "twin_emotional_state": {"current_emotion": current_emotion, "real_emotion": effective_emotion, "intensity": emotion_intensity, "confidence": emotion_state["confidence"]},
+            "behavior": {"intent": intent["intent"], "goal": intent["goal"], "tone": behavior["tone"], "silence_before_speaking_ms": silence.get("suggested_pause_ms",0)},
             "memory_surfaced": relevant_memories[0] if relevant_memories else None,
-            "twin_state_update": {
-                "bond_delta": 1,
-                "personality_dna": evolved_dna,
-                "relationship": {
-                    "bond_level": bond_level,
-                    "stage": phase,
-                    "trust": relationship.get("trust", 50),
-                },
-            },
+            "twin_state_update": {"bond_delta": 1, "personality_dna": evolved_dna, "relationship": {"bond_level": bond_level, "stage": phase, "trust": relationship.get("trust",50)}},
             "timing": timing,
-            "latency_ms": round(latency_ms, 2),
+            "latency_ms": round(latency_ms,2),
+            "limits": {"can_send": can_send, "remaining_messages": remaining},
+            "energy": energy_state,
         }
 
 
@@ -556,4 +417,4 @@ class UnifiedTwinBrain:
 
 # نسخة عالمية
 unified_brain = UnifiedTwinBrain()
-logger.info("✅ Unified Twin Brain v6.0 ready — all P0 + P1 engines integrated")
+logger.info("✅ Unified Twin Brain v7.0 ready — tier + limits + energy + P1")

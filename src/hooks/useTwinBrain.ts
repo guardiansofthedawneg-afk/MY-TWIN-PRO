@@ -105,6 +105,19 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
 
       const response: UnifiedResponse = await bridgeRef.current.process(message, perceptionData);
 
+      // ✅ ربط الاستجابة بـ StateBus لتغذية الكيان الحي
+      if (response) {
+        stateBus.updateFromUnifiedResponse(response);
+        
+        // تحديث المحركات الأساسية مباشرة
+        if (response.twin_emotional_state) {
+          presenceEngine.setEmotion(
+            response.twin_emotional_state.current_emotion || 'neutral',
+            response.twin_emotional_state.intensity || 0.5,
+          );
+        }
+      }
+
       if (response.reply) {
         const phases: ThinkingPhase[] = [
           { phase: 'observe', progress: 0.1, label: PHASE_LABELS.perceive[lang === 'ar' ? 'ar' : 'en'] },

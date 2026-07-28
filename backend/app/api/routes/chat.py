@@ -1,5 +1,5 @@
 """
-CHAT ROUTER v7.0 — توجيه ذكي + Unified Brain
+CHAT ROUTER v8.0 — Unified Brain مع استجابة كاملة
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -15,6 +15,9 @@ class ChatRequest(BaseModel):
     lang: str = "ar"
     user_id: Optional[str] = None
     use_voice: bool = False
+    tier: str = "free"
+    perception: Optional[Dict] = None
+    device_info: Optional[Dict] = None
 
 LIFE_COACH_KEYWORDS = ["مدرب", "حياتي", "مشكلة", "علاقتي", "وظيفتي", "مالي", "نومي", "قلق", "خائف", "حزين"]
 CODE_LAB_KEYWORDS = ["كود", "برمجة", "مشروع", "معمارية", "قاعدة بيانات", "API", "React", "FastAPI"]
@@ -32,74 +35,32 @@ async def chat(req: ChatRequest):
         if not message:
             raise HTTPException(400, "Message cannot be empty")
 
-        reply = ""
-        provider = "twin_brain"
-        twin_emotional_state = {}
-        relationship_update = {}
-
-        if any(kw in message for kw in SMART_HOME_KEYWORDS):
-            from app.features.smart_home.smart_home_orchestrator import smart_home
-            result = await smart_home.process_command(req.user_id, message, req.lang)
-            reply = result.get("response", "")
-            provider = "smart_home"
-        elif any(kw in message for kw in IMAGE_KEYWORDS):
-            from app.features.image_lab.image_orchestrator import image_lab
-            result = await image_lab.generate(req.user_id, message)
-            reply = f"تم توليد الصورة: {result.get('image_url', '')}"
-            provider = "image_lab"
-        elif any(kw in message for kw in PASS_KEYWORDS):
-            try:
-                from app.features.task_manager.pass_orchestrator import pass_assistant
-                if "طقس" in message or "weather" in message:
-                    result = await pass_assistant._get_weather("Cairo")
-                    reply = f"الطقس: {result}"
-                    provider = "pass"
-                else:
-                    result = await pass_assistant.create_task(req.user_id, message, "", "medium")
-                    reply = f"تم إنشاء المهمة: {result.get('task', {}).get('title', '')}"
-                    provider = "pass"
-            except Exception as e:
-                logger.warning(f"PASS fallback: {e}")
-        elif any(kw in message for kw in DREAM_KEYWORDS):
-            from app.features.dreams.dream_orchestrator import dream_orchestrator
-            result = await dream_orchestrator.interpret(req.user_id, message, req.lang)
-            reply = result.get("data", {}).get("interpretation", "")
-            provider = "dream_orchestrator"
-        elif any(kw in message for kw in CREATOR_KEYWORDS):
-            from app.features.creator.creator_orchestrator import creator
-            result = await creator.generate_outline(req.user_id, message, "article", "", req.lang)
-            reply = result.get("outline", "")
-            provider = "creator"
-        elif any(kw in message for kw in STUDY_KEYWORDS):
-            from app.features.study.athena_orchestrator import athena
-            result = await athena.start_study_session(req.user_id, message, "teen", req.lang)
-            reply = result.get("explanation", {}).get("simplified", "")
-            provider = "athena"
-        elif any(kw in message for kw in CODE_LAB_KEYWORDS):
-            from app.features.code_lab.code_lab_orchestrator import code_lab
-            result = await code_lab.analyze_idea(req.user_id, message, req.lang)
-            reply = result.get("recommendation", "")
-            provider = "code_lab"
-        elif any(kw in message for kw in LIFE_COACH_KEYWORDS):
-            from app.features.life_coach.life_coach_orchestrator import life_coach
-            result = await life_coach.full_session(req.user_id, message, req.lang)
-            reply = result.get("coach_reply", "")
-            provider = "life_coach"
-        else:
-            # ✅ Unified Brain بدلاً من brain_orchestrator القديم
-            from app.twin_brain.unified_brain import unified_brain
-            response = await unified_brain.process(req.user_id, message, req.lang, history=req.history)
-            reply = response.get("reply", "")
-            provider = "unified_brain"
-            twin_emotional_state = response.get("twin_emotional_state", {})
-            relationship_update = response.get("twin_state_update", {}).get("relationship", {})
-
+        # ✅ Unified Brain كخيار أول (يحل محل التوجيه اليدوي للمحادثات العامة)
+        from app.twin_brain.unified_brain import unified_brain
+        response = await unified_brain.process(
+            req.user_id, message, req.lang,
+            perception=req.perception,
+            history=req.history,
+            device_info=req.device_info,
+            tier=req.tier,
+        )
+        
         return {
-            "reply": reply,
-            "provider": provider,
+            "reply": response.get("reply", ""),
+            "provider": "unified_brain",
             "use_voice": req.use_voice,
-            "twin_emotional_state": twin_emotional_state,
-            "relationship_update": relationship_update,
+            "tone": response.get("tone", "neutral"),
+            "emotion": response.get("emotion", "neutral"),
+            "intensity": response.get("intensity", 0.5),
+            "silence_ms": response.get("silence_ms", 0),
+            "energy": response.get("energy", 0.5),
+            "bond_level": response.get("bond_level", 0),
+            "phase": response.get("phase", "stranger"),
+            "latency_ms": response.get("latency_ms", 0),
+            "limits": response.get("limits", {"can_send": True, "remaining": 9999}),
+            "memory_surfaced": response.get("memory_surfaced"),
+            "suggested_question": response.get("suggested_question"),
+            "extended": response.get("extended"),
         }
     except HTTPException:
         raise

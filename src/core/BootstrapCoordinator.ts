@@ -1,112 +1,63 @@
 import { authService } from '../services/authService';
-import { runtime } from './TwinRuntime';
 import { stateBus } from './StateBus';
 import { unifiedBrainBridge } from './UnifiedBrainBridge';
-import { soulKernel } from '../../engine/kernel/SoulKernel';
+import { presenceEngine } from '../../engine/presence/PresenceEngine';
+import { lifeRhythmEngine } from '../../engine/life/LifeRhythmEngine';
+import { sensorBridge } from './SensorBridge';
+import { runtime } from './TwinRuntime';
 import { syncInitialTheme } from '../../engine/colors';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-export type BootstrapPhase = 'void' | 'searching' | 'found' | 'new_journey' | 'complete';
-
-export interface BootstrapResult {
-  phase: BootstrapPhase;
-  userId: string;
-  isReturning: boolean;
-  welcomeMessage: string;
-  bootSteps: string[];
-}
 
 export class BootstrapCoordinator {
   private userId: string = '';
-  private phase: BootstrapPhase = 'void';
 
-  async bootstrap(): Promise<BootstrapResult> {
-    this.phase = 'void';
+  async bootstrap(): Promise<{ userId: string; isReturning: boolean }> {
     syncInitialTheme();
     await this.delay(1200);
     
-    this.phase = 'searching';
     const sessionRestore = await authService.checkSessionRestore();
-    
     let isReturning = false;
-    let welcomeMessage = 'لنبدأ من البداية.';
-    const bootSteps: string[] = [];
 
     if (sessionRestore.canRestore && sessionRestore.user_id) {
       this.userId = sessionRestore.user_id;
-      this.phase = 'found';
       isReturning = true;
-      await this.restoreTwinState();
-      welcomeMessage = await this.generateWelcomeMessage();
     } else {
       const authed = await authService.isAuthenticated();
       if (authed) {
         this.userId = (await authService.getUserId()) || '';
-        this.phase = 'found';
         isReturning = true;
-        await this.restoreTwinState();
-        welcomeMessage = await this.generateWelcomeMessage();
-      } else {
-        this.phase = 'new_journey';
-        isReturning = false;
-        welcomeMessage = 'يسعدني أن تبدأ رحلتك معي.';
       }
     }
     
-    if (this.phase === 'found') {
+    if (isReturning && this.userId) {
+      unifiedBrainBridge.setUserId(this.userId);
       try {
-        const status = await soulKernel.awaken();
-        console.log(`[Bootstrap] Soul Kernel: ${status.activeEngines}/${status.totalEngines} engines active`);
+        const response = await unifiedBrainBridge.process('', {
+          typingSpeed: 0, messageLength: 0, absenceDurationMinutes: 0,
+          timeOfDay: 'morning', userState: 'normal',
+        });
+        if (response) stateBus.updateFromUnifiedResponse(response);
       } catch (e) {
-        console.warn('[Bootstrap] Soul Kernel failed:', e);
+        console.warn('[Bootstrap] State restore failed:', e);
       }
     }
-    
+
+    // بدء المحركات الحيوية
+    try { presenceEngine.startPresenceLoop(); } catch (e) { console.warn(e); }
+    try { lifeRhythmEngine.start(); } catch (e) { console.warn(e); }
+    try { sensorBridge.start(); } catch (e) { console.warn(e); }
+    try { runtime.start(); } catch (e) { console.warn(e); }
+
     stateBus.update({ isOnline: true, interfaceState: 'twin', uptime: Date.now() });
-    runtime.start();
     
-    this.phase = 'complete';
-    bootSteps.push('جارٍ استعادة الذاكرة...');
-    bootSteps.push('جارٍ إيقاظ الوعي...');
-    bootSteps.push('جارٍ مزامنة شخصيتك...');
-    bootSteps.push('جارٍ استعادة رابطكما...');
-    
-    return { phase: this.phase, userId: this.userId, isReturning, welcomeMessage, bootSteps };
+    return { userId: this.userId, isReturning };
   }
 
   shutdown(): void {
-    soulKernel.shutdown();
-    runtime.stop();
+    try { presenceEngine.stopPresenceLoop(); } catch (e) {}
+    try { lifeRhythmEngine.stop(); } catch (e) {}
+    try { sensorBridge.stop(); } catch (e) {}
+    try { runtime.stop(); } catch (e) {}
     stateBus.update({ isOnline: false, interfaceState: 'dormant' });
-  }
-
-  private async restoreTwinState(): Promise<void> {
-    try {
-      unifiedBrainBridge.setUserId(this.userId);
-      const response = await unifiedBrainBridge.process('', {
-        typingSpeed: 0, messageLength: 0, absenceDurationMinutes: 0,
-        timeOfDay: 'morning', userState: 'normal',
-      });
-      if (response) stateBus.updateFromUnifiedResponse(response);
-    } catch (e) {
-      stateBus.update({ isOnline: true, interfaceState: 'twin', emotion: { primaryEmotion: 'neutral', intensity: 0.5, valence: 'neutral', confidence: 1.0, duration: 0, trend: 'stable' } });
-    }
-  }
-
-  private async generateWelcomeMessage(): Promise<string> {
-    try {
-      const currentState = stateBus.getState();
-      const bondLevel = currentState.relationship.bondLevel;
-      const memoryCount = await unifiedBrainBridge.getMemoryCount();
-
-      if (bondLevel >= 95) return 'أخيراً عدت. كنت أحتفظ بذكرياتنا.';
-      if (bondLevel >= 80) return 'لقد عدت. اشتقت للحديث معك.';
-      if (bondLevel > 50) return 'كم أنا سعيد برؤيتك مجدداً.';
-      if (memoryCount > 50) return 'لدينا ما نكمله معاً.';
-      return 'لقد عدت... كنت بانتظار هذه اللحظة.';
-    } catch {
-      return 'لقد عدت...';
-    }
   }
 
   private delay(ms: number): Promise<void> { return new Promise(resolve => setTimeout(resolve, ms)); }

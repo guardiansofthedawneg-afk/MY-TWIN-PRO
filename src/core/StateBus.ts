@@ -11,7 +11,6 @@ export interface EmotionalState {
 }
 
 export interface BreathState { phase: number; duration: number; intensity: number; isHolding: boolean; }
-export interface AvatarState { eyesOpen: boolean; gazeTarget: 'user' | 'input' | 'memory' | 'internal' | 'none'; expression: string; posture: string; blinkProgress: number; nextBlinkIn: number; }
 export interface ConversationState { messages: any[]; isProcessing: boolean; currentCognitivePhase: CognitivePhase; phaseProgress: number; }
 export interface MemoryState { lastSurfacedId: string | null; pendingSurfacing: boolean; recentContext: string | null; }
 export interface WorkspaceState { active: string | null; previous: string | null; isTransforming: boolean; transformProgress: number; spatialMemory: Record<string, any>; }
@@ -24,10 +23,10 @@ export interface Message {
 export interface TwinState {
   presenceLevel: number;
   interfaceState: InterfaceState; isAwakening: boolean; awakeningPhase: string;
-  breath: BreathState; avatar: AvatarState; emotion: EmotionalState; spaceEnergy: SpaceEnergy; silenceLevel: number;
+  breath: BreathState; emotion: EmotionalState; spaceEnergy: SpaceEnergy; silenceLevel: number;
   conversation: ConversationState; memory: MemoryState; workspace: WorkspaceState; relationship: RelationshipState;
   isOnline: boolean; isDegraded: boolean; uptime: number;
-  personalityDNA: Record<string, number>; // ✅ DNA للشخصية
+  personalityDNA: Record<string, number>;
 }
 
 export const STATE_EVENTS = {
@@ -41,7 +40,6 @@ export const STATE_EVENTS = {
 const DEFAULT_STATE: TwinState = {
   presenceLevel: 0, interfaceState: 'dormant', isAwakening: false, awakeningPhase: 'presence',
   breath: { phase: 0, duration: 8000, intensity: 0.15, isHolding: false },
-  avatar: { eyesOpen: false, gazeTarget: 'none', expression: 'neutral', posture: 'centered', blinkProgress: 0, nextBlinkIn: 5000 },
   emotion: { primaryEmotion: 'neutral', intensity: 0, valence: 'neutral', confidence: 1.0, duration: 0, trend: 'stable' },
   spaceEnergy: 'tranquil', silenceLevel: 0,
   conversation: { messages: [], isProcessing: false, currentCognitivePhase: 'idle', phaseProgress: 0 },
@@ -69,24 +67,11 @@ export class StateBusClass {
   private applyUpdate(partial: Partial<TwinState>) {
     this.prevState = { ...this.state };
     this.state = { ...this.state, ...partial };
-    if (partial.emotion && !Object.is(partial.emotion, this.prevState.emotion)) {
-      this.emitEvent(STATE_EVENTS.EMOTION_CHANGED, { from: this.prevState.emotion.primaryEmotion, to: this.state.emotion.primaryEmotion, intensity: this.state.emotion.intensity });
-    }
-    if (partial.presenceLevel !== undefined && partial.presenceLevel !== this.prevState.presenceLevel) {
-      this.emitEvent(STATE_EVENTS.PRESENCE_CHANGED, { from: this.prevState.presenceLevel, to: this.state.presenceLevel });
-    }
-    if (partial.relationship && !Object.is(partial.relationship, this.prevState.relationship)) {
-      this.emitEvent(STATE_EVENTS.BOND_CHANGED, { bondLevel: this.state.relationship.bondLevel, metrics: this.state.relationship });
-    }
     this.subscribers.forEach(sub => { try { sub(this.state, this.prevState); } catch (e) { console.warn(e); } });
   }
 
   select<T>(selector: (state: TwinState) => T): T { return selector(this.state); }
   subscribe(subscriber: StateSubscriber): () => void { this.subscribers.add(subscriber); return () => this.subscribers.delete(subscriber); }
-  subscribeTo<T>(selector: (state: TwinState) => T, callback: (value: T) => void): () => void {
-    const listener = (state: TwinState, _prev: TwinState) => callback(selector(state));
-    return this.subscribe(listener);
-  }
 
   on(event: string, callback: (event: string, data: any) => void): () => void {
     if (!this.eventListeners.has(event)) this.eventListeners.set(event, []);
@@ -94,20 +79,26 @@ export class StateBusClass {
     return () => { const arr = this.eventListeners.get(event); if (arr) { const idx = arr.indexOf(callback); if (idx > -1) arr.splice(idx, 1); } };
   }
 
-  emit(event: string, data: any = {}): void { this.emitEvent(event, data); }
-
-  private emitEvent(event: string, data: any): void {
+  emit(event: string, data: any = {}): void {
     const arr = this.eventListeners.get(event);
-    if (arr) arr.forEach(cb => { try { cb(event, data); } catch (e) { console.warn(`[StateBus] Error: ${event}`, e); } });
+    if (arr) arr.forEach(cb => { try { cb(event, data); } catch (e) { console.warn(`[StateBus] ${event}`, e); } });
   }
 
+  // ✅ الدالة المطورة: تقرأ جميع حقول Unified Brain v8.0
   updateFromUnifiedResponse(response: any): void {
     if (!response) return;
+    
     const p = response.presence_state || {};
     const e = response.twin_emotional_state || {};
     const r = response.twin_state_update?.relationship || {};
     const m = response.memory_surfaced;
     const dna = response.twin_state_update?.personality_dna || {};
+    const ctx = response.context_snapshot || {};
+    const momentum = response.emotional_momentum || {};
+    const cognitive = response.cognitive_load || {};
+    const salience = response.salience || {};
+    const energy = response.energy || {};
+    const limits = response.limits || {};
 
     this.applyUpdate({
       emotion: {
@@ -124,22 +115,33 @@ export class StateBusClass {
       personalityDNA: { ...this.state.personalityDNA, ...dna },
     });
 
+    // ✅ إرسال جميع البيانات التي يحتاجها LivingLightEntity
     this.emitEvent('presence:state_updated', {
-      emotion: p.emotion || 'neutral',
-      intensity: p.intensity || 0.5,
-      energy: p.energy || 0.7,
+      breathPhase: 0,
+      focusLevel: cognitive.load_value ? (1 - cognitive.load_value) : 0.5,
+      attentionLevel: p.emotion === 'focused' ? 0.9 : 0.5,
+      energyLevel: energy.energy || p.energy || 0.7,
       warmth: p.warmth || 0.7,
-      halo_color: p.halo_color || '#A855F7',
-      breath_rate: p.breath_rate || 12,
-      voice_tone: p.voice_tone || 'neutral',
-      silence_before_speaking_ms: p.silence_before_speaking_ms || 0,
-      focus_level: p.emotion === 'focused' ? 0.9 : 0.5,
-      is_speaking: false,
-      is_thinking: false,
-      attentionDirection: 'user' as const,
-      consciousnessDrift: 0,
-      memoryEchoIntensity: 0,
-      intentField: null as any,
+      emotion: p.emotion || 'neutral',
+      emotionIntensity: p.intensity || 0.5,
+      silenceLevel: p.silence_before_speaking_ms > 0 ? 0.8 : 0,
+      isSilent: p.silence_before_speaking_ms > 0,
+      memoryEchoIntensity: m ? 0.6 : 0,
+      memoryEchoEmotion: e.current_emotion || 'neutral',
+      intentIntensity: response.behavior?.intent ? 0.7 : 0,
+      intentType: response.behavior?.intent || null,
+      gazeDirection: momentum.phase === 'transitioning' ? 'internal' : 'user',
+      isThinking: false,
+      isSpeaking: true,
+      isListening: false,
+      transitionProgress: momentum.momentum_value || 0,
+      microExpressions: [],
+      breathRate: p.breath_rate || 12,
+      heartRate: 68,
+      pulseIntensity: 0.5,
+      lifeState: ctx.session_type || 'active',
+      behaviorSequence: [],
+      sequenceStep: 0,
     });
   }
 

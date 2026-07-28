@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useTwinBrain } from '../hooks/useTwinBrain';
 import { useRTL } from '../../lib/useRTL';
 import { useAppTheme } from '../../engine/colors';
 import { useTwinStore } from '../../store/useTwinStore';
 import { bootstrapCoordinator } from '../core/BootstrapCoordinator';
+import { presenceEngine } from '../../engine/presence/PresenceEngine';
+import { audioMixer } from '../core/AudioMixer';
 import AmbientField from './AmbientField';
 import LivingLightEntity from '../renderers/zones/LivingLightEntity';
 import { SPACE, RADIUS } from '../../src/design/tokens/spacing';
@@ -20,25 +22,19 @@ export default function LivingWorld() {
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; sender: 'user' | 'twin'; text: string }>>([]);
 
-  
   // 🧬 تشغيل جميع المحركات
   useEffect(() => {
     const init = async () => {
       try {
         await bootstrapCoordinator.bootstrap();
+        presenceEngine.startPresenceLoop();
+        audioMixer.playEffect('awakening');
       } catch (e) {
         console.warn('[LivingWorld] Bootstrap failed:', e);
       }
     };
     init();
   }, []);
-
-
-  
-  useEffect(() => {
-    import('../core/TestAllEngines').then(m => m.testAllEngines()).then(console.log).catch(console.error);
-  }, []);
-
 
   const handleSend = useCallback(async () => {
     if (!inputText.trim() || isThinking) return;
@@ -47,6 +43,10 @@ export default function LivingWorld() {
     setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'user' as const, text }]);
     const twinMsgId = (Date.now() + 1).toString();
     setMessages(prev => [...prev, { id: twinMsgId, sender: 'twin', text: '' }]);
+    
+    // إعلام المحركات بالتفاعل
+    audioMixer.playTyping();
+    
     await streamMessage(text);
   }, [inputText, isThinking, streamMessage]);
 
@@ -64,9 +64,12 @@ export default function LivingWorld() {
   }, [streamedText, messages]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.bg }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <AmbientField />
-      <LivingLightEntity isThinking={isThinking} isSpeaking={false} isListening={true} />
+      <LivingLightEntity isThinking={isThinking} isSpeaking={streamedText.length > 0} isListening={!isThinking} />
 
       <View style={styles.conversationContainer}>
         {messages.map(msg => (
@@ -88,7 +91,7 @@ export default function LivingWorld() {
           placeholderTextColor={colors.textSecondary}
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

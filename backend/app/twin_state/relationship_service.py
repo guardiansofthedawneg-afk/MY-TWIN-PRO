@@ -1,7 +1,9 @@
 """
-Relationship Service v4.0 – خدمة العلاقات مع AI Intent Detection
-==================================================================
-يدعم TCMA Relationship Memory + AI Intent Detection.
+Relationship Service v5.0 – خدمة العلاقات مع AI Intent Detection محسن
+========================================================================
+- AI Intent Detection مع Prompt متطور يشمل الأمثلة والسياقات
+- Fallback على القواعد
+- تكامل مع TCMA Relationship Memory
 """
 import logging
 from typing import Dict, Any, Optional, Tuple
@@ -9,7 +11,9 @@ from typing import Dict, Any, Optional, Tuple
 logger = logging.getLogger("relationship_service")
 
 try:
-    from app.memory.relationship.relationship_memory import get_relationship_context_for_response, store_relationship_snapshot
+    from app.memory.relationship.relationship_memory import (
+        get_relationship_context_for_response, store_relationship_snapshot,
+    )
     TCMA_RELATIONSHIP_AVAILABLE = True
 except ImportError:
     TCMA_RELATIONSHIP_AVAILABLE = False
@@ -49,7 +53,7 @@ QUICK_INTENT = {
         "goodbye": ["bye","see you"],
         "self_reflection": ["i can't","i'm scared","i'm confused"],
         "goal_setting": ["goal","plan","i want to achieve"],
-    }
+    },
 }
 
 async def load(user_id: str) -> Dict[str, Any]:
@@ -57,12 +61,19 @@ async def load(user_id: str) -> Dict[str, Any]:
         try:
             context = await get_relationship_context_for_response(user_id, "")
             rel = context.get("relationship", {})
-            return {"trust": rel.get("trust", 50), "openness": rel.get("openness", 50), "attachment": rel.get("attachment", 30), "comfort": rel.get("comfort", 50), "stage": "friend", "bond_level": rel.get("bond_level", rel.get("trust", 50)), "interaction_count": 0}
+            return {
+                "trust": rel.get("trust", 50), "openness": rel.get("openness", 50),
+                "attachment": rel.get("attachment", 30), "comfort": rel.get("comfort", 50),
+                "stage": "friend", "bond_level": rel.get("bond_level", rel.get("trust", 50)),
+                "interaction_count": 0,
+            }
         except Exception as e:
             logger.warning(f"TCMA relationship failed: {e}")
-    return {"trust": 50, "openness": 50, "attachment": 30, "comfort": 50, "stage": "friend", "bond_level": 50, "trend": "stable", "interaction_count": 0}
+    return {"trust": 50, "openness": 50, "attachment": 30, "comfort": 50,
+            "stage": "friend", "bond_level": 50, "trend": "stable", "interaction_count": 0}
 
-async def update(user_id: str, emotion: Optional[Dict] = None, message: Optional[str] = None, journey_phase: Optional[str] = None, attachment_style: Optional[str] = None) -> Optional[Dict[str, str]]:
+async def update(user_id: str, emotion: Optional[Dict] = None, message: Optional[str] = None,
+                 journey_phase: Optional[str] = None, attachment_style: Optional[str] = None) -> Optional[Dict[str, str]]:
     state = await load(user_id)
     if emotion:
         primary = emotion.get("primary", "neutral")
@@ -74,13 +85,13 @@ async def update(user_id: str, emotion: Optional[Dict] = None, message: Optional
     state["bond_level"] = min(100, (state.get("trust", 50) + min(interaction_count * 0.1, 30)))
     if TCMA_RELATIONSHIP_AVAILABLE:
         try:
-            dims = {"trust": state.get("trust", 50), "openness": state.get("openness", 50), "attachment": state.get("attachment", 30), "comfort": state.get("comfort", 50)}
+            dims = {"trust": state.get("trust", 50), "openness": state.get("openness", 50),
+                    "attachment": state.get("attachment", 30), "comfort": state.get("comfort", 50)}
             await store_relationship_snapshot(user_id, dims, state.get("stage", "friend"))
         except: pass
     return None
 
 def detect_intent(message: str, lang: str = "ar") -> Tuple[str, float]:
-    """اكتشاف النية بالقواعد السريعة (احتياطي)"""
     if not message: return "general", 0.0
     text = message.lower().strip()
     rules = QUICK_INTENT.get(lang, QUICK_INTENT["ar"])
@@ -93,17 +104,37 @@ def detect_intent(message: str, lang: str = "ar") -> Tuple[str, float]:
     return best, best_score
 
 async def detect_intent_ai(message: str, lang: str = "ar") -> Tuple[str, float, str]:
-    """اكتشاف النية باستخدام AI Gateway"""
+    """اكتشاف النية باستخدام AI مع Prompt محسّن."""
     try:
         from app.infrastructure.ai.ai_gateway import ai_gateway
-        prompt = f"""Analyze the user message and return ONLY a JSON object with:
-- intent: one of [greeting, gratitude, goodbye, self_reflection, goal_setting, question, complaint, sharing, general]
-- confidence: 0.0 to 1.0
-- reasoning: short explanation in {"Arabic" if lang == "ar" else "English"}
 
-Message: {message[:500]}
+        # Prompt محسن يشمل أمثلة وسياقات
+        prompt = f"""أنت محلل نوايا ذكي. حدد نية المستخدم من رسالته. أعد فقط JSON صالحًا.
 
-JSON:"""
+النوايا المحتملة:
+- greeting: تحية وترحيب (مرحبا، صباح الخير)
+- gratitude: شكر وامتنان (شكرا، تسلم)
+- goodbye: وداع وإنهاء محادثة (باي، مع السلامة)
+- self_reflection: تعبير عن مشاعر سلبية أو حيرة (أنا مش قادر، محتار، خايف، متضايق)
+- goal_setting: تحديد أهداف أو خطط (هدف، نفسي أحقق، أخطط)
+- question: سؤال مباشر (كيف، لماذا، متى، ما هو)
+- complaint: شكوى أو تذمر (تعبت من، مش عارف، سيء)
+- sharing: مشاركة معلومات أو أحداث شخصية (حصل معي، اليوم عملت، اشتريت)
+- general: غير ذلك
+
+أمثلة:
+- "مرحبا كيفك" → intent: greeting, confidence: 0.95
+- "شكرا على مساعدتك" → intent: gratitude, confidence: 0.92
+- "أنا مش قادر أكمل في الشغل ده" → intent: self_reflection, confidence: 0.88
+- "عايز أتعلم لغة جديدة" → intent: goal_setting, confidence: 0.85
+- "إيه رأيك في المشروع الجديد؟" → intent: question, confidence: 0.90
+- "تعبت من الزحمة كل يوم" → intent: complaint, confidence: 0.87
+- "النهاردة قابلت صديق قديم" → intent: sharing, confidence: 0.83
+
+الرسالة: {message[:300]}
+
+أعد JSON بهذا الشكل فقط:
+{{"intent": "...", "confidence": 0.XX, "reasoning": "..."}}"""
         response = await ai_gateway.generate(prompt, max_tokens=150)
         import json
         start = response.find('{')
@@ -113,8 +144,8 @@ JSON:"""
             return data.get("intent", "general"), data.get("confidence", 0.5), data.get("reasoning", "")
     except Exception as e:
         logger.debug(f"AI intent detection failed: {e}")
-    # احتياطي: استخدام القواعد
+
     intent, confidence = detect_intent(message, lang)
     return intent, confidence, "rule-based fallback"
 
-logger.info("✅ Relationship Service v4.0 initialized with AI intent detection")
+logger.info("✅ Relationship Service v5.0 initialized with enhanced AI intent detection")

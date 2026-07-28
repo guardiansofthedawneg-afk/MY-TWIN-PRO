@@ -1,10 +1,8 @@
 """
-Existence Loop v5.0 – دورة الحياة مع P1 ومحركات الطاقة المحدثة
-================================================================
-- Tick (60s): Internal State + Context + Cognitive Load + Energy State
-- Slow (10min): Reflection + Identity + Self Model + Salience
-- Hourly (1h): World Model + Experience Summary
-- يستخدم get_energy_state() بدل update() القديمة
+Existence Loop v6.0 – مع tier حقيقي من قاعدة البيانات
+==========================================================
+- يستعلم عن tier كل مستخدم من Supabase
+- يمرره لجميع المحركات (طاقة، عبء معرفي، إلخ)
 """
 import logging, asyncio
 from datetime import datetime, timezone, timedelta
@@ -23,21 +21,37 @@ class ExistenceLoop:
         self._tasks.append(asyncio.create_task(self._run_tick_loop()))
         self._tasks.append(asyncio.create_task(self._run_slow_loop()))
         self._tasks.append(asyncio.create_task(self._run_hourly_loop()))
-        logger.info("🔄 Existence Loop v5.0 started")
+        logger.info("🔄 Existence Loop v6.0 started with dynamic tier")
 
     async def stop(self):
         self._running = False
         for t in self._tasks: t.cancel()
         self._tasks.clear()
 
-    async def _get_active_users(self, hours: int = 24, limit: int = 50) -> List[str]:
+    async def _get_active_users(self, hours: int = 24, limit: int = 50) -> List[dict]:
+        """جلب المستخدمين النشطين مع tier الخاص بهم"""
         try:
             from app.infrastructure.database.supabase_client import get_db
             db = get_db()
             cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
-            res = db.table("profiles").select("id").gte("last_active", cutoff).limit(limit).execute()
-            return [r["id"] for r in (res.data or [])]
-        except: return []
+            res = db.table("profiles").select("id, tier").gte("last_active", cutoff).limit(limit).execute()
+            users = []
+            for row in (res.data or []):
+                users.append({"id": row["id"], "tier": row.get("tier", "free")})
+            return users
+        except Exception as e:
+            logger.warning(f"Failed to get active users: {e}")
+            return []
+
+    async def _get_user_tier(self, user_id: str) -> str:
+        """جلب tier من قاعدة البيانات"""
+        try:
+            from app.infrastructure.database.supabase_client import get_db
+            db = get_db()
+            res = db.table("profiles").select("tier").eq("id", user_id).single().execute()
+            return res.data.get("tier", "free") if res.data else "free"
+        except:
+            return "free"
 
     async def _run_tick_loop(self):
         while self._running:
@@ -64,14 +78,17 @@ class ExistenceLoop:
         users = await self._get_active_users(24, 20)
         if not users: return
         from app.memory.unified_memory import unified_memory_engine
-        for user_id in users[:10]:
+        for u in users[:10]:
+            user_id = u["id"]
+            tier = u["tier"]
             try:
+                # استخدم tier الحقيقي
                 from app.engine.internal.internal_state_engine import internal_state_engine
                 state = internal_state_engine.evaluate(emotion="neutral", bond_level=50, twin_energy=0.7)
                 await unified_memory_engine.store_engine_output(user_id, "internal_state", state)
 
                 from app.engine.energy.twin_energy_engine import twin_energy_engine
-                energy = await twin_energy_engine.get_energy_state(user_id, tier="free")
+                energy = await twin_energy_engine.get_energy_state(user_id, tier=tier)
                 await unified_memory_engine.store_engine_output(user_id, "twin_energy", energy)
 
                 from app.twin_state.context_awareness_engine import context_awareness_engine
@@ -79,7 +96,7 @@ class ExistenceLoop:
                 await unified_memory_engine.store_engine_output(user_id, "context_awareness", {"time_of_day": snapshot["time"]["time_of_day"], "cognitive_load": snapshot["cognitive"]["load_level"]})
 
                 from app.twin_state.cognitive_load import cognitive_load_engine
-                await cognitive_load_engine.evaluate_load(user_id, "background", 0.3, snapshot)
+                await cognitive_load_engine.evaluate_load(user_id, "background", 0.3, snapshot, tier=tier)
 
                 from app.twin_state.internal_state import twin_internal_state
                 istate = await twin_internal_state.get_state(user_id)
@@ -87,8 +104,6 @@ class ExistenceLoop:
                 istate["energy_level"] = energy.get("energy", 0.7)
                 await twin_internal_state._save_state(user_id, istate)
 
-                if snapshot["cognitive"]["load_level"] > 0.8:
-                    await cognitive_load_engine.rest(user_id, 2)
             except Exception as e:
                 logger.debug(f"Tick {user_id}: {e}")
 
@@ -96,7 +111,8 @@ class ExistenceLoop:
         users = await self._get_active_users(48, 10)
         if not users: return
         from app.memory.unified_memory import unified_memory_engine
-        for user_id in users[:5]:
+        for u in users[:5]:
+            user_id = u["id"]
             try:
                 from app.engine.reflection.reflection_engine import reflection_engine
                 from app.engine.identity.identity_engine import identity_engine
@@ -120,7 +136,8 @@ class ExistenceLoop:
         users = await self._get_active_users(72, 5)
         if not users: return
         from app.memory.unified_memory import unified_memory_engine
-        for user_id in users[:3]:
+        for u in users[:3]:
+            user_id = u["id"]
             try:
                 from app.twin_state.world_model import world_model_engine
                 snapshot = await world_model_engine.get_world_snapshot(user_id)
@@ -137,4 +154,4 @@ class ExistenceLoop:
                 logger.debug(f"Hourly {user_id}: {e}")
 
 existence_loop = ExistenceLoop()
-logger.info("✅ Existence Loop v5.0 ready")
+logger.info("✅ Existence Loop v6.0 ready with dynamic tier")

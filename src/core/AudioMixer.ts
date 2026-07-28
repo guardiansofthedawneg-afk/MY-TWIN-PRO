@@ -18,16 +18,21 @@ const BEHAVIOR_AUDIO: Record<string, string> = {
   celebrate: 'milestone',
   protect: 'bond_pulse',
   guide: 'workspace_enter',
+  startup: 'startup_birth',
+  first_breath: 'first_breath',
+  awakening: 'awakening_glow',
+  heartbeat: 'heartbeat_energy',
+  eyes_open: 'eyes_open',
 };
 
 const MICRO_AUDIO: Record<string, string> = {
-  gaze_shift: '',
+  gaze_shift: 'camera_look',
   breath_variation: 'first_breath',
   tiny_pulse: 'heartbeat_energy',
   membrane_shiver: 'memory_whisper',
   particle_burst: 'particles',
-  core_tilt: '',
-  warmth_flicker: '',
+  core_tilt: 'head_nod',
+  warmth_flicker: 'bond_pulse',
 };
 
 export class AudioMixer {
@@ -49,12 +54,10 @@ export class AudioMixer {
     stateBus.on('presence:state_updated', (_: string, data: any) => {
       if (!data) return;
 
-      // Emotion-based audio
       if (data.emotion && data.emotionIntensity > 0.3) {
         this.setEmotionAudio(data.emotion);
       }
 
-      // Micro-expression audio (throttled)
       const now = Date.now();
       if (data.microExpressions && data.microExpressions.length > 0 && now - this.lastMicroAudio > 5000) {
         const latest = data.microExpressions[data.microExpressions.length - 1];
@@ -65,7 +68,6 @@ export class AudioMixer {
         }
       }
 
-      // Silence dynamics
       if (data.silenceLevel > 0.5) {
         this.activeLayers.forEach(id => audioEngine.stop(id).catch(() => {}));
         this.activeLayers.clear();

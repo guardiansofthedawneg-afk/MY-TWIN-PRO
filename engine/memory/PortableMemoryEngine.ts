@@ -1,12 +1,9 @@
 /**
- * Portable Memory Engine v2.0 — خاص بالشركة فقط
- * ===============================================
- * يُستخدم لتصدير بيانات الذكريات والمحادثات لتدريب Llama AI.
- * لا يُتاح للمستخدم العادي.
- * يُستدعى من لوحة تحكم داخلية أو API خاص بالشركة.
+ * Portable Memory Engine v3.0 — تصدير الذاكرة والمحادثات
+ * ==========================================================
+ * للاستخدام الداخلي للشركة فقط (تدريب Llama AI).
+ * يستدعي API الخلفية المحمي بمفتاح.
  */
-
-import { unifiedBrainBridge } from '../../src/core/UnifiedBrainBridge';
 
 export interface TrainingDataExport {
   exportId: string;
@@ -31,51 +28,44 @@ export interface TrainingDataExport {
   }>;
 }
 
+const INTERNAL_API_KEY = 'SOUL_SYNC_INTERNAL_KEY'; // يجب تخزينها في متغيرات البيئة
+
 export class PortableMemoryEngine {
   /**
    * تصدير بيانات التدريب (للاستخدام الداخلي فقط)
-   * يُستدعى من API خاص بالشركة — وليس من التطبيق العام
    */
   async exportForTraining(): Promise<TrainingDataExport> {
-    const allMemories = await unifiedBrainBridge.getCoreMemories(10000);
-    const memoryCount = await unifiedBrainBridge.getMemoryCount();
-
-    const conversations = await unifiedBrainBridge.getCapabilityMemory('conversation', 1000);
-
-    return {
-      exportId: `TRAIN-${Date.now().toString(36)}`,
-      exportedAt: new Date().toISOString(),
-      totalConversations: conversations.length,
-      totalMemories: memoryCount,
-      conversations: conversations.map((c: any) => ({
-        userId: c.user_id || '',
-        messages: [{ role: 'user', content: c.expressed_text || c.content || '', emotion: c.real_emotion || 'neutral', timestamp: c.created_at || '' }],
-      })),
-      memories: allMemories.map((m: any) => ({
-        content: m.expressed_text || m.content || '',
-        emotion: m.real_emotion || 'neutral',
-        importance: m.importance || 50,
-        createdAt: m.created_at || '',
-      })),
-      identityData: [],
-    };
+    try {
+      const response = await fetch(`/api/v1/admin/export/training?api_key=${INTERNAL_API_KEY}`);
+      const data = await response.json();
+      
+      return {
+        exportId: data.export_id,
+        exportedAt: new Date().toISOString(),
+        totalConversations: 0, // تحسب من الخلفية
+        totalMemories: data.total_records,
+        conversations: [],
+        memories: data.data.map((m: any) => ({
+          content: m.instruction || '',
+          emotion: m.emotion || 'neutral',
+          importance: m.importance || 50,
+          createdAt: ''
+        })),
+        identityData: [],
+      };
+    } catch (error) {
+      console.error('Export failed:', error);
+      throw error;
+    }
   }
 
   /**
    * تصدير بتنسيق Llama (للتدريب المباشر)
    */
   async exportForLlama(): Promise<string> {
-    const data = await this.exportForTraining();
-    
-    // تنسيق Llama: instruction/input/output
-    const llamaFormat = data.conversations.map(conv => ({
-      instruction: conv.messages[0]?.content || '',
-      input: '',
-      output: conv.messages[1]?.content || '',
-      emotion: conv.messages[0]?.emotion || 'neutral',
-    }));
-
-    return JSON.stringify(llamaFormat, null, 2);
+    const response = await fetch(`/api/v1/admin/export/training?api_key=${INTERNAL_API_KEY}`);
+    const data = await response.json();
+    return JSON.stringify(data.data, null, 2);
   }
 
   /**
@@ -87,18 +77,22 @@ export class PortableMemoryEngine {
     estimatedTokens: number;
     estimatedFileSizeMB: number;
   }> {
-    const memoryCount = await unifiedBrainBridge.getMemoryCount();
-    const conversations = await unifiedBrainBridge.getCapabilityMemory('conversation', 1);
-    
-    const estimatedTokens = memoryCount * 50; // تقدير 50 توكن لكل ذاكرة
-    const estimatedFileSizeMB = (estimatedTokens * 4) / (1024 * 1024); // 4 بايت لكل توكن
-
-    return {
-      totalConversations: conversations.length,
-      totalMemories: memoryCount,
-      estimatedTokens,
-      estimatedFileSizeMB: Math.round(estimatedFileSizeMB * 100) / 100,
-    };
+    try {
+      const response = await fetch(`/api/v1/admin/export/training?api_key=${INTERNAL_API_KEY}`);
+      const data = await response.json();
+      const count = data.total_records || 0;
+      const estimatedTokens = count * 50;
+      const estimatedFileSizeMB = (estimatedTokens * 4) / (1024 * 1024);
+      
+      return {
+        totalConversations: 0,
+        totalMemories: count,
+        estimatedTokens,
+        estimatedFileSizeMB: Math.round(estimatedFileSizeMB * 100) / 100,
+      };
+    } catch {
+      return { totalConversations: 0, totalMemories: 0, estimatedTokens: 0, estimatedFileSizeMB: 0 };
+    }
   }
 }
 

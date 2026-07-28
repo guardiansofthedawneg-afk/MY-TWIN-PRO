@@ -1,53 +1,51 @@
+/**
+ * ExpressionEngine v2.0 — تعبيرات متصلة بالخلفية
+ * =================================================
+ * يقرأ الحالة العاطفية وسلوك الكيان من UnifiedBrainBridge.
+ */
+
+import { unifiedBrainBridge } from '../../src/core/UnifiedBrainBridge';
 import { stateBus } from '../../src/core/StateBus';
-// InternalStateEngine now in backend
-// TwinEnergyEngine now in backend
 
 export interface ExpressionState {
-  voiceTone: 'whisper' | 'soft' | 'warm' | 'neutral' | 'enthusiastic' | 'calm' | 'gentle';
-  speechSpeed: 'very_slow' | 'slow' | 'normal' | 'fast';
-  hesitation: number;
-  microExpressions: string[];
-  bodyLanguage: string;
-  eyeContact: 'direct' | 'soft' | 'avoiding' | 'wandering' | 'focused';
-  breathingStyle: 'deep' | 'shallow' | 'irregular' | 'calm' | 'rapid';
+  emotion: string;
+  intensity: number;
+  tone: string;
+  silenceMs: number;
+  energy: number;
 }
 
 export class ExpressionEngine {
-  evaluate(): ExpressionState {
-    const internal = { mood: 'neutral', confidence: 0.5, stress: 0.3, curiosity: 0.5, uncertainty: 0.3 }; // InternalState now in backend
-    const twinEnergy = 0.7; // TwinEnergy now in backend
+  private currentExpression: ExpressionState = {
+    emotion: 'neutral',
+    intensity: 0.5,
+    tone: 'neutral',
+    silenceMs: 0,
+    energy: 0.7
+  };
 
-    let voiceTone: ExpressionState['voiceTone'] = 'warm';
-    if (twinEnergy < 0.2) voiceTone = 'whisper';
-    else if (internal.stress > 0.6) voiceTone = 'soft';
-    else if (internal.mood === 'joy') voiceTone = 'enthusiastic';
-    else if (internal.mood === 'sadness') voiceTone = 'gentle';
-    else if (internal.mood === 'calm') voiceTone = 'calm';
+  updateFromResponse(response: any): void {
+    if (response?.twin_emotional_state) {
+      this.currentExpression = {
+        emotion: response.twin_emotional_state.real_emotion || 'neutral',
+        intensity: response.twin_emotional_state.intensity || 0.5,
+        tone: response.behavior?.tone || 'neutral',
+        silenceMs: response.behavior?.silence_before_speaking_ms || 0,
+        energy: response.presence_state?.energy || 0.7
+      };
+    }
+  }
 
-    let speechSpeed: ExpressionState['speechSpeed'] = 'normal';
-    if (twinEnergy < 0.15) speechSpeed = 'very_slow';
-    else if (twinEnergy < 0.3) speechSpeed = 'slow';
-    else if (internal.mood === 'joy') speechSpeed = 'fast';
+  getCurrentExpression(): ExpressionState {
+    return this.currentExpression;
+  }
 
-    const hesitation = internal.uncertainty > 0.5 ? 0.7 : twinEnergy < 0.2 ? 0.6 : 0.2;
-
-    const microExpressions: string[] = [];
-    if (internal.mood === 'joy') microExpressions.push('particle_burst', 'warmth_flicker');
-    if (internal.mood === 'sadness') microExpressions.push('core_contract', 'membrane_shiver');
-    if (internal.stress > 0.6) microExpressions.push('breath_variation', 'gaze_shift');
-    if (internal.curiosity > 0.7) microExpressions.push('tiny_pulse');
-
-    const bodyLanguage = twinEnergy < 0.2 ? 'subdued' : internal.mood === 'joy' ? 'expansive' : 'neutral';
-    const eyeContact: ExpressionState['eyeContact'] = internal.confidence > 0.7 ? 'direct' : internal.uncertainty > 0.5 ? 'avoiding' : 'soft';
-    const breathingStyle: ExpressionState['breathingStyle'] = twinEnergy < 0.2 ? 'shallow' : internal.stress > 0.5 ? 'irregular' : 'calm';
-
-    const state: ExpressionState = {
-      voiceTone, speechSpeed, hesitation, microExpressions,
-      bodyLanguage, eyeContact, breathingStyle,
+  getEmotionColor(): string {
+    const colors: Record<string, string> = {
+      joy: '#F59E0B', sadness: '#3B82F6', fear: '#A78BFA',
+      anger: '#EF4444', love: '#EC4899', neutral: '#A855F7'
     };
-
-    stateBus.emit('expression:updated', state);
-    return state;
+    return colors[this.currentExpression.emotion] || '#A855F7';
   }
 }
 

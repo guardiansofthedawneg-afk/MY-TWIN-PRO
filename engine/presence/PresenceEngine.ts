@@ -1,7 +1,5 @@
 import { stateBus } from '../../src/core/StateBus';
 import { EventBus } from '../../src/core/EventBus';
-import { livingBehaviorEngine, BehaviorDecision } from '../behavior/LivingBehaviorEngine';
-import { lifeStateEngine, LifeState } from '../life/LifeStateEngine';
 import { lifeRhythmEngine } from '../life/LifeRhythmEngine';
 
 export interface MicroExpression {
@@ -31,7 +29,7 @@ export interface PresenceState {
   memoryEchoEmotion: string;
   intentType: string | null;
   intentIntensity: number;
-  lifeState: LifeState;
+  lifeState: string;
   microExpressions: MicroExpression[];
   behaviorSequence: string[];
   sequenceStep: number;
@@ -44,6 +42,7 @@ export class PresenceEngine {
   private isActive: boolean = false;
   private behaviorTimer: ReturnType<typeof setTimeout> | null = null;
   private microExpressions: MicroExpression[] = [];
+  private rhythmInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.state = this.getDefaultState();
@@ -69,7 +68,7 @@ export class PresenceEngine {
   }
 
   private listenToBehavior(): void {
-    stateBus.on('behavior:decided', (_: string, data: BehaviorDecision) => {
+    stateBus.on('behavior:decided', (_: string, data: any) => {
       if (!data) return;
       this.state.intentType = data.intentType;
       this.state.intentIntensity = 0.8;
@@ -162,6 +161,13 @@ export class PresenceEngine {
     if (this.animationFrame !== null) return;
     this.isActive = true;
     this.lastTimestamp = performance.now();
+
+    // استدعاء إيقاع الحياة تلقائياً كل 30 ثانية
+    this.rhythmInterval = setInterval(() => {
+      this.applyLifeRhythm();
+    }, 30000);
+    this.applyLifeRhythm(); // استدعاء فوري
+
     const loop = (timestamp: number) => {
       if (!this.isActive) return;
       const delta = timestamp - this.lastTimestamp;
@@ -177,6 +183,7 @@ export class PresenceEngine {
     this.isActive = false;
     if (this.animationFrame !== null) { cancelAnimationFrame(this.animationFrame); this.animationFrame = null; }
     if (this.behaviorTimer) { clearTimeout(this.behaviorTimer); this.behaviorTimer = null; }
+    if (this.rhythmInterval) { clearInterval(this.rhythmInterval); this.rhythmInterval = null; }
   }
 
   private update(delta: number): void {
@@ -224,7 +231,6 @@ export class PresenceEngine {
     this.state.gazeDirection = direction;
     this.state.focusLevel = direction === 'user' ? 0.9 : direction === 'internal' ? 0.6 : 0.3;
   }
-
 
   getState(): PresenceState { return { ...this.state }; }
 }

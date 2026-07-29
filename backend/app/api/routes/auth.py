@@ -1,3 +1,10 @@
+"""
+Auth Routes v6.0 — نظام مصادقة آمن ومتكامل
+=============================================
+- تصحيح الأخطاء الإملائية
+- توحيد استخدام Service Role لتجاوز RLS
+- دعم كامل لـ Email + Google + Session Restore
+"""
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
@@ -24,6 +31,7 @@ class GoogleAuthBody(BaseModel):
     lang: str = "ar"
 
 async def _wake_up_twin(user_id: str, lang: str = "ar"):
+    """إيقاظ التوأم بعد المصادقة"""
     try:
         from app.twin_brain.unified_brain import unified_brain
         greeting = "أنا هنا." if lang == "ar" else "I am here."
@@ -39,12 +47,22 @@ async def _wake_up_twin(user_id: str, lang: str = "ar"):
 
 @router.post("/login")
 async def login(body: LoginBody):
+    """تسجيل الدخول بالبريد وكلمة المرور"""
     db = get_db()
+    service_db = get_service_role_db()
     try:
-        result = db.auth.sign_in_with_password({"email": body.email, "password": body.password})
+        result = db.auth.sign_in_with_password({
+            "email": body.email,
+            "password": body.password,
+        })
         if result.user and result.session:
-            db.table("profiles").update({"last_active": datetime.now(timezone.utc).isoformat()}).eq("id", result.user.id).execute()
+            # تحديث آخر نشاط باستخدام Service Role لتجاوز RLS
+            service_db.table("profiles").update({
+                "last_active": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", result.user.id).execute()
+            
             await _wake_up_twin(result.user.id)
+            
             return {
                 "token": result.session.access_token,
                 "user_id": result.user.id,
@@ -59,13 +77,17 @@ async def login(body: LoginBody):
 
 @router.post("/signup")
 async def signup(body: SignupBody):
+    """إنشاء حساب جديد"""
     db = get_db()
+    service_db = get_service_role_db()
     try:
-        result = db.auth.sign_up({"email": body.email, "password": body.password})
+        result = db.auth.sign_up({
+            "email": body.email,
+            "password": body.password,
+        })
         if result.user:
-            # ✅ استخدام Service Role DB لتجاوز RLS
-            service_db = get_service_role_db()
-            service_service_db.table("profiles").insert({
+            # ✅ استخدام Service Role لتجاوز RLS (تم تصحيح الخطأ الإملائي)
+            service_db.table("profiles").insert({
                 "id": result.user.id,
                 "email": body.email,
                 "full_name": body.email.split('@')[0],
@@ -74,12 +96,20 @@ async def signup(body: SignupBody):
                 "tier": "free",
                 "twin_energy": 100,
                 "onboarded": False,
+                "last_active": datetime.now(timezone.utc).isoformat(),
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }).execute()
+            
             if result.session:
                 await _wake_up_twin(result.user.id, body.lang)
-                return {"token": result.session.access_token, "user_id": result.user.id}
-            return {"message": "Check your email to confirm", "user_id": result.user.id}
+                return {
+                    "token": result.session.access_token,
+                    "user_id": result.user.id,
+                }
+            return {
+                "message": "Check your email to confirm",
+                "user_id": result.user.id,
+            }
         raise HTTPException(400, "Signup failed")
     except Exception as e:
         logger.error(f"Signup failed: {e}")
@@ -89,6 +119,7 @@ async def signup(body: SignupBody):
 
 @router.post("/google")
 async def google_auth(body: GoogleAuthBody):
+    """تسجيل الدخول عبر Google"""
     try:
         # 1. تبادل code بـ access_token من Google
         async with httpx.AsyncClient() as client:
@@ -123,7 +154,7 @@ async def google_auth(body: GoogleAuthBody):
             if not email:
                 raise HTTPException(400, "Email not provided by Google")
 
-        # 3. تسجيل الدخول أو إنشاء حساب عبر Supabase OAuth
+        # 3. تسجيل الدخول أو إنشاء حساب
         db = get_db()
         service_db = get_service_role_db()
         try:
@@ -133,9 +164,11 @@ async def google_auth(body: GoogleAuthBody):
             })
             if result.user and result.session:
                 user_id = result.user.id
-                profile = service_db.table("profiles").select("id").eq("id", user_id).execute()
-                if not profile.data:
-                    service_service_db.table("profiles").insert({
+                existing_profile = service_db.table("profiles").select("id").eq("id", user_id).execute()
+                
+                if not existing_profile.data:
+                    # ✅ إنشاء ملف شخصي جديد (تم تصحيح الخطأ الإملائي)
+                    service_db.table("profiles").insert({
                         "id": user_id,
                         "email": email,
                         "full_name": name or email.split('@')[0],
@@ -144,13 +177,16 @@ async def google_auth(body: GoogleAuthBody):
                         "tier": "free",
                         "twin_energy": 100,
                         "onboarded": False,
+                        "last_active": datetime.now(timezone.utc).isoformat(),
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     }).execute()
                 else:
-                    db.table("profiles").update({
+                    # تحديث آخر نشاط
+                    service_db.table("profiles").update({
                         "email": email,
                         "last_active": datetime.now(timezone.utc).isoformat(),
                     }).eq("id", user_id).execute()
+                
                 await _wake_up_twin(user_id, body.lang)
                 return {
                     "token": result.session.access_token,
@@ -160,6 +196,7 @@ async def google_auth(body: GoogleAuthBody):
         except Exception as oauth_err:
             logger.error(f"Google OAuth failed: {oauth_err}")
             raise HTTPException(401, f"Google authentication failed: {str(oauth_err)}")
+        
         raise HTTPException(500, "Google authentication failed")
     except HTTPException:
         raise
@@ -169,14 +206,14 @@ async def google_auth(body: GoogleAuthBody):
 
 @router.get("/verify-token")
 async def verify_token(user_id: str):
+    """التحقق من صحة المستخدم (للاستعادة)"""
     try:
-        db = get_db()
         service_db = get_service_role_db()
-                profile = service_db.table("profiles").select("id").eq("id", user_id).execute()
+        profile = service_db.table("profiles").select("id").eq("id", user_id).execute()
         if profile.data:
             return {"valid": True}
         return {"valid": False}
     except Exception:
         return {"valid": False}
 
-logger.info("✅ Auth Routes v5.0 initialized — Service Role + PKCE Google Auth")
+logger.info("✅ Auth Routes v6.0 initialized — Service Role + PKCE Google Auth")

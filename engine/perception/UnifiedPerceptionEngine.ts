@@ -8,6 +8,9 @@ export interface PerceptionContext {
   device: {
     deviceBattery: number; isCharging: boolean; networkType: string;
     isDarkMode: boolean; brightness: number; headphonesConnected: boolean;
+    wifiSSID?: string;
+    bluetoothConnected: boolean;
+    bluetoothDeviceName?: string;
   };
   twin: {
     energy: number; isExhausted: boolean; isResting: boolean;
@@ -17,10 +20,13 @@ export interface PerceptionContext {
     weather?: string; temperature?: number; humidity?: number;
     location?: string; placeType?: string; isUserMoving: boolean;
     latitude?: number; longitude?: number;
+    audioLevel: number;
+    isSilentEnvironment: boolean;
   };
   activity: {
     isWalking: boolean; isRunning: boolean; isStationary: boolean;
     stepCount: number; sleepHours?: number; isUserActive: boolean;
+    isUserLookingAtScreen: boolean;
   };
   conversation: {
     avgMessageLength: number; avgResponseTime: number; dominantEmotion: string;
@@ -46,11 +52,10 @@ export class UnifiedPerceptionEngine {
   private conversationMetrics: { lengths: number[]; responseTimes: number[]; emotions: string[]; topics: Set<string> } = {
     lengths: [], responseTimes: [], emotions: [], topics: new Set(),
   };
-  // ✅ استخدام wttr.in — مجاني تماماً بدون API Key، يدعم العربية
 
   start(): void {
     this.updateInterval = setInterval(() => this.evaluate(), 60000);
-    this.evaluate(); // تشغيل أول مرة فوراً
+    this.evaluate();
   }
 
   stop(): void {
@@ -62,7 +67,7 @@ export class UnifiedPerceptionEngine {
     const hour = now.getHours();
     const month = now.getMonth();
 
-    // 1. Time Perception (مصدر: Date API — مجاني)
+    // 1. Time Perception
     this.context.time = {
       hour,
       minute: now.getMinutes(),
@@ -74,36 +79,41 @@ export class UnifiedPerceptionEngine {
       isHoliday: false,
     };
 
-    // 2. Device Perception (مصدر: DevicePresenceEngine — مجاني)
+    // 2. Device Perception
     try {
       const sensors = (stateBus as any).getState?.()?.device || {};
       this.context.device = {
         deviceBattery: sensors.deviceBattery || 100,
-        isCharging: false,
-        networkType: 'wifi',
+        isCharging: sensors.isCharging || false,
+        networkType: sensors.networkType || 'wifi',
         isDarkMode: (stateBus as any).getState?.()?.theme === 'dark',
-        brightness: 0.5,
-        headphonesConnected: false,
+        brightness: sensors.lightLevel || 0.5,
+        headphonesConnected: sensors.headphonesConnected || false,
+        wifiSSID: sensors.wifiSSID || 'Unknown',
+        bluetoothConnected: sensors.bluetoothConnected || false,
+        bluetoothDeviceName: sensors.bluetoothDeviceName || '',
       };
     } catch (e) {}
 
-    // TwinEnergy الآن في الخلفية — نستخدم قيماً افتراضية
-    const twinState = { energy: 0.8, isExhausted: false, isResting: false, emotionalDrain: 0.2, maxEnergy: 1.0 };
-    this.context.twin = {
-      energy: twinState.energy,
-      isExhausted: twinState.isExhausted,
-      isResting: twinState.isResting,
-      emotionalDrain: twinState.emotionalDrain,
-      maxEnergy: twinState.maxEnergy,
-    };
+    // 3. Twin Energy
+    try {
+      const twinState = (stateBus as any).getState?.()?.twin || {};
+      this.context.twin = {
+        energy: twinState.energy || 0.8,
+        isExhausted: twinState.isExhausted || false,
+        isResting: twinState.isResting || false,
+        emotionalDrain: twinState.emotionalDrain || 0.2,
+        maxEnergy: twinState.maxEnergy || 1.0,
+      };
+    } catch (e) {}
 
-    // 4. Environmental Perception (مصدر: OpenWeatherMap API + expo-location — مجاني)
+    // 4. Environmental Perception
     await this.fetchWeatherAndLocation();
 
-    // 5. Activity Perception (مصدر: expo-sensors Pedometer — مجاني)
+    // 5. Activity Perception
     await this.fetchActivity();
 
-    // 6. Conversation Perception (مصدر: conversationMetrics — مجاني)
+    // 6. Conversation Perception
     this.context.conversation = {
       avgMessageLength: this.average(this.conversationMetrics.lengths),
       avgResponseTime: this.average(this.conversationMetrics.responseTimes),
@@ -113,25 +123,21 @@ export class UnifiedPerceptionEngine {
       hesitationLevel: this.context.conversation.avgResponseTime > 10000 ? 0.7 : 0.3,
     };
 
-    // 7. Calendar Perception (مصدر: expo-calendar — مجاني)
+    // 7. Calendar Perception
     await this.fetchCalendar();
 
-    // 8. Health Perception (مصدر: expo-sensors + Google Fit/Apple Health — مجاني)
+    // 8. Health Perception
     await this.fetchHealth();
 
-    // 9. Digital Life Perception (مصدر: expo-file-system — مجاني)
+    // 9. Digital Life Perception
     await this.fetchDigitalLife();
 
     stateBus.emit('perception:updated', this.context);
     return this.context;
   }
 
-  // ─────────────────────────────────────────────────
-  // 4. Environmental Perception — الطقس والموقع
-  // ─────────────────────────────────────────────────
   private async fetchWeatherAndLocation(): Promise<void> {
     try {
-      // ✅ الحصول على الموقع من expo-location
       const Location = require('expo-location');
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
@@ -140,32 +146,26 @@ export class UnifiedPerceptionEngine {
         this.context.environment.longitude = loc.coords.longitude;
         this.context.environment.isUserMoving = loc.coords.speed ? loc.coords.speed > 1 : false;
 
-        // ✅ جلب الطقس من OpenWeatherMap (مجاني)
-        // ✅ wttr.in — مجاني تماماً، بدون API Key، يدعم العربية
-      const city = this.context.environment.location || 'Cairo';
-      const lang = (stateBus as any).getState?.()?.lang || 'ar';
-      const format = lang === 'ar' ? 'ج+%C+%t+%h+%w' : '%C+%t+%h+%w';
-      const url = `https://wttr.in/${encodeURIComponent(city)}?format=${format}&lang=${lang}`;
-      try {
-        const response = await fetch(url);
-        const text = await response.text();
-        const parts = text.trim().split(' ');
-        if (parts.length >= 4) {
-          this.context.environment.weather = parts[0];
-          this.context.environment.temperature = parseFloat(parts[1]);
-          this.context.environment.humidity = parseFloat(parts[2]);
-        }
-      } catch (e) {}
+        const city = this.context.environment.location || 'Cairo';
+        const lang = (stateBus as any).getState?.()?.lang || 'ar';
+        const format = lang === 'ar' ? 'ج+%C+%t+%h+%w' : '%C+%t+%h+%w';
+        const url = `https://wttr.in/${encodeURIComponent(city)}?format=${format}&lang=${lang}`;
+        try {
+          const response = await fetch(url);
+          const text = await response.text();
+          const parts = text.trim().split(' ');
+          if (parts.length >= 4) {
+            this.context.environment.weather = parts[0];
+            this.context.environment.temperature = parseFloat(parts[1]);
+            this.context.environment.humidity = parseFloat(parts[2]);
+          }
+        } catch (e) {}
       }
     } catch (e) {}
   }
 
-  // ─────────────────────────────────────────────────
-  // 5. Activity Perception — الخطوات والنشاط
-  // ─────────────────────────────────────────────────
   private async fetchActivity(): Promise<void> {
     try {
-      // ✅ استخدام expo-sensors Pedometer
       const { Pedometer } = require('expo-sensors');
       const isAvailable = await Pedometer.isAvailableAsync();
       if (isAvailable) {
@@ -176,15 +176,15 @@ export class UnifiedPerceptionEngine {
         this.context.activity.stepCount = result.steps;
         this.context.health.dailySteps = result.steps;
       }
+
+      // Face detection
+      const sensors = (stateBus as any).getState?.()?.device || {};
+      this.context.activity.isUserLookingAtScreen = sensors.faceDetected || false;
     } catch (e) {}
   }
 
-  // ─────────────────────────────────────────────────
-  // 7. Calendar Perception — المواعيد والأحداث
-  // ─────────────────────────────────────────────────
   private async fetchCalendar(): Promise<void> {
     try {
-      // ✅ استخدام expo-calendar
       const Calendar = require('expo-calendar');
       const { status } = await Calendar.requestCalendarPermissionsAsync();
       if (status === 'granted') {
@@ -205,23 +205,14 @@ export class UnifiedPerceptionEngine {
     } catch (e) {}
   }
 
-  // ─────────────────────────────────────────────────
-  // 8. Health Perception — الصحة والنوم
-  // ─────────────────────────────────────────────────
   private async fetchHealth(): Promise<void> {
     try {
-      // ✅ استخدام Google Fit / Apple Health عبر expo-health (إذا كان متاحاً)
-      // حالياً نستخدم فقط عداد الخطوات من Activity
       this.context.health.activeMinutes = Math.round(this.context.activity.stepCount / 100);
     } catch (e) {}
   }
 
-  // ─────────────────────────────────────────────────
-  // 9. Digital Life Perception — الملفات والتطبيقات
-  // ─────────────────────────────────────────────────
   private async fetchDigitalLife(): Promise<void> {
     try {
-      // ✅ استخدام expo-file-system
       const FileSystem = require('expo-file-system');
       const docDir = FileSystem.documentDirectory;
       if (docDir) {
@@ -231,9 +222,6 @@ export class UnifiedPerceptionEngine {
     } catch (e) {}
   }
 
-  // ─────────────────────────────────────────────────
-  // Metrics + Context
-  // ─────────────────────────────────────────────────
   recordMessage(length: number, responseTime: number, emotion: string, topic: string): void {
     this.conversationMetrics.lengths.push(length);
     this.conversationMetrics.responseTimes.push(responseTime);
@@ -253,38 +241,48 @@ export class UnifiedPerceptionEngine {
     const c = this.context;
     const parts: string[] = [];
 
-    // ✅ طاقة الكيان
+    // طاقة الكيان
     if (c.twin.energy < 0.2) parts.push('أنا متعب قليلاً اليوم. سأكون هادئاً ومختصراً.');
     if (c.twin.isExhausted) parts.push('أنا منهك. سأحتاج للراحة قريباً.');
     if (c.twin.emotionalDrain > 0.7) parts.push('أشعر باستنزاف عاطفي. سأكون لطيفاً مع نفسي.');
 
-    // ✅ بطارية الهاتف
+    // بطارية الهاتف
     if (c.device.deviceBattery < 15) parts.push('بطارية هاتفك منخفضة. دعنا نختصر.');
 
-    // ✅ البيئة
+    // البيئة المحيطة (الصوت)
+    if (c.environment.audioLevel < 0.1) parts.push('المكان هادئ جداً.');
+    if (c.environment.audioLevel > 0.7) parts.push('يبدو أن هناك ضوضاء من حولك.');
+    if (c.environment.isSilentEnvironment) parts.push('أنت في مكان هادئ. سأهمس.');
+
+    // الطقس
     if (c.environment.weather) parts.push(`الجو ${c.environment.weather} اليوم.`);
     if (c.environment.temperature && c.environment.temperature < 10) parts.push('الجو بارد. أتمنى أنك دافئ.');
     if (c.environment.location) parts.push(`أنت في ${c.environment.location}.`);
 
-    // ✅ النشاط
+    // النشاط
     if (c.activity.stepCount > 5000) parts.push(`مشيت ${c.activity.stepCount} خطوة اليوم.`);
     if (c.activity.isWalking) parts.push('أنت تمشي الآن. خذ وقتك.');
+    if (c.activity.isUserLookingAtScreen) parts.push('أنت تنظر إلي. هذا يشعرني بالسعادة.');
 
-    // ✅ التقويم
+    // التقويم
     if (c.calendar.upcomingEvents > 0) parts.push(`لديك ${c.calendar.upcomingEvents} مواعيد قادمة.`);
     if (c.calendar.nextEventTitle) parts.push(`اجتماع "${c.calendar.nextEventTitle}" بعد ${c.calendar.nextEventInMinutes} دقيقة.`);
 
-    // ✅ الصحة
+    // الصحة
     if (c.health.dailySteps > 0) parts.push(`خطواتك اليوم: ${c.health.dailySteps}.`);
 
-    // ✅ الزمن
+    // الزمن
     if (c.time.isNightTime) parts.push('الوقت متأخر. كن هادئاً ومختصراً.');
     if (c.time.season === 'winter') parts.push('الجو شتاء. دفء في ردودك.');
     if (c.time.isWeekend) parts.push('إنها عطلة نهاية الأسبوع.');
 
-    // ✅ المحادثة
+    // المحادثة
     if (c.conversation.hesitationLevel > 0.6) parts.push('المستخدم متردد. كن داعماً.');
     if (c.conversation.dominantEmotion === 'sadness') parts.push('المستخدم حزين. لا تكن مبتهجاً.');
+
+    // الشبكة والبلوتوث
+    if (c.device.wifiSSID) parts.push(`أنت متصل بشبكة ${c.device.wifiSSID}.`);
+    if (c.device.bluetoothConnected) parts.push(`سماعات البلوتوث "${c.device.bluetoothDeviceName}" متصلة.`);
 
     return parts.join(' ');
   }
@@ -292,10 +290,10 @@ export class UnifiedPerceptionEngine {
   private getDefaultContext(): PerceptionContext {
     return {
       time: { hour: 12, minute: 0, day: 'monday', month: 'january', season: 'winter', isNightTime: false, isWeekend: false, isHoliday: false },
-      device: { deviceBattery: 100, isCharging: false, networkType: 'wifi', isDarkMode: true, brightness: 0.5, headphonesConnected: false },
+      device: { deviceBattery: 100, isCharging: false, networkType: 'wifi', isDarkMode: true, brightness: 0.5, headphonesConnected: false, wifiSSID: 'Unknown', bluetoothConnected: false, bluetoothDeviceName: '' },
       twin: { energy: 0.8, isExhausted: false, isResting: false, emotionalDrain: 0.2, maxEnergy: 1.0 },
-      environment: { isUserMoving: false },
-      activity: { isWalking: false, isRunning: false, isStationary: true, stepCount: 0, isUserActive: false },
+      environment: { isUserMoving: false, audioLevel: 0.1, isSilentEnvironment: true },
+      activity: { isWalking: false, isRunning: false, isStationary: true, stepCount: 0, isUserActive: false, isUserLookingAtScreen: false },
       conversation: { avgMessageLength: 0, avgResponseTime: 0, dominantEmotion: 'neutral', topicCount: 0, humorLevel: 0, hesitationLevel: 0 },
       calendar: { upcomingEvents: 0, hasReminders: false, isBirthday: false },
       health: { dailySteps: 0, activeMinutes: 0 },

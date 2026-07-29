@@ -10,45 +10,25 @@ import { lifeStateEngine } from '../../engine/life/LifeStateEngine';
 import { devicePresenceEngine } from '../../engine/device/DevicePresenceEngine';
 import { stateBus } from '../core/StateBus';
 import { EventBus } from '../core/EventBus';
+import { useTwinStore } from '../../store/useTwinStore';
 
-export interface ThinkingPhase {
-  phase: string;
-  progress: number;
-  label: string;
-}
-
-export interface BrainResponse {
-  reply: string;
-  provider: string;
-  emotion: string;
-  thinkingPhases: ThinkingPhase[];
-  memoryStored: boolean;
-  relationshipDelta: number;
-}
-
-interface UseTwinBrainReturn {
-  isThinking: boolean;
-  thinkingPhase: ThinkingPhase | null;
-  streamedText: string;
-  sendMessage: (message: string) => Promise<BrainResponse>;
-  streamMessage: (message: string) => Promise<void>;
-  setUserId: (userId: string) => void;
-  setLang: (lang: string) => void;
-}
+export interface ThinkingPhase { phase: string; progress: number; label: string; }
+export interface BrainResponse { reply: string; provider: string; emotion: string; thinkingPhases: ThinkingPhase[]; memoryStored: boolean; relationshipDelta: number; }
 
 const PHASE_LABELS: Record<string, { ar: string; en: string }> = {
-  perceive:    { ar: 'أشعر بوجودك...',  en: 'I sense your presence...' },
-  context:     { ar: 'أفهم السياق...',  en: 'Understanding context...' },
-  remember:    { ar: 'أتذكر...',        en: 'Remembering...' },
-  relate:      { ar: 'أفهم علاقتنا...', en: 'Understanding our bond...' },
-  respond:     { ar: 'أستجيب...',       en: 'Responding...' },
+  perceive: { ar: 'أشعر بوجودك...', en: 'I sense your presence...' },
+  context: { ar: 'أفهم السياق...', en: 'Understanding context...' },
+  remember: { ar: 'أتذكر...', en: 'Remembering...' },
+  relate: { ar: 'أفهم علاقتنا...', en: 'Understanding our bond...' },
+  respond: { ar: 'أستجيب...', en: 'Responding...' },
 };
 
-export function useTwinBrain(initialUserId: string = '', initialLang: string = 'ar'): UseTwinBrainReturn {
+export function useTwinBrain(initialUserId: string = '', initialLang: string = 'ar') {
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingPhase, setThinkingPhase] = useState<ThinkingPhase | null>(null);
   const [streamedText, setStreamedText] = useState('');
   const bridgeRef = useRef(unifiedBrainBridge);
+  const tier = useTwinStore(s => s.tier) || 'free';
 
   bridgeRef.current.setUserId(initialUserId);
   bridgeRef.current.setLang(initialLang);
@@ -103,13 +83,23 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
         userState: perception.userState,
       };
 
-      const response: UnifiedResponse = await bridgeRef.current.process(message, perceptionData);
+      // ✅ جمع بيانات المستشعرات للجهاز
+      const sensors = devicePresenceEngine.getSensors();
+      const device_info = {
+        battery_level: sensors.deviceBattery,
+        device_type: 'phone',
+        os: 'expo',
+        weather: sensors.weatherCondition,
+        is_night: sensors.isNightTime,
+        user_walking: sensors.userWalking,
+      };
 
-      // ✅ ربط الاستجابة بـ StateBus لتغذية الكيان الحي
+      const response: UnifiedResponse = await bridgeRef.current.process(
+        message, perceptionData, tier, device_info
+      );
+
       if (response) {
         stateBus.updateFromUnifiedResponse(response);
-        
-        // تحديث المحركات الأساسية مباشرة
         if (response.twin_emotional_state) {
           presenceEngine.setEmotion(
             response.twin_emotional_state.current_emotion || 'neutral',
@@ -128,20 +118,10 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
         ];
 
         EventBus.emit('AI_FINISH_THINKING', { response: response.reply, confidence: 0.9 });
-        if (response.memory_surfaced) {
-          EventBus.emit('MEMORY_CREATED', { memoryId: response.memory_surfaced.id, layer: 'context' });
-        }
+        if (response.memory_surfaced) EventBus.emit('MEMORY_CREATED', { memoryId: response.memory_surfaced.id, layer: 'context' });
 
-        return {
-          reply: response.reply,
-          provider: 'unified_brain',
-          emotion: response.twin_emotional_state?.current_emotion || 'neutral',
-          thinkingPhases: phases,
-          memoryStored: !!response.memory_surfaced,
-          relationshipDelta: response.twin_state_update?.bond_delta || 0,
-        };
+        return { reply: response.reply, provider: 'unified_brain', emotion: response.twin_emotional_state?.current_emotion || 'neutral', thinkingPhases: phases, memoryStored: !!response.memory_surfaced, relationshipDelta: response.twin_state_update?.bond_delta || 0 };
       }
-
       return { reply: '', provider: 'consciousness', emotion: 'neutral', thinkingPhases: [], memoryStored: false, relationshipDelta: 0 };
     } catch (error) {
       EventBus.emit('AI_FINISH_THINKING', { response: '', confidence: 0 });
@@ -151,7 +131,7 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
       setThinkingPhase(null);
       lifeStateEngine.transition('observing', 'finished responding');
     }
-  }, [initialLang]);
+  }, [initialLang, tier]);
 
   const stream = useCallback(async (message: string): Promise<void> => {
     setIsThinking(true);

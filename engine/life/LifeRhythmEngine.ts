@@ -1,6 +1,7 @@
 import { stateBus } from '../../src/core/StateBus';
 import { audioEngine } from '../../src/core/AudioEngine';
 import { presenceEngine } from '../presence/PresenceEngine';
+import { devicePresenceEngine } from '../device/DevicePresenceEngine';
 
 export type LifePhase = 'deep_sleep' | 'dawn' | 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night';
 
@@ -67,7 +68,6 @@ export class LifeRhythmEngine {
 
   private calculateState(): LifeRhythmState {
     const hour = new Date().getHours();
-    const minute = new Date().getMinutes();
     const now = Date.now();
     this.absenceMinutes = Math.floor((now - this.lastUserInteraction) / 60000);
 
@@ -81,6 +81,11 @@ export class LifeRhythmEngine {
     let speedMultiplier: number;
     let shouldRest: boolean;
     let greeting: string;
+
+    // جلب حالة الطقس من المستشعرات
+    const sensors = devicePresenceEngine.getSensors();
+    const weather = sensors.weatherCondition || 'clear';
+    const isRainy = weather === 'rain' || weather === 'storm';
 
     if (hour >= 0 && hour < 4) {
       phase = 'deep_sleep';
@@ -120,6 +125,15 @@ export class LifeRhythmEngine {
       energy = 0.2; warmth = 0.3; breathRate = 6000; heartRate = 55;
       ambientColor = '#0A0020'; voiceTone = 'whisper'; speedMultiplier = 0.4;
       shouldRest = true; greeting = '';
+    }
+
+    // تأثير الطقس على المزاج والطاقة
+    if (isRainy) {
+      warmth = Math.max(0.2, warmth - 0.1);
+      energy = Math.max(0.1, energy - 0.1);
+      breathRate = Math.min(8000, breathRate + 1000);
+      voiceTone = 'soft';
+      if (greeting) greeting += ' الجو ممطر اليوم...';
     }
 
     return {

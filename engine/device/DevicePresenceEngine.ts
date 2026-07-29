@@ -8,6 +8,8 @@ export interface DeviceSensors {
   barometer: number | null;
   proximity: number | null;
   lightLevel: number | null;
+  audioLevel: number;
+  weatherCondition: 'clear' | 'rain' | 'storm' | 'unknown';
   stepCount: number;
   deviceBattery: number | null;
   isCameraReady: boolean;
@@ -25,8 +27,8 @@ export interface DeviceSensors {
 export class DevicePresenceEngine {
   private sensors: DeviceSensors = {
     accelerometer: null, gyroscope: null, barometer: null, proximity: null,
-    lightLevel: null, stepCount: 0, deviceBattery: 100,
-    isCameraReady: false, isMicrophoneReady: false,
+    lightLevel: null, audioLevel: 0, weatherCondition: 'unknown', stepCount: 0,
+    deviceBattery: 100, isCameraReady: false, isMicrophoneReady: false,
     hasUserPermission: false, faceDetected: false, faceBounds: null,
     userWalking: false, userRunning: false, userStationary: true,
     isNightTime: false, isQuietTime: false,
@@ -66,7 +68,13 @@ export class DevicePresenceEngine {
 
   updateAccelerometer(x: number, y: number, z: number): void { this.sensors.accelerometer = { x, y, z }; }
   updateGyroscope(x: number, y: number, z: number): void { this.sensors.gyroscope = { x, y, z }; }
-  updateBarometer(pressure: number): void { this.sensors.barometer = pressure; }
+  updateBarometer(pressure: number): void {
+    this.sensors.barometer = pressure;
+    // تحديد حالة الطقس بناءً على الضغط الجوي (تقريبي)
+    if (pressure < 990) this.sensors.weatherCondition = 'storm';
+    else if (pressure < 1010) this.sensors.weatherCondition = 'rain';
+    else this.sensors.weatherCondition = 'clear';
+  }
 
   updateProximity(distance: number): void { this.sensors.proximity = distance; }
 
@@ -75,6 +83,8 @@ export class DevicePresenceEngine {
     this.sensors.isNightTime = illuminance < 10;
     this.sensors.isQuietTime = this.sensors.isNightTime;
   }
+
+  updateAudioLevel(level: number): void { this.sensors.audioLevel = level; }
 
   updateStepCount(steps: number): void {
     const previous = this.sensors.stepCount;

@@ -7,7 +7,7 @@ import { subscriptionService } from '../../services/SubscriptionService';
 import { adService, AdStatus } from '../../services/AdService';
 import { economyEngine, SoulPointsBalance } from '../../services/EconomyEngine';
 import { PlanTier } from '../../services/CommercePlugin';
-import { Crown, Star, CheckCircle2, Brain, Zap, Sparkles, ArrowRight, RefreshCw, Play, Gift, TrendingUp } from 'lucide-react-native';
+import { Crown, Star, CheckCircle2, Brain, Zap, Sparkles, ArrowRight, RefreshCw, Play, Gift, TrendingUp, Battery, BatteryWarning, BatteryFull } from 'lucide-react-native';
 
 interface Plan {
   id: PlanTier; name: string; price: string; period: string;
@@ -46,6 +46,8 @@ export default function TwinPlusWing() {
   const [restoringPurchases, setRestoringPurchases] = useState(false);
   const [loadingAd, setLoadingAd] = useState(false);
   const [soulBalance, setSoulBalance] = useState<SoulPointsBalance | null>(null);
+  const [twinEnergy, setTwinEnergy] = useState<number>(0.5);
+  const [energyMessage, setEnergyMessage] = useState<string>('');
 
   useEffect(() => {
     loadAll();
@@ -59,6 +61,17 @@ export default function TwinPlusWing() {
     ]);
     setAdStatus(status);
     setSoulBalance(balance);
+    
+    // ✅ جلب طاقة الكيان من economy API
+    try {
+      const { apiGet } = require('../../lib/httpClient');
+      const energyRes = await apiGet(`/api/economy/energy/status?user_id=${userId}`);
+      if (energyRes?.energy !== undefined) {
+        setTwinEnergy(energyRes.energy);
+        setEnergyMessage(energyRes.recommendation || '');
+      }
+    } catch (e) {}
+    
     adService.loadAd();
   };
 
@@ -66,7 +79,18 @@ export default function TwinPlusWing() {
     if (plan.id === 'free' || plan.id === tier || loadingPlan || !userId) return;
     setLoadingPlan(plan.id);
     const result = await subscriptionService.purchase(plan.id, userId);
-    if (!result.success) {
+    if (result.success) {
+      // ✅ تحديث الطاقة بعد الترقية الناجحة
+      try {
+        const { apiGet } = require('../../lib/httpClient');
+        const energyRes = await apiGet(`/api/economy/energy/status?user_id=${userId}`);
+        if (energyRes?.energy !== undefined) {
+          setTwinEnergy(energyRes.energy);
+          setEnergyMessage('⚡ تم استعادة كامل طاقة التوأم بعد الترقية!');
+        }
+      } catch (e) {}
+      loadAll();
+    } else if (!result.cancelled) {
       await Linking.openURL(`${LANDING_PAGE}?plan=${plan.id}&user=${encodeURIComponent(twinName || 'user')}`);
     }
     setLoadingPlan(null);
@@ -86,9 +110,20 @@ export default function TwinPlusWing() {
     const reward = await adService.showAd(userId);
     if (reward.success) {
       await economyEngine.addPoints('ad', 10, 'مشاهدة إعلان');
+      
+      // ✅ تحديث الطاقة بعد الإعلان
+      try {
+        const { apiGet } = require('../../lib/httpClient');
+        const energyRes = await apiGet(`/api/economy/energy/status?user_id=${userId}`);
+        if (energyRes?.energy !== undefined) {
+          setTwinEnergy(energyRes.energy);
+          setEnergyMessage('⚡ +20% طاقة من الإعلان!');
+        }
+      } catch (e) {}
+      
       Alert.alert('⚡', rtl.isRTL
-        ? `🎫 Explorer Pass مفعّل!\n🕐 حرية كاملة لمدة ${adService.getPassDuration()} دقيقة\n⭐ +10 Soul Points`
-        : `🎫 Explorer Pass activated!\n🕐 Full freedom for ${adService.getPassDuration()} min\n⭐ +10 Soul Points`
+        ? `🎫 Explorer Pass مفعّل!\n🕐 حرية كاملة لمدة ${adService.getPassDuration()} دقيقة\n⭐ +10 Soul Points\n⚡ +20% طاقة`
+        : `🎫 Explorer Pass activated!\n🕐 Full freedom for ${adService.getPassDuration()} min\n⭐ +10 Soul Points\n⚡ +20% Energy`
       );
       loadAll();
     }
@@ -98,8 +133,45 @@ export default function TwinPlusWing() {
   const handleDailyLogin = async () => {
     if (!userId) return;
     const newTotal = await economyEngine.claimDailyLogin(userId);
+    
+    // ✅ تحديث الطاقة بعد تسجيل الدخول
+    try {
+      const { apiPost } = require('../../lib/httpClient');
+      await apiPost('/api/economy/daily-login', { user_id: userId });
+    } catch (e) {}
+    
     Alert.alert('☀️', rtl.isRTL ? `+5 Soul Points! الرصيد: ${newTotal}` : `+5 Soul Points! Balance: ${newTotal}`);
     setSoulBalance(economyEngine.getBalance());
+    loadAll();
+  };
+
+  // ✅ مكون عرض طاقة الكيان
+  const EnergyDisplay = () => {
+    const energyPercent = Math.round(twinEnergy * 100);
+    const isLow = twinEnergy < 0.25;
+    const isCritical = twinEnergy < 0.10;
+    
+    return (
+      <View style={[styles.energyCard, { borderColor: isCritical ? '#EF444440' : isLow ? '#F59E0B40' : '#10B98140' }]}>
+        <View style={styles.energyHeader}>
+          {isCritical ? <BatteryWarning size={22} stroke="#EF4444" /> : isLow ? <Battery size={22} stroke="#F59E0B" /> : <BatteryFull size={22} stroke="#10B981" />}
+          <Text style={[styles.energyTitle, { color: isCritical ? '#EF4444' : isLow ? '#F59E0B' : '#10B981' }]}>
+            {rtl.isRTL ? 'طاقة التوأم' : 'Twin Energy'}
+          </Text>
+        </View>
+        <View style={styles.energyBar}>
+          <View style={[styles.energyFill, { width: `${energyPercent}%`, backgroundColor: isCritical ? '#EF4444' : isLow ? '#F59E0B' : '#10B981' }]} />
+        </View>
+        <Text style={styles.energyPercent}>{energyPercent}%</Text>
+        {energyMessage ? <Text style={styles.energyMessage}>{energyMessage}</Text> : null}
+        {isLow && tier === 'free' && (
+          <TouchableOpacity style={styles.watchAdForEnergy} onPress={handleWatchAd}>
+            <Play size={14} stroke="#F59E0B" />
+            <Text style={styles.watchAdForEnergyText}>{rtl.isRTL ? 'مشاهدة إعلان لاستعادة الطاقة' : 'Watch Ad to restore energy'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -110,6 +182,9 @@ export default function TwinPlusWing() {
         </View>
         <Text style={styles.heroTitle}>{rtl.isRTL ? 'اقتصاد العلاقة' : 'Relationship Economy'}</Text>
         <Text style={styles.heroSub}>{rtl.isRTL ? 'تكسب وأنت تعيش مع توأمك.' : 'Earn while you live with your Twin.'}</Text>
+
+        {/* ✅ طاقة الكيان */}
+        <EnergyDisplay />
 
         {/* Soul Points Balance */}
         {soulBalance && (
@@ -132,7 +207,7 @@ export default function TwinPlusWing() {
       {tier === 'free' && adStatus && adStatus.can_watch && (
         <View style={styles.adCard}>
           <View style={styles.adHeader}><Play size={18} stroke="#F59E0B" /><Text style={styles.adTitle}>{rtl.isRTL ? 'Explorer Pass' : 'Explorer Pass'}</Text></View>
-          <Text style={styles.adDesc}>{rtl.isRTL ? `🎫 افتح كل القدرات لمدة ${adService.getPassDuration()} دقيقة.\n⭐ +10 Soul Points` : `🎫 Unlock all capabilities for ${adService.getPassDuration()} min.\n⭐ +10 Soul Points`}</Text>
+          <Text style={styles.adDesc}>{rtl.isRTL ? `🎫 افتح كل القدرات لمدة ${adService.getPassDuration()} دقيقة.\n⭐ +10 Soul Points\n⚡ +20% طاقة` : `🎫 Unlock all capabilities for ${adService.getPassDuration()} min.\n⭐ +10 Soul Points\n⚡ +20% Energy`}</Text>
           <Text style={styles.adRemaining}>{adStatus.remaining_today} / {adService.getMaxDailyAds()} {rtl.isRTL ? 'متبقي اليوم' : 'remaining today'}</Text>
           <TouchableOpacity style={styles.adWatchBtn} onPress={handleWatchAd} disabled={loadingAd}>
             {loadingAd ? <ActivityIndicator size="small" color="#FFF" /> : <><Play size={16} stroke="#FFF" /><Text style={styles.adWatchText}>{rtl.isRTL ? 'مشاهدة' : 'Watch'}</Text></>}
@@ -177,6 +252,17 @@ const styles = StyleSheet.create({
   heroIcon: { width: 72, height: 72, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: SPACE.sm },
   heroTitle: { color: '#E8E0F0', fontSize: 20, fontWeight: '700', textAlign: 'center' },
   heroSub: { color: '#6B5B8A', fontSize: 13, textAlign: 'center' },
+  // ✅ Energy Card
+  energyCard: { backgroundColor: 'rgba(16,185,129,0.05)', borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.md, width: '100%', marginTop: SPACE.sm, marginBottom: SPACE.sm },
+  energyHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
+  energyTitle: { fontSize: 16, fontWeight: '700' },
+  energyBar: { height: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 6, overflow: 'hidden', marginBottom: SPACE.xs },
+  energyFill: { height: '100%', borderRadius: 6 },
+  energyPercent: { color: '#E8E0F0', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  energyMessage: { color: '#6B5B8A', fontSize: 11, textAlign: 'center', marginTop: 4 },
+  watchAdForEnergy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: SPACE.sm, paddingVertical: 8, backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: RADIUS.sm },
+  watchAdForEnergyText: { color: '#F59E0B', fontSize: 12, fontWeight: '600' },
+  // Balance
   balanceCard: { backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: RADIUS.card, borderWidth: 1, borderColor: '#F59E0B40', padding: SPACE.md, width: '100%', alignItems: 'center', marginTop: SPACE.sm },
   balanceRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   balanceValue: { color: '#F59E0B', fontSize: 28, fontWeight: '800' },
@@ -184,6 +270,7 @@ const styles = StyleSheet.create({
   balanceSub: { color: '#6B5B8A', fontSize: 11, marginTop: 4 },
   restoreBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 16, borderRadius: RADIUS.sm, backgroundColor: '#A855F710', marginTop: SPACE.sm },
   restoreText: { color: '#A855F7', fontSize: 13, fontWeight: '600' },
+  // Ad
   adCard: { backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: RADIUS.card, borderWidth: 1, borderColor: '#F59E0B40', padding: SPACE.md, marginBottom: SPACE.md },
   adHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
   adTitle: { color: '#F59E0B', fontSize: 15, fontWeight: '700' },
@@ -191,8 +278,10 @@ const styles = StyleSheet.create({
   adRemaining: { color: '#6B5B8A', fontSize: 11, marginBottom: SPACE.sm },
   adWatchBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F59E0B', paddingVertical: 10, borderRadius: RADIUS.sm },
   adWatchText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  // Daily
   dailyLoginBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: RADIUS.sm, padding: SPACE.md, marginBottom: SPACE.md },
   dailyLoginText: { color: '#10B981', fontSize: 14, fontWeight: '600' },
+  // Plans
   planCard: { backgroundColor: 'rgba(26,18,38,0.9)', borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.md, marginBottom: SPACE.md, position: 'relative' },
   badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, marginBottom: 10 },
   badgeText: { color: '#FFF', fontSize: 11, fontWeight: '700' },

@@ -8,6 +8,8 @@ export class SensorBridge {
   private proximitySub: any = null;
   private lightSensorSub: any = null;
   private pedometerSub: any = null;
+  private faceDetectorSub: any = null;
+  private audioLevelInterval: ReturnType<typeof setInterval> | null = null;
   private isActive = false;
 
   async start(): Promise<void> {
@@ -37,7 +39,6 @@ export class SensorBridge {
       });
       LightSensor.setUpdateInterval(1000);
 
-      // Proximity متاح فقط على بعض الأجهزة
       try {
         const { Proximity } = await import('expo-sensors');
         this.proximitySub = Proximity.addListener(data => {
@@ -47,8 +48,23 @@ export class SensorBridge {
         console.log('[SensorBridge] Proximity sensor not available');
       }
 
-      // Pedometer (عداد الخطوات)
       try {
+        const { FaceDetector } = await import('expo-face-detector');
+        this.faceDetectorSub = FaceDetector.addListener(({ faces }) => {
+          if (faces.length > 0) {
+            const face = faces[0];
+            devicePresenceEngine.updateFaceDetected(face.bounds);
+          } else {
+            devicePresenceEngine.updateFaceDetected(null);
+          }
+        });
+        FaceDetector.start();
+      } catch (e) {
+        console.log('[SensorBridge] Face detector not available');
+      }
+
+      try {
+        const { Pedometer } = await import('expo-sensors');
         const pedometerResult = await Pedometer.isAvailableAsync();
         if (pedometerResult) {
           const end = new Date();
@@ -58,7 +74,6 @@ export class SensorBridge {
           if (pastStepCount) {
             devicePresenceEngine.updateStepCount(pastStepCount.steps);
           }
-          
           this.pedometerSub = Pedometer.watchStepCount(data => {
             devicePresenceEngine.updateStepCount(data.steps);
           });
@@ -67,20 +82,21 @@ export class SensorBridge {
         console.log('[SensorBridge] Pedometer not available');
       }
 
-      console.log('[SensorBridge] ✅ All sensors connected (Accel, Gyro, Baro, Light, Prox, Pedometer)');
+      // محاكاة مستوى الصوت (يمكن تحسينه لاحقًا بمكتبة حقيقية)
+      this.startAudioLevelSimulation();
+
+      console.log('[SensorBridge] ✅ All sensors connected');
     } catch (e) {
       console.warn('[SensorBridge] ⚠️ Sensors unavailable:', e);
     }
-
-    // بدء مراقبة البطارية
-    this.startBatteryMonitoring();
   }
 
-  private startBatteryMonitoring(): void {
-    try {
-      const { PowerState } = require('expo-battery');
-      // محاكاة: سنستخدم EventBus لاحقاً
-    } catch (e) {}
+  private startAudioLevelSimulation(): void {
+    // محاكاة بسيطة لتغير مستوى الصوت
+    this.audioLevelInterval = setInterval(() => {
+      const level = Math.random() * 0.4 + (global as any).__audioLevel || 0.1;
+      devicePresenceEngine.updateAudioLevel(level);
+    }, 500);
   }
 
   stop(): void {
@@ -91,6 +107,8 @@ export class SensorBridge {
     if (this.proximitySub) { this.proximitySub.remove(); this.proximitySub = null; }
     if (this.lightSensorSub) { this.lightSensorSub.remove(); this.lightSensorSub = null; }
     if (this.pedometerSub) { this.pedometerSub.remove(); this.pedometerSub = null; }
+    if (this.faceDetectorSub) { this.faceDetectorSub.remove(); this.faceDetectorSub = null; }
+    if (this.audioLevelInterval) { clearInterval(this.audioLevelInterval); this.audioLevelInterval = null; }
     console.log('[SensorBridge] All sensors disconnected');
   }
 }

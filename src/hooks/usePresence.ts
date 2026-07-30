@@ -25,7 +25,7 @@ export function usePresence(): PresenceInfo {
   });
 
   useEffect(() => {
-    const unsub = StateBus.subscribe(
+    const unsub = StateBus.subscribeTo(
       (s) => ({ presenceLevel: s.presenceLevel, interfaceState: s.interfaceState }),
       (value) => {
         setInfo(buildInfo(value.presenceLevel, value.interfaceState));

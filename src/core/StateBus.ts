@@ -7,10 +7,12 @@ export type CognitivePhase = 'idle' | 'observe' | 'understand' | 'recall' | 'rea
 export type SilenceLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
 export interface EmotionalState {
-  primaryEmotion: string; intensity: number; valence: 'positive' | 'negative' | 'neutral' | 'mixed'; confidence: number; duration: number; trend: 'improving' | 'worsening' | 'stable';
+  primaryEmotion: string; intensity: number; valence: 'positive' | 'negative' | 'neutral' | 'mixed';
+  confidence: number; duration: number; trend: 'improving' | 'worsening' | 'stable';
 }
 
 export interface BreathState { phase: number; duration: number; intensity: number; isHolding: boolean; }
+export interface AvatarState { eyesOpen: boolean; gazeTarget: string; expression: string; posture: string; blinkProgress: number; nextBlinkIn: number; }
 export interface ConversationState { messages: any[]; isProcessing: boolean; currentCognitivePhase: CognitivePhase; phaseProgress: number; }
 export interface MemoryState { lastSurfacedId: string | null; pendingSurfacing: boolean; recentContext: string | null; }
 export interface WorkspaceState { active: string | null; previous: string | null; isTransforming: boolean; transformProgress: number; spatialMemory: Record<string, any>; }
@@ -20,12 +22,10 @@ export interface Message {
   id: string; sender: 'user' | 'twin'; text: string; timestamp: number; confidence?: number; source?: 'memory' | 'inference' | 'knowledge' | 'unknown';
 }
 
-export interface AvatarState { eyesOpen: boolean; gazeTarget: string; expression: string; posture: string; blinkProgress: number; nextBlinkIn: number; }
 export interface TwinState {
-  avatar: AvatarState;
   presenceLevel: number;
   interfaceState: InterfaceState; isAwakening: boolean; awakeningPhase: string;
-  breath: BreathState; emotion: EmotionalState; spaceEnergy: SpaceEnergy; silenceLevel: number;
+  breath: BreathState; avatar: AvatarState; emotion: EmotionalState; spaceEnergy: SpaceEnergy; silenceLevel: number;
   conversation: ConversationState; memory: MemoryState; workspace: WorkspaceState; relationship: RelationshipState;
   isOnline: boolean; isDegraded: boolean; uptime: number;
   personalityDNA: Record<string, number>;
@@ -41,8 +41,8 @@ export const STATE_EVENTS = {
 
 const DEFAULT_STATE: TwinState = {
   presenceLevel: 0, interfaceState: 'dormant', isAwakening: false, awakeningPhase: 'presence',
-  avatar: { eyesOpen: false, gazeTarget: 'none', expression: 'neutral', posture: 'centered', blinkProgress: 0, nextBlinkIn: 5000 },
   breath: { phase: 0, duration: 8000, intensity: 0.15, isHolding: false },
+  avatar: { eyesOpen: false, gazeTarget: 'none', expression: 'neutral', posture: 'centered', blinkProgress: 0, nextBlinkIn: 5000 },
   emotion: { primaryEmotion: 'neutral', intensity: 0, valence: 'neutral', confidence: 1.0, duration: 0, trend: 'stable' },
   spaceEnergy: 'tranquil', silenceLevel: 0,
   conversation: { messages: [], isProcessing: false, currentCognitivePhase: 'idle', phaseProgress: 0 },
@@ -74,7 +74,17 @@ export class StateBusClass {
   }
 
   select<T>(selector: (state: TwinState) => T): T { return selector(this.state); }
-  subscribe(subscriber: StateSubscriber): () => void { this.subscribers.add(subscriber); return () => this.subscribers.delete(subscriber); }
+
+  subscribe(subscriber: StateSubscriber): () => void {
+    this.subscribers.add(subscriber);
+    return () => this.subscribers.delete(subscriber);
+  }
+
+  // ✅ إضافة subscribeTo لتتوافق مع hooks التي تستخدم وسيطين
+  subscribeTo<T>(selector: (state: TwinState) => T, callback: (value: T) => void): () => void {
+    const listener = (state: TwinState, _prev: TwinState) => callback(selector(state));
+    return this.subscribe(listener);
+  }
 
   on(event: string, callback: (event: string, data: any) => void): () => void {
     if (!this.eventListeners.has(event)) this.eventListeners.set(event, []);
@@ -85,67 +95,6 @@ export class StateBusClass {
   emit(event: string, data: any = {}): void {
     const arr = this.eventListeners.get(event);
     if (arr) arr.forEach(cb => { try { cb(event, data); } catch (e) { console.warn(`[StateBus] ${event}`, e); } });
-  }
-
-  // ✅ الدالة المطورة: تقرأ جميع حقول Unified Brain v8.0
-  updateFromUnifiedResponse(response: any): void {
-    if (!response) return;
-    
-    const p = response.presence_state || {};
-    const e = response.twin_emotional_state || {};
-    const r = response.twin_state_update?.relationship || {};
-    const m = response.memory_surfaced;
-    const dna = response.twin_state_update?.personality_dna || {};
-    const ctx = response.context_snapshot || {};
-    const momentum = response.emotional_momentum || {};
-    const cognitive = response.cognitive_load || {};
-    const salience = response.salience || {};
-    const energy = response.energy || {};
-    const limits = response.limits || {};
-
-    this.applyUpdate({
-      emotion: {
-        primaryEmotion: p.emotion || e.current_emotion || 'neutral',
-        intensity: p.intensity || e.intensity || 0.5,
-        valence: (e.intensity > 0.5 || p.emotion === 'joy') ? 'positive' : (p.emotion === 'sadness' || p.emotion === 'fear' ? 'negative' : 'neutral'),
-        confidence: e.confidence || 0.7, duration: 0, trend: 'stable',
-      },
-      relationship: { bondLevel: r.bond_level || 0, attachmentStyle: 'secure', trustScore: (r.trust || 50) / 100, firstContactTimestamp: null },
-      memory: { lastSurfacedId: m?.id || null, pendingSurfacing: false, recentContext: m?.content || null },
-      spaceEnergy: p.emotion === 'joy' ? 'energetic' : p.emotion === 'sadness' ? 'serene' : p.emotion === 'fear' ? 'tense' : 'tranquil',
-      interfaceState: 'twin',
-      presenceLevel: Math.round(p.intensity * 5) as any,
-      personalityDNA: { ...this.state.personalityDNA, ...dna },
-    });
-
-    // ✅ إرسال جميع البيانات التي يحتاجها LivingLightEntity
-    this.emit('presence:state_updated', {
-      breathPhase: 0,
-      focusLevel: cognitive.load_value ? (1 - cognitive.load_value) : 0.5,
-      attentionLevel: p.emotion === 'focused' ? 0.9 : 0.5,
-      energyLevel: energy.energy || p.energy || 0.7,
-      warmth: p.warmth || 0.7,
-      emotion: p.emotion || 'neutral',
-      emotionIntensity: p.intensity || 0.5,
-      silenceLevel: p.silence_before_speaking_ms > 0 ? 0.8 : 0,
-      isSilent: p.silence_before_speaking_ms > 0,
-      memoryEchoIntensity: m ? 0.6 : 0,
-      memoryEchoEmotion: e.current_emotion || 'neutral',
-      intentIntensity: response.behavior?.intent ? 0.7 : 0,
-      intentType: response.behavior?.intent || null,
-      gazeDirection: momentum.phase === 'transitioning' ? 'internal' : 'user',
-      isThinking: false,
-      isSpeaking: true,
-      isListening: false,
-      transitionProgress: momentum.momentum_value || 0,
-      microExpressions: [],
-      breathRate: p.breath_rate || 12,
-      heartRate: 68,
-      pulseIntensity: 0.5,
-      lifeState: ctx.session_type || 'active',
-      behaviorSequence: [],
-      sequenceStep: 0,
-    });
   }
 
   reset(): void { this.prevState = { ...this.state }; this.state = { ...DEFAULT_STATE }; this.subscribers.forEach(s => s(this.state, this.prevState)); }

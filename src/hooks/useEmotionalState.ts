@@ -42,7 +42,7 @@ export function useEmotionalState(): EmotionalInfo {
 
   useEffect(() => {
     // المسار 1: StateBus.subscribeTo — يستمع لتغيرات emotional state الكاملة
-    const unsub1 = stateBus.subscribe(
+    const unsub1 = stateBus.subscribeTo(
       (s) => s.emotion,
       (emotion) => {
         setInfo(prev => ({

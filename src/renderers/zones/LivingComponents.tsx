@@ -8,10 +8,6 @@ import type { Status, Variant, Emotion } from './LivingSurface';
 export const LivingBubble = ({ children, isTwin = false, style, status = 'idle' as Status, emotion = 'neutral' as Emotion }: { children: React.ReactNode; isTwin?: boolean; style?: ViewStyle; status?: Status; emotion?: Emotion }) => (
   <LivingSurface
     variant={isTwin ? 'twin' : 'user'}
-    
-    
-    animated={isTwin}
-    awarenessLevel={isTwin ? 'Focused' : 'Dormant'}
     style={StyleSheet.flatten([
       { maxWidth: '85%', alignSelf: isTwin ? 'flex-start' : 'flex-end' },
       isTwin ? { borderBottomLeftRadius: 4 } : { borderBottomRightRadius: 4 },

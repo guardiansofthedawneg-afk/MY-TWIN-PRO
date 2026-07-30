@@ -23,7 +23,7 @@ export function useBreathAnimation(): BreathAnimation {
   const [breath, setBreath] = useState<BreathState>(() => StateBus.select(s => s.breath));
 
   useEffect(() => {
-    const unsub = StateBus.subscribe(
+    const unsub = StateBus.subscribeTo(
       (s) => s.breath,
       (state) => setBreath({ ...state.breath })
     );

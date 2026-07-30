@@ -36,10 +36,10 @@ def get_service_role_db():
         try:
             from supabase import create_client
             url = os.getenv("SUPABASE_URL")
-            key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            key = os.getenv("SUPABASE_SERVICE_KEY")
             
             if not url or not key:
-                logger.warning("⚠️ SUPABASE_SERVICE_ROLE_KEY not set. Using regular client.")
+                logger.warning("⚠️ SUPABASE_SERVICE_KEY not set. Using regular client.")
                 return get_db()
             
             _service_role_client = create_client(url, key)

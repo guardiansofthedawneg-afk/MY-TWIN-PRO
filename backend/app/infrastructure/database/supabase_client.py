@@ -1,50 +1,33 @@
 import os
+from supabase import create_client, Client
+from dotenv import load_dotenv
 import logging
 
 logger = logging.getLogger("supabase_client")
+load_dotenv()
 
-# عميل Supabase الأساسي
-_supabase_client = None
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
-def get_db():
-    """يُرجع عميل Supabase. يُنشئه إذا لم يكن موجوداً."""
-    global _supabase_client
-    if _supabase_client is None:
-        try:
-            from supabase import create_client
-            url = os.getenv("SUPABASE_URL")
-            key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
-            
-            if not url or not key:
-                logger.error("❌ Missing SUPABASE_URL or SUPABASE_KEY environment variables")
-                raise Exception("Supabase credentials not configured")
-            
-            _supabase_client = create_client(url, key)
-            logger.info("✅ Supabase client created successfully")
-        except Exception as e:
-            logger.error(f"❌ Failed to create Supabase client: {e}")
-            raise
-    return _supabase_client
+if not SUPABASE_URL:
+    logger.critical("❌ SUPABASE_URL not set!")
+    raise RuntimeError("SUPABASE_URL is required")
 
-# عميل Supabase مع Service Role (يتجاوز RLS)
-_service_role_client = None
+if not SUPABASE_SERVICE_ROLE_KEY:
+    logger.warning("⚠️ SUPABASE_SERVICE_KEY not set. RLS policies may block operations.")
 
-def get_service_role_db():
-    """يُرجع عميل Supabase مع صلاحيات service_role. يُنشئه إذا لم يكن موجوداً."""
-    global _service_role_client
-    if _service_role_client is None:
-        try:
-            from supabase import create_client
-            url = os.getenv("SUPABASE_URL")
-            key = os.getenv("SUPABASE_SERVICE_KEY")
-            
-            if not url or not key:
-                logger.warning("⚠️ SUPABASE_SERVICE_KEY not set. Using regular client.")
-                return get_db()
-            
-            _service_role_client = create_client(url, key)
-            logger.info("✅ Supabase service_role client created successfully")
-        except Exception as e:
-            logger.error(f"❌ Failed to create service_role client: {e}")
-            return get_db()
-    return _service_role_client
+# ✅ عميل الخدمة (Service Role) — يتجاوز RLS بالكامل
+_service_role_db: Client | None = None
+
+def get_service_role_db() -> Client:
+    global _service_role_db
+    if _service_role_db is None and SUPABASE_SERVICE_ROLE_KEY:
+        _service_role_db = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        logger.info("✅ Supabase service_role client created successfully")
+    return _service_role_db
+
+# ✅ عميل عادي (للتوافق)
+def get_db() -> Client:
+    return get_service_role_db()
+
+logger.info("✅ Supabase client configured")

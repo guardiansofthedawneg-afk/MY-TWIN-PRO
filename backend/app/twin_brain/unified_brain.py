@@ -90,8 +90,10 @@ class UnifiedTwinBrain:
         engine_context = f"[STATE] Emotion: {effective_emotion} | Bond: {bond_level} | Tier: {tier}\n[CONTEXT] {contextual_prompt}"
         
         strategy = {"goal": intent["goal"], "tone": behavior["tone"], "personality_dna": dna, "emotion": effective_emotion, "engine_context": engine_context}
+        memory_context_for_response = {"recent_conversations": [{"role": "user", "content": m.get("content", ""), "importance": m.get("importance", 50)} for m in relevant_memories]}
         reply = await build_response(user_id=user_id, message=message, identity_context=identity,
             emotion_context={"current_emotion": current_emotion, "real_emotion": effective_emotion, "intensity": emotion_intensity},
+            memory_context=memory_context_for_response,
             strategy=strategy, lang=lang)
 
         await unified_memory_engine.store(user_id=user_id, content=message, reply=reply, emotion=effective_emotion, importance=50, lang=lang)

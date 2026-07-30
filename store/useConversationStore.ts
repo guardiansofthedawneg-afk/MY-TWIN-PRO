@@ -94,7 +94,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         ),
         isThinking: false,
         thinkingStage: 'complete',
-        suggestedCapability: response.behavior ? { type: response.behavior.intent, route: '', label_ar: '', label_en: '' } : null,
+        suggestedCapability: response ? { type: response.tone, route: '', label_ar: '', label_en: '' } : null,
       }));
       return { success: true };
     } catch (error) {

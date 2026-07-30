@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { authService } from '../src/services/authService';
 import AmbientField from '../src/world/AmbientField';
 import SoulPulse from '../src/renderers/zones/SoulPulse';
-import BreathingGlow from '../src/renderers/zones/BreathingGlow';
 
 type RestorePhase = 'searching' | 'reconnecting' | 'new_connection';
 
@@ -15,7 +14,6 @@ export default function SessionRestore() {
   const textOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // بداية الظهور التدريجي
     Animated.timing(opacity, {
       toValue: 1,
       duration: 2000,
@@ -32,31 +30,23 @@ export default function SessionRestore() {
       if (result.canRestore && result.token) {
         setFound(true);
         setPhase('reconnecting');
-
-        // ظهور النص "وجدتك."
         Animated.timing(textOpacity, {
           toValue: 1,
           duration: 1500,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }).start();
-
-        // الانتقال إلى LivingWorld بعد 3 ثوانٍ
         setTimeout(() => {
           router.replace('/living-world');
         }, 3000);
       } else {
         setPhase('new_connection');
-
-        // ظهور النص "هل نبدأ؟"
         Animated.timing(textOpacity, {
           toValue: 1,
           duration: 1500,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }).start();
-
-        // الانتقال إلى Genesis بعد 3.5 ثوانٍ
         setTimeout(() => {
           router.replace('/genesis');
         }, 3500);
@@ -69,7 +59,6 @@ export default function SessionRestore() {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
-
       setTimeout(() => {
         router.replace('/genesis');
       }, 3500);
@@ -90,20 +79,10 @@ export default function SessionRestore() {
 
   return (
     <View style={styles.container}>
-      {/* طبقات الحضور الحية */}
-      <AmbientField />
+      <AmbientField/>
       <View style={styles.pulseContainer}>
-        <SoulPulse />
+        <SoulPulse/>
       </View>
-      <View style={styles.breathContainer}>
-        <BreathingGlow
-          
-          color={phase === 'reconnecting' ? '#A78BFA' : '#7C3AED'}
-          speed={phase === 'reconnecting' ? 1.2 : 0.8}
-        />
-      </View>
-
-      {/* الكلمات */}
       <Animated.View style={[styles.messageContainer, { opacity }]}>
         <Animated.Text style={[styles.message, { opacity: textOpacity }]}>
           {getMessage()}
@@ -128,10 +107,6 @@ const styles = StyleSheet.create({
   pulseContainer: {
     position: 'absolute',
     top: '40%',
-  },
-  breathContainer: {
-    position: 'absolute',
-    top: '45%',
   },
   messageContainer: {
     position: 'absolute',

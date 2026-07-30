@@ -90,7 +90,7 @@ export class SensorContextEngine {
     else this.context.timeContext = 'late_night';
 
     // 7. stepCount
-    this.context.stepCount = devicePresenceEngine.getStepCount?.() || 0;
+    this.context.stepCount = devicePresenceEngine.getSensors().stepCount || 0;
 
     // 8. contextualSummary
     this.context.contextualSummary = this.buildContextualSummary();

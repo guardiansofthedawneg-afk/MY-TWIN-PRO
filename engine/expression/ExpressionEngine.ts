@@ -1,10 +1,3 @@
-/**
- * ExpressionEngine v2.0 — تعبيرات متصلة بالخلفية
- * =================================================
- * يقرأ الحالة العاطفية وسلوك الكيان من UnifiedBrainBridge.
- */
-
-import { unifiedBrainBridge } from '../../src/core/UnifiedBrainBridge';
 import { stateBus } from '../../src/core/StateBus';
 
 export interface ExpressionState {
@@ -21,7 +14,7 @@ export class ExpressionEngine {
     intensity: 0.5,
     tone: 'neutral',
     silenceMs: 0,
-    energy: 0.7
+    energy: 0.7,
   };
 
   updateFromResponse(response: any): void {
@@ -31,7 +24,7 @@ export class ExpressionEngine {
         intensity: response.twin_emotional_state.intensity || 0.5,
         tone: response.behavior?.tone || 'neutral',
         silenceMs: response.behavior?.silence_before_speaking_ms || 0,
-        energy: response.presence_state?.energy || 0.7
+        energy: response.presence_state?.energy || 0.7,
       };
     }
   }
@@ -43,9 +36,18 @@ export class ExpressionEngine {
   getEmotionColor(): string {
     const colors: Record<string, string> = {
       joy: '#F59E0B', sadness: '#3B82F6', fear: '#A78BFA',
-      anger: '#EF4444', love: '#EC4899', neutral: '#A855F7'
+      anger: '#EF4444', love: '#EC4899', neutral: '#A855F7',
     };
     return colors[this.currentExpression.emotion] || '#A855F7';
+  }
+
+  evaluate(state: any): any {
+    return {
+      emotion: this.currentExpression.emotion,
+      intensity: this.currentExpression.intensity,
+      tone: this.currentExpression.tone,
+      energy: this.currentExpression.energy,
+    };
   }
 }
 

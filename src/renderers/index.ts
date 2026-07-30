@@ -1,11 +1,7 @@
-export { default as BirthSequence } from './zones/BirthSequence';
 export { default as GreetingWord } from './zones/GreetingWord';
 export { default as CosmicBackground } from './zones/CosmicBackground';
-export { default as BreathingGlow } from './zones/BreathingGlow';
 export { default as PresenceBubble } from './zones/PresenceBubble';
-export { default as LivingAvatar } from './zones/LivingAvatar';
 export { default as ThinkingIndicator } from './zones/ThinkingIndicator';
-export { EmotionRing } from './zones/EmotionRing';
 export { AwarenessBackground } from './zones/AwarenessBackground';
 export { default as EmotionalAvatar } from './zones/EmotionalAvatar';
 export { LivingBubble, LivingCard, LivingPanel, LivingStatus, LivingPulse, LivingWave } from './zones/LivingComponents';

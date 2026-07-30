@@ -20,7 +20,9 @@ export interface Message {
   id: string; sender: 'user' | 'twin'; text: string; timestamp: number; confidence?: number; source?: 'memory' | 'inference' | 'knowledge' | 'unknown';
 }
 
+export interface AvatarState { eyesOpen: boolean; gazeTarget: string; expression: string; posture: string; blinkProgress: number; nextBlinkIn: number; }
 export interface TwinState {
+  avatar: AvatarState;
   presenceLevel: number;
   interfaceState: InterfaceState; isAwakening: boolean; awakeningPhase: string;
   breath: BreathState; emotion: EmotionalState; spaceEnergy: SpaceEnergy; silenceLevel: number;
@@ -39,6 +41,7 @@ export const STATE_EVENTS = {
 
 const DEFAULT_STATE: TwinState = {
   presenceLevel: 0, interfaceState: 'dormant', isAwakening: false, awakeningPhase: 'presence',
+  avatar: { eyesOpen: false, gazeTarget: 'none', expression: 'neutral', posture: 'centered', blinkProgress: 0, nextBlinkIn: 5000 },
   breath: { phase: 0, duration: 8000, intensity: 0.15, isHolding: false },
   emotion: { primaryEmotion: 'neutral', intensity: 0, valence: 'neutral', confidence: 1.0, duration: 0, trend: 'stable' },
   spaceEnergy: 'tranquil', silenceLevel: 0,
@@ -116,7 +119,7 @@ export class StateBusClass {
     });
 
     // ✅ إرسال جميع البيانات التي يحتاجها LivingLightEntity
-    this.emitEvent('presence:state_updated', {
+    this.emit('presence:state_updated', {
       breathPhase: 0,
       focusLevel: cognitive.load_value ? (1 - cognitive.load_value) : 0.5,
       attentionLevel: p.emotion === 'focused' ? 0.9 : 0.5,

@@ -62,7 +62,7 @@ export class SoulKernel {
       { name: 'WorldAwarenessEngine', start: () => worldAwarenessEngine.evaluate(), stop: () => {} },
       { name: 'LifeStateEngine', start: () => lifeStateEngine.update(), stop: () => {} },
       { name: 'SensorContextEngine', start: () => sensorContextEngine.evaluate(), stop: () => {} },
-      { name: 'ExpressionEngine', start: () => expressionEngine.evaluate(), stop: () => {} },
+      { name: 'ExpressionEngine', start: () => expressionEngine.evaluate({}), stop: () => {} },
       { name: 'DigitalPassportEngine', start: async () => { await digitalPassportEngine.generate(); }, stop: () => {} },
       { name: 'PortableMemoryEngine', start: async () => { await portableMemoryEngine.exportForTraining(); }, stop: () => {} },
       { name: 'AudioMixer', start: () => audioMixer.setContext('conversation'), stop: () => {} },

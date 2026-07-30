@@ -12,7 +12,6 @@ import { router } from 'expo-router';
 import { authService } from '../src/services/authService';
 import { useAppTheme } from '../engine/colors';
 import SoulPulse from '../src/renderers/zones/SoulPulse';
-import BreathingGlow from '../src/renderers/zones/BreathingGlow';
 
 export default function ForgotPassword() {
   const { colors } = useAppTheme();
@@ -65,13 +64,7 @@ export default function ForgotPassword() {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.pulseContainer}>
-        <SoulPulse />
-      </View>
-      <View style={styles.breathContainer}>
-        <BreathingGlow
-          color={colors.accent}
-          speed={0.6}
-        />
+        <SoulPulse/>
       </View>
 
       <Animated.View style={[styles.glassCard, { backgroundColor: colors.card, borderColor: colors.accent + '40', opacity: fadeAnim }]}>
@@ -97,7 +90,7 @@ export default function ForgotPassword() {
               keyboardType="email-address"
               autoCapitalize="none"
               textAlign="right"
-            />
+           />
             <TouchableOpacity
               style={[styles.btn, { backgroundColor: colors.accent }, loading && styles.btnDisabled]}
               onPress={handleReset}
@@ -144,10 +137,6 @@ const styles = StyleSheet.create({
   pulseContainer: {
     position: 'absolute',
     top: '20%',
-  },
-  breathContainer: {
-    position: 'absolute',
-    top: '25%',
   },
   glassCard: {
     width: '100%',

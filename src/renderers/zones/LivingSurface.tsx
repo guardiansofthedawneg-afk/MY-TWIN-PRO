@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { useLivingTheme } from '../../../engine/living-theme';
 
+export type Status = 'idle' | 'thinking' | 'analyzing' | 'learning' | 'remembering' | 'speaking' | 'connecting' | 'planning' | 'researching';
+export type Emotion = 'neutral' | 'happy' | 'focused' | 'curious' | 'concerned' | 'inspired' | 'calm';
 export type Variant = 'twin' | 'user' | 'warning' | 'success' | 'memory' | 'dream' | 'glass';
 
 interface LivingSurfaceProps {

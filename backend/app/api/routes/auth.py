@@ -1,5 +1,5 @@
 """
-Auth Routes v6.1 – نظيف وخالي من الأخطاء
+Auth Routes v7.0 — تأكيد تلقائي للبريد + تسجيل دخول فوري
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -59,6 +59,14 @@ async def signup(body: SignupBody):
     try:
         result = db.auth.sign_up({"email": body.email, "password": body.password})
         if result.user:
+            # ✅ تأكيد البريد الإلكتروني تلقائياً باستخدام service_role
+            try:
+                service_db.auth.admin.update_user_by_id(result.user.id, {"email_confirm": True})
+                logger.info(f"📧 Email confirmed for {result.user.id}")
+            except Exception as e:
+                logger.warning(f"Could not auto-confirm email: {e}")
+
+            # إنشاء الملف الشخصي
             service_db.table("profiles").insert({
                 "id": result.user.id, "email": body.email,
                 "full_name": body.email.split('@')[0], "twin_name": body.twin_name,
@@ -66,10 +74,11 @@ async def signup(body: SignupBody):
                 "onboarded": False, "last_active": datetime.now(timezone.utc).isoformat(),
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }).execute()
+
             if result.session:
                 await _wake_up_twin(result.user.id, body.lang)
                 return {"token": result.session.access_token, "user_id": result.user.id}
-            return {"message": "Check your email to confirm", "user_id": result.user.id}
+            return {"message": "Account created. Please login.", "user_id": result.user.id}
         raise HTTPException(400, "Signup failed")
     except Exception as e:
         logger.error(f"Signup failed: {e}")
@@ -127,4 +136,4 @@ async def verify_token(user_id: str):
         return {"valid": bool(profile.data)}
     except Exception: return {"valid": False}
 
-logger.info("✅ Auth Routes v6.1 initialized")
+logger.info("✅ Auth Routes v7.0 initialized")

@@ -5,7 +5,7 @@ SoulBonds v1.0 – روابط الأرواح
 يُقارن البصمات ويقيس التوافق.
 """
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
 logger = logging.getLogger("soul_bonds")

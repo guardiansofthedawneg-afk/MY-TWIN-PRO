@@ -1,5 +1,7 @@
 import { EventBus } from '../core/EventBus';
 import { economyEngine } from './EconomyEngine';
+import { explorerPassBridge } from './ExplorerPassBridge';
+import { subscriptionService } from './SubscriptionService';
 
 interface SurpriseReward {
   id: string;
@@ -7,7 +9,7 @@ interface SurpriseReward {
   amount: number;
   message_ar: string;
   message_en: string;
-  rarity: number; // 0-1: احتمالية الظهور
+  rarity: number;
 }
 
 const SURPRISES: SurpriseReward[] = [
@@ -21,18 +23,50 @@ const SURPRISES: SurpriseReward[] = [
 
 export class SurpriseRewards {
   private lastSurpriseDate: string = '';
-  private readonly DAYS_BETWEEN_SURPRISES = 7; // مرة كل أسبوع
+  private readonly DAYS_BETWEEN_SURPRISES = 7;
+
+  constructor() {
+    this.listenToEvents();
+  }
+
+  /** الاستماع لأحداث منح المفاجآت */
+  private listenToEvents(): void {
+    // مستمع SURPRISE_EXPLORER_PASS
+    EventBus.on('SURPRISE_EXPLORER_PASS', async (payload: any) => {
+      const userId = payload?.userId;
+      if (userId) {
+        await explorerPassBridge.activatePass(userId);
+        console.log('[Surprise] Explorer Pass activated');
+      }
+    });
+
+    // مستمع SURPRISE_PREMIUM_DAY
+    EventBus.on('SURPRISE_PREMIUM_DAY', async (payload: any) => {
+      const userId = payload?.userId;
+      if (userId) {
+        try {
+          await subscriptionService.upgradeForDuration(userId, 'premium', 1);
+          console.log('[Surprise] Premium day granted');
+        } catch (e) {
+          console.warn('[Surprise] Failed to grant premium day:', e);
+        }
+      }
+    });
+
+    // مستمع SURPRISE_FREE_DREAM
+    EventBus.on('SURPRISE_FREE_DREAM', (payload: any) => {
+      console.log('[Surprise] Free dream granted for', payload?.userId);
+    });
+  }
 
   /** التحقق من استحقاق هدية مفاجئة */
-  checkForSurprise(): { eligible: boolean; reward?: SurpriseReward } {
+  checkForSurprise(userId: string): { eligible: boolean; reward?: SurpriseReward } {
     const today = new Date().toDateString();
-    
-    // لم يحن الوقت بعد
+
     if (this.lastSurpriseDate === today) {
       return { eligible: false };
     }
 
-    // اختيار عشوائي مرجح
     const roll = Math.random();
     let cumulativeProbability = 0;
 
@@ -54,13 +88,17 @@ export class SurpriseRewards {
         await economyEngine.surpriseReward(reward.amount, reward.message_ar);
         break;
       case 'explorer_pass':
-        EventBus.emit('SURPRISE_EXPLORER_PASS', { duration: reward.amount, userId });
+        await explorerPassBridge.activatePass(userId);
         break;
       case 'premium_day':
-        EventBus.emit('SURPRISE_PREMIUM_DAY', { userId });
+        try {
+          await subscriptionService.upgradeForDuration(userId, 'premium', 1);
+        } catch (e) {
+          console.warn('[Surprise] Premium day failed:', e);
+        }
         break;
       case 'dream_free':
-        EventBus.emit('SURPRISE_FREE_DREAM', { userId });
+        // سيتم تفعيله لاحقاً مع نظام الأحلام
         break;
     }
 

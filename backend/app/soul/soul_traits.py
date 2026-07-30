@@ -4,7 +4,7 @@ SoulTraits v1.0 – الصفات المرتبطة بـ DNA الشخصية
 يشتق صفات الروح من DNA الشخصية والعواطف السائدة.
 """
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger("soul_traits")
 

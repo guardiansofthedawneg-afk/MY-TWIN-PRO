@@ -5,7 +5,7 @@ SoulValues v1.0 – نظام القيم الديناميكي
 ليست ثابتة، بل تتطور مع رحلة المستخدم.
 """
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Any, Optional, List
 from collections import Counter
 
 logger = logging.getLogger("soul_values")

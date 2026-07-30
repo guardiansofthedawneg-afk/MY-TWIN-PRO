@@ -5,7 +5,7 @@ SoulTimeline v1.0 – الخط الزمني للروح
 يُعيد قصة حياة الروح.
 """
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
 logger = logging.getLogger("soul_timeline")

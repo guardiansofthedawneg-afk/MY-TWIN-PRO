@@ -8,6 +8,7 @@ import { presenceEngine } from '../../engine/presence/PresenceEngine';
 import { worldAwarenessEngine } from '../../engine/consciousness/WorldAwarenessEngine';
 import { lifeStateEngine } from '../../engine/life/LifeStateEngine';
 import { devicePresenceEngine } from '../../engine/device/DevicePresenceEngine';
+import { unifiedPerceptionEngine } from '../../engine/perception/UnifiedPerceptionEngine';
 import { stateBus } from '../core/StateBus';
 import { EventBus } from '../core/EventBus';
 import { useTwinStore } from '../../store/useTwinStore';
@@ -57,6 +58,11 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
 
     emitPhase('context', 0.15, lang);
     contextEngine.build(perception);
+    
+    // ✅ بناء سياق الإدراك الموحد من 9 طبقات
+    const perceptionContext = await unifiedPerceptionEngine.evaluate();
+    const contextualPrompt = unifiedPerceptionEngine.getContextualPrompt();
+    
     await new Promise(r => setTimeout(r, 150));
 
     emitPhase('remember', 0.25, lang);
@@ -83,7 +89,6 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
         userState: perception.userState,
       };
 
-      // ✅ جمع بيانات المستشعرات للجهاز
       const sensors = devicePresenceEngine.getSensors();
       const device_info = {
         battery_level: sensors.deviceBattery,
@@ -92,6 +97,7 @@ export function useTwinBrain(initialUserId: string = '', initialLang: string = '
         weather: sensors.weatherCondition,
         is_night: sensors.isNightTime,
         user_walking: sensors.userWalking,
+        contextual_prompt: contextualPrompt, // ✅ السياق الحي من 9 طبقات
       };
 
       const response: UnifiedResponse = await bridgeRef.current.process(

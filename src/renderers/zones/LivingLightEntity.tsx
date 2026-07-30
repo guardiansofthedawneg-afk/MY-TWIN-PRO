@@ -11,6 +11,7 @@ import {
 import { stateBus } from '../../../src/core/StateBus';
 import { audioMixer } from '../../../src/core/AudioMixer';
 import { useAppTheme } from '../../../engine/colors';
+import { voiceEngine } from '../../../engine/voice/VoiceEngine';
 import { devicePresenceEngine } from '../../../engine/device/DevicePresenceEngine';
 
 interface LivingLightEntityProps {
@@ -119,9 +120,11 @@ export default function LivingLightEntity({ isThinking = false, isSpeaking = fal
       audioLevel.value = withTiming(sensors.audioLevel, { duration: 200 });
     }, 200);
 
+    voiceEngine.start();
     return () => {
       unsubscribe();
       clearInterval(sensorInterval);
+      voiceEngine.stop();
     };
   }, [colors, currentEmotion]);
 

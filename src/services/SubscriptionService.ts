@@ -1,10 +1,7 @@
-import { commercePlugin, PlanTier, PlanInfo, PurchaseResult } from './CommercePlugin';
+import { commercePlugin, PlanTier, PurchaseResult } from './CommercePlugin';
 import { EventBus } from '../core/EventBus';
 import { StateBus } from '../core/StateBus';
 
-/**
- * قدرات كل باقة
- */
 const TIER_CAPABILITIES: Record<PlanTier, string[]> = {
   free: ['chat', 'weather', 'search', 'translate', 'summarize'],
   plus: ['chat', 'study', 'content', 'dreams', 'proactive'],
@@ -13,119 +10,76 @@ const TIER_CAPABILITIES: Record<PlanTier, string[]> = {
   yearly: ['all'],
 };
 
-/**
- * SUBSCRIPTION SERVICE
- * =====================
- * تربط CommercePlugin بالـ Backend وتدير حالة الاشتراك.
- * تحدد أي القدرات متاحة للمستخدم حسب باقته.
- */
 export class SubscriptionService {
   private currentTier: PlanTier = 'free';
   private capabilities: string[] = [];
   private isInitialized = false;
 
-  /**
-   * تهيئة الخدمة وجلب الاشتراك الحالي
-   */
   async initialize(userId: string): Promise<void> {
     if (this.isInitialized) return;
-
     await commercePlugin.initialize();
-
     const subscription = await commercePlugin.getCurrentSubscription(userId);
     if (subscription?.isActive) {
       this.currentTier = subscription.tier;
     } else {
       this.currentTier = 'free';
     }
-
     this.capabilities = TIER_CAPABILITIES[this.currentTier] || TIER_CAPABILITIES.free;
     this.isInitialized = true;
-
-    // إعلام النظام
-    StateBus.update({
-      relationship: {
-        ...StateBus.select(s => s.relationship),
-        bondLevel: StateBus.select(s => s.relationship.bondLevel),
-      },
-    });
-
-    EventBus.emit('SUBSCRIPTION_INITIALIZED', {
-      tier: this.currentTier,
-      capabilities: this.capabilities,
-    });
+    EventBus.emit('SUBSCRIPTION_INITIALIZED', { tier: this.currentTier, capabilities: this.capabilities });
   }
 
-  /**
-   * شراء خطة جديدة
-   */
   async purchase(planId: PlanTier, userId: string): Promise<PurchaseResult> {
     const result = await commercePlugin.purchase(planId, userId);
-
     if (result.success) {
       this.currentTier = planId;
       this.capabilities = TIER_CAPABILITIES[planId] || TIER_CAPABILITIES.free;
-
-      EventBus.emit('SUBSCRIPTION_UPDATED', {
-        tier: this.currentTier,
-        capabilities: this.capabilities,
-      });
+      EventBus.emit('SUBSCRIPTION_UPDATED', { tier: this.currentTier, capabilities: this.capabilities });
     }
-
     return result;
   }
 
-  /**
-   * استعادة الاشتراك
-   */
   async restore(userId: string): Promise<PurchaseResult> {
     const result = await commercePlugin.restorePurchases(userId);
-
     if (result.success && result.tier) {
       this.currentTier = result.tier;
       this.capabilities = TIER_CAPABILITIES[result.tier] || TIER_CAPABILITIES.free;
-
-      EventBus.emit('SUBSCRIPTION_RESTORED', {
-        tier: this.currentTier,
-        capabilities: this.capabilities,
-      });
+      EventBus.emit('SUBSCRIPTION_RESTORED', { tier: this.currentTier, capabilities: this.capabilities });
     }
-
     return result;
   }
 
-  /**
-   * التحقق من توفر قدرة للمستخدم
-   */
+  /** ✅ ترقية مؤقتة لمدة محدودة (للمفاجآت) */
+  async upgradeForDuration(userId: string, tier: PlanTier, days: number): Promise<boolean> {
+    try {
+      const { apiPost } = require('../../lib/httpClient');
+      const res = await apiPost('/api/billing/upgrade-temporary', {
+        user_id: userId,
+        tier: tier,
+        duration_days: days,
+      });
+      if (res?.success) {
+        this.currentTier = tier;
+        this.capabilities = TIER_CAPABILITIES[tier] || TIER_CAPABILITIES.free;
+        EventBus.emit('SUBSCRIPTION_UPDATED', { tier: this.currentTier, capabilities: this.capabilities });
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('[Subscription] Temporary upgrade failed:', e);
+      return false;
+    }
+  }
+
   canUseCapability(capability: string): boolean {
     if (this.capabilities.includes('all')) return true;
     return this.capabilities.includes(capability);
   }
 
-  /**
-   * الباقة الحالية
-   */
-  getCurrentTier(): PlanTier {
-    return this.currentTier;
-  }
+  getCurrentTier(): PlanTier { return this.currentTier; }
+  getCapabilities(): string[] { return [...this.capabilities]; }
+  isPremium(): boolean { return this.currentTier !== 'free'; }
 
-  /**
-   * القدرات المتاحة
-   */
-  getCapabilities(): string[] {
-    return [...this.capabilities];
-  }
-
-  /**
-   * هل الباقة مدفوعة؟
-   */
-  isPremium(): boolean {
-    return this.currentTier !== 'free';
-  }
-
-  /**
-   * إلغاء الاشتراك
-   */
   async cancel(userId: string): Promise<boolean> {
     const success = await commercePlugin.cancel(userId);
     if (success) {
